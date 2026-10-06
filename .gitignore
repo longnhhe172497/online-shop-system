@@ -1,0 +1,26 @@
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# IDEs and operating systems
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/coverage/
+
+# Backend
+backend/target/
+*.log
+
+# Local runtime data
+uploads/*
+!uploads/.gitkeep
+data/
+

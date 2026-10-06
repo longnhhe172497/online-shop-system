@@ -1,0 +1,32 @@
+spring:
+  application:
+    name: online-shop-backend
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5433/online_shop}
+    username: ${DB_USERNAME:online_shop}
+    password: ${DB_PASSWORD:online_shop_local}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+  flyway:
+    enabled: true
+  mail:
+    host: ${MAIL_HOST:localhost}
+    port: ${MAIL_PORT:1025}
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+
+server:
+  port: ${BACKEND_PORT:8080}
+
+app:
+  upload-dir: ${UPLOAD_DIR:../uploads}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
