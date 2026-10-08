@@ -23,19 +23,28 @@ Authentication is **not yet implemented**. The existing SecurityConfig protects 
 
 No one should edit an applied Flyway migration. Use a new versioned migration for each schema change.
 
-## Five non-overlapping workstreams
+## Five balanced workstreams
 
-Assign one owner and one reviewer per stream. These are **suggested assignments**, not five separate repositories.
+Assign **one owner and one different reviewer** to each stream. The point estimates balance complexity rather than count use cases; revisit them after the first milestone. Every owner delivers backend API, frontend screens, OpenAPI updates and tests for their stream. No stream is “frontend only” or “backend only”. The five streams are suggested assignments, not five separate repositories.
 
-| Stream | First deliverable | Later deliverables | Dependency |
-| --- | --- | --- | --- |
-| A — Identity | Register, verify, login, logout, reset using the V3 opaque bearer-session table; real Spring Security role/ownership checks | Profile, addresses, Admin account/role/settings/audit endpoints | Unblocks protected APIs |
-| B — Catalog | Product detail, category list, Manager product/category CRUD | Voucher CRUD, reviews/moderation | Can start now |
-| C — Shopping | Customer cart API and UI; guest-cart merge | Checkout, reservation, simulated QR/COD, order history/cancel | Requires A for customer ownership; B for product data |
-| D — Fulfillment | Warehouse stock view/adjustment/packing | Assignment, delivery attempts, returns, refunds | Requires orders from C |
-| E — Integration/UI | Shared frontend routes, forms, API error/loading handling | Tickets, daily reports, dashboards, integration tests | Coordinate with A–D contracts |
+| Stream | Scope and deliverable | Estimate | Dependency / earliest start |
+| --- | --- | ---: | --- |
+| **A — Identity & Admin** | Register, email verification, login/logout with V3 bearer sessions, password reset; profile and saved addresses; role and ownership enforcement; Admin accounts, role/status, settings and audit. Do not give Admin other business-role privileges. | **25** | Start now. Deliver login and role/ownership checks first to unblock protected APIs. |
+| **B — Catalog & Cart** | Public product list/detail/search and categories; Manager product/category CRUD; Guest and Customer cart, cart merge on login; verified product reviews and Manager moderation. | **24** | Public catalog can start now. Customer cart integration waits for A's login contract. |
+| **C — Checkout & Payment** | Voucher CRUD/application; checkout and stock/voucher reservations; simulated QR and COD; QR retry/expiry; customer order history/detail/cancel; order receipt email. Never imply that simulated payment moves real money. | **26** | Contract and tests can start now; integration depends on A and B. |
+| **D — Warehouse & Delivery** | Basic stock view/manual adjustment, Support confirmation of COD orders, packing and stock-out; Manager delivery assignment; Delivery Staff attempts, COD collection, failed delivery and return to warehouse. Maximum two attempts. | **25** | Inventory UI can start now; fulfillment integration depends on C's orders. |
+| **E — After-sales & Reporting** | Customer return/refund request, Warehouse inspection, Manager decision, simulated/manual refund; support tickets/messages; staff daily reports; Manager dashboard and business report/export. | **25** | Ticket contract/UI can start now; refunds and metrics depend on C/D transaction data. |
 
-Members may start frontend screens with typed mock data while a backend endpoint is being built, but mocks must be replaced and an integration test added before the feature PR is merged. Do not claim a mock page is integrated.
+Do not assign a second owner to the same endpoint. The owner of a stream owns its related Flyway additions, API routes and UI; another member reviews the PR. For cross-stream changes, agree on the request/response schema in [`API_CONTRACT.md`](API_CONTRACT.md) and OpenAPI first, then split implementation at that boundary.
+
+## Suggested integration milestones
+
+1. **Foundation:** A completes login/authorization; B completes public catalog. The whole team can query products and access one protected endpoint with a real account.
+2. **Purchase:** B completes cart; C completes checkout and simulated payment. A customer can place and view an order.
+3. **Fulfillment:** D packs and delivers that order; COD is marked paid only after collection.
+4. **After-sales:** E handles return/refund/ticket and shows reports from committed records.
+
+Members may build screens against typed mock data while a backend endpoint is being developed, but mocks must be replaced and an integration test added before the feature PR is merged. Do not claim a mock page is integrated.
 
 ## Definition of done for every feature PR
 
@@ -46,4 +55,4 @@ Members may start frontend screens with typed mock data while a backend endpoint
 5. Connect the frontend to the real API, including loading, empty and error states.
 6. Run backend tests and frontend lint/build/tests. Open a feature-branch PR into `develop`, request one teammate review, wait for CI, then merge.
 
-For QR, display "Simulated payment — no real money is transferred". Do not integrate a gateway or store real card/bank secrets.
+For QR, display “Simulated payment — no real money is transferred”. Do not integrate a gateway or store real card/bank secrets.
