@@ -18,6 +18,7 @@ import java.util.HexFormat;
 import java.util.List;
 import java.util.Locale;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.mail.SimpleMailMessage;
@@ -32,11 +33,17 @@ public class AuthService {
     private final JdbcTemplate jdbc;
     private final PasswordEncoder passwords;
     private final JavaMailSender mail;
+    private final String mailFrom;
+    private final String frontendBaseUrl;
 
-    public AuthService(JdbcTemplate jdbc, PasswordEncoder passwords, JavaMailSender mail) {
+    public AuthService(JdbcTemplate jdbc, PasswordEncoder passwords, JavaMailSender mail,
+                       @Value("${app.mail-from}") String mailFrom,
+                       @Value("${app.frontend-base-url}") String frontendBaseUrl) {
         this.jdbc = jdbc;
         this.passwords = passwords;
         this.mail = mail;
+        this.mailFrom = mailFrom;
+        this.frontendBaseUrl = frontendBaseUrl.replaceAll("/+$", "");
     }
 
     @Transactional
@@ -54,11 +61,11 @@ public class AuthService {
                     VALUES (?, ?, 'EMAIL_VERIFICATION', ?)
                     """, userId, hash(token), Timestamp.from(Instant.now().plus(24, ChronoUnit.HOURS)));
             SimpleMailMessage message = new SimpleMailMessage();
-            message.setFrom("no-reply@online-shop.local");
+            message.setFrom(mailFrom);
             message.setTo(email);
             message.setSubject("Verify your Online Shop System account");
-            message.setText("Open this local verification link within 24 hours:\n"
-                    + "http://localhost:5173/verify-email?token=" + token);
+            message.setText("Open this verification link within 24 hours:\n"
+                    + frontendBaseUrl + "/verify-email?token=" + token);
             mail.send(message);
             return new RegisterResponse(userId, true);
         } catch (DataIntegrityViolationException exception) {

@@ -26,7 +26,7 @@ export default function AuthPage() {
     try {
       if (mode === 'register') {
         await registerAccount({ fullName, email, password })
-        setNotice('Account created. Open MailHog at localhost:8025 and use the verification link before signing in.')
+        setNotice('Account created. Check your email and open the verification link before signing in.')
         setMode('login')
         setPassword('')
       } else {

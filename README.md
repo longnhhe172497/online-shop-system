@@ -56,6 +56,8 @@ npm run dev
 - Swagger UI: http://localhost:8080/swagger-ui/index.html
 - MailHog: http://localhost:8025
 
+To send real verification email from your own mailbox, follow [`docs/SMTP_SETUP.md`](docs/SMTP_SETUP.md). MailHog remains the safe default for local development.
+
 ## Git workflow
 
 - `main`: stable demonstration branch
@@ -64,4 +66,3 @@ npm run dev
 - `fix/<issue-number>-<short-name>`: bug fixes
 
 All changes enter `develop` through pull requests. Do not commit secrets or push directly to `main`.
-
