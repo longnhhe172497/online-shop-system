@@ -2,6 +2,7 @@ package com.osmshop.auth;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.doThrow;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -18,6 +19,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.mail.SimpleMailMessage;
+import org.springframework.mail.MailSendException;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -78,5 +80,17 @@ class AuthFlowTests {
     void unauthenticatedRequestIsRejected() throws Exception {
         mvc.perform(get("/api/me")).andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value("UNAUTHENTICATED"));
+    }
+
+    @Test
+    void mailFailureReturnsDeliveryErrorInsteadOfAuthenticationError() throws Exception {
+        doThrow(new MailSendException("SMTP unavailable"))
+                .when(mail).send(any(SimpleMailMessage.class));
+        String email = "mail-failure-" + UUID.randomUUID() + "@example.com";
+        mvc.perform(post("/api/auth/register").contentType(MediaType.APPLICATION_JSON)
+                .content(json.writeValueAsString(new AuthDtos.RegisterRequest(
+                        "Test Customer", email, "StrongPass123", null))))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.code").value("EMAIL_DELIVERY_FAILED"));
     }
 }

@@ -1,6 +1,7 @@
 package com.osmshop.config;
 
 import com.osmshop.auth.BearerAuthenticationFilter;
+import jakarta.servlet.DispatcherType;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
@@ -40,6 +41,7 @@ public class SecurityConfig {
                         .accessDeniedHandler((request, response, exception) ->
                                 writeProblem(response, 403, "FORBIDDEN", "Access denied")))
                 .authorizeHttpRequests(auth -> auth
+                        .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
                         .requestMatchers("/api/health", "/actuator/health", "/v3/api-docs/**", "/swagger-ui/**")
                         .permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/auth/register", "/api/auth/verify", "/api/auth/login")
