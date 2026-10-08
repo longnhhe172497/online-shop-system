@@ -1,8 +1,8 @@
 openapi: 3.0.3
 info:
   title: Online Shop System API
-  version: 0.1.0
-  description: Implemented public endpoints in the API foundation. Planned endpoints are listed separately in docs/API_CONTRACT.md.
+  version: 0.2.0
+  description: Implemented API foundation and authentication endpoints. Planned endpoints are listed separately in docs/API_CONTRACT.md.
 servers:
   - url: http://localhost:8080/api
 paths:
@@ -12,6 +12,70 @@ paths:
       responses:
         '200':
           description: Backend is running
+  /auth/register:
+    post:
+      summary: Register a Customer account and send a verification email to local MailHog
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RegisterRequest' }
+      responses:
+        '201':
+          description: Account created, awaiting email verification
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RegisterResponse' }
+        '400': { description: Validation failed }
+        '409': { description: Email already registered }
+  /auth/verify:
+    post:
+      summary: Consume a single-use email verification token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/VerifyRequest' }
+      responses:
+        '200':
+          description: Email verified
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/VerifyResponse' }
+        '400': { description: Invalid, expired, or used token }
+  /auth/login:
+    post:
+      summary: Exchange credentials for a 24-hour opaque bearer token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LoginRequest' }
+      responses:
+        '200':
+          description: Signed in
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/LoginResponse' }
+        '401': { description: Wrong credentials or inactive account }
+  /auth/logout:
+    post:
+      summary: Revoke the current bearer token
+      security: [{ bearerAuth: [] }]
+      responses:
+        '204': { description: Signed out }
+        '401': { description: Missing or invalid token }
+  /me:
+    get:
+      summary: Return the authenticated user's public profile
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Current user
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthUser' }
+        '401': { description: Missing, expired, or revoked token }
   /products:
     get:
       summary: List active products in active categories
@@ -36,7 +100,57 @@ paths:
               schema:
                 $ref: '#/components/schemas/Problem'
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: Opaque 24-hour token issued by /auth/login
   schemas:
+    RegisterRequest:
+      type: object
+      required: [fullName, email, password]
+      properties:
+        fullName: { type: string, maxLength: 150 }
+        email: { type: string, format: email, maxLength: 255 }
+        password: { type: string, format: password, minLength: 8, maxLength: 72 }
+        phone: { type: string, maxLength: 30 }
+    RegisterResponse:
+      type: object
+      required: [userId, verificationRequired]
+      properties:
+        userId: { type: integer, format: int64 }
+        verificationRequired: { type: boolean }
+    VerifyRequest:
+      type: object
+      required: [token]
+      properties:
+        token: { type: string }
+    VerifyResponse:
+      type: object
+      required: [verified]
+      properties:
+        verified: { type: boolean }
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email: { type: string, format: email }
+        password: { type: string, format: password }
+    AuthUser:
+      type: object
+      required: [id, email, fullName, role]
+      properties:
+        id: { type: integer, format: int64 }
+        email: { type: string, format: email }
+        fullName: { type: string }
+        role: { type: string, enum: [CUSTOMER, ADMIN, MANAGER, SUPPORT, WAREHOUSE, DELIVERY] }
+    LoginResponse:
+      type: object
+      required: [accessToken, expiresAt, user]
+      properties:
+        accessToken: { type: string, description: Returned only at login; store securely on the client }
+        expiresAt: { type: string, format: date-time }
+        user: { $ref: '#/components/schemas/AuthUser' }
     Product:
       type: object
       required: [id, sku, name, price, categoryName, availableQuantity]
