@@ -11,6 +11,7 @@ export async function registerAccount(input: {
   fullName: string
   email: string
   password: string
+  confirmPassword: string
   phone?: string
 }) {
   const { data } = await api.post<{ userId: number; verificationRequired: boolean }>('/auth/register', input)

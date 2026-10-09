@@ -48,6 +48,10 @@ public class AuthService {
 
     @Transactional
     public RegisterResponse register(RegisterRequest request) {
+        if (!request.password().equals(request.confirmPassword())) {
+            throw new AuthApiException(HttpStatus.BAD_REQUEST, "PASSWORD_MISMATCH",
+                    "Passwords do not match");
+        }
         String email = request.email().trim().toLowerCase(Locale.ROOT);
         try {
             Long userId = jdbc.queryForObject("""
