@@ -29,9 +29,9 @@ This is the **agreed route inventory for implementation**, not a claim that ever
 | `POST /auth/logout` | C/M/S/W/D/A | authenticated request → `204` |
 | `POST /auth/password-reset/request` | P | `{email}` → `202` regardless of whether account exists; active accounts receive a 30-minute single-use link, at most one email per five minutes |
 | `POST /auth/password-reset/confirm` | P | `{token,newPassword,confirmPassword}` → `{reset:true}`; consumes link and revokes existing sessions |
-| `GET /me`, `PATCH /me` | authenticated | profile read/update → profile without password hash |
-| `GET/POST /me/addresses` | C | none / address fields → own addresses / created address |
-| `PATCH/DELETE /me/addresses/{id}` | C | address fields / none → updated address / `204` |
+| `GET /me`, `PATCH /me` | authenticated | read profile / `{fullName,phone}` → profile without password hash; email and role stay read-only |
+| `GET/POST /me/addresses` | C | none / `{recipientName,phone,addressLine,ward,district,province,isDefault}` → own addresses / created address; first address becomes default, max from `max_saved_addresses` setting |
+| `PATCH/DELETE /me/addresses/{id}` | C | complete address fields / none → updated address / `204`; owner check uses bearer user ID, deleting default promotes oldest remaining address |
 | `GET /cart` | C or guest session | none → cart items and current totals |
 | `POST /cart/items` | C or guest session | `{productId,quantity}` → cart; revalidate product and quantity |
 | `PATCH/DELETE /cart/items/{id}` | C or guest session | `{quantity}` / none → cart / `204` |

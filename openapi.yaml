@@ -101,8 +101,82 @@ paths:
           description: Current user
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/AuthUser' }
+              schema: { $ref: '#/components/schemas/Profile' }
         '401': { description: Missing, expired, or revoked token }
+    patch:
+      summary: Update own full name and phone (email and role are read-only)
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ProfileUpdateRequest' }
+      responses:
+        '200':
+          description: Updated profile
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Profile' }
+        '400': { description: Validation failed }
+        '401': { description: Missing or invalid token }
+  /me/addresses:
+    get:
+      summary: List current Customer's saved addresses, default first
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Own addresses
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Address' }
+        '403': { description: Authenticated role is not Customer }
+    post:
+      summary: Save an address for the current Customer (maximum from system settings)
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AddressRequest' }
+      responses:
+        '201':
+          description: Saved address
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Address' }
+        '403': { description: Authenticated role is not Customer }
+        '409': { description: Saved address limit reached }
+  /me/addresses/{id}:
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema: { type: integer, format: int64 }
+    patch:
+      summary: Update an address owned by the current Customer
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AddressRequest' }
+      responses:
+        '200':
+          description: Updated address
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Address' }
+        '403': { description: Authenticated role is not Customer }
+        '404': { description: Address is not owned by current Customer }
+    delete:
+      summary: Delete an owned address; another saved address becomes default if necessary
+      security: [{ bearerAuth: [] }]
+      responses:
+        '204': { description: Address deleted }
+        '403': { description: Authenticated role is not Customer }
+        '404': { description: Address is not owned by current Customer }
   /products:
     get:
       summary: List active products in active categories
@@ -189,6 +263,39 @@ components:
         email: { type: string, format: email }
         fullName: { type: string }
         role: { type: string, enum: [CUSTOMER, ADMIN, MANAGER, SUPPORT, WAREHOUSE, DELIVERY] }
+    Profile:
+      type: object
+      required: [id, email, fullName, role]
+      properties:
+        id: { type: integer, format: int64 }
+        email: { type: string, format: email }
+        fullName: { type: string }
+        phone: { type: string, nullable: true }
+        role: { type: string, enum: [CUSTOMER, ADMIN, MANAGER, SUPPORT, WAREHOUSE, DELIVERY] }
+    ProfileUpdateRequest:
+      type: object
+      required: [fullName]
+      properties:
+        fullName: { type: string, minLength: 1, maxLength: 150 }
+        phone: { type: string, nullable: true, maxLength: 30 }
+    AddressRequest:
+      type: object
+      required: [recipientName, phone, addressLine, province]
+      properties:
+        recipientName: { type: string, minLength: 1, maxLength: 150 }
+        phone: { type: string, minLength: 1, maxLength: 30 }
+        addressLine: { type: string, minLength: 1, maxLength: 300 }
+        ward: { type: string, nullable: true, maxLength: 120 }
+        district: { type: string, nullable: true, maxLength: 120 }
+        province: { type: string, minLength: 1, maxLength: 120 }
+        isDefault: { type: boolean, default: false }
+    Address:
+      allOf:
+        - { $ref: '#/components/schemas/AddressRequest' }
+        - type: object
+          required: [id, isDefault]
+          properties:
+            id: { type: integer, format: int64 }
     LoginResponse:
       type: object
       required: [accessToken, expiresAt, user]

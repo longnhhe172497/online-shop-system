@@ -7,13 +7,11 @@ import com.osmshop.auth.AuthDtos.PasswordResetConfirmRequest;
 import com.osmshop.auth.AuthDtos.PasswordResetConfirmResponse;
 import com.osmshop.auth.AuthDtos.RegisterRequest;
 import com.osmshop.auth.AuthDtos.RegisterResponse;
-import com.osmshop.auth.AuthDtos.UserResponse;
 import com.osmshop.auth.AuthDtos.VerifyRequest;
 import com.osmshop.auth.AuthDtos.VerifyResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -63,13 +61,5 @@ public class AuthController {
     public void logout(@AuthenticationPrincipal AuthPrincipal user,
                        @RequestHeader("Authorization") String authorization) {
         auth.logout(user.id(), authorization.substring(7).trim());
-    }
-}
-
-@RestController
-class MeController {
-    @GetMapping("/api/me")
-    public UserResponse me(@AuthenticationPrincipal AuthPrincipal user) {
-        return new UserResponse(user.id(), user.email(), user.fullName(), user.role());
     }
 }

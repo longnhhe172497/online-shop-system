@@ -6,6 +6,7 @@ import { hasAccessToken } from './api/client'
 import AuthPage from './AuthPage'
 import VerifyPage from './VerifyPage'
 import PasswordResetPage from './PasswordResetPage'
+import ProfilePage from './ProfilePage'
 import './App.css'
 
 function ProductsPage() {
@@ -28,7 +29,8 @@ function ProductsPage() {
 
   return <main className="app-shell"><section className="status-card">
     <div className="shop-topline"><p className="eyebrow">Online Shop System</p>
-      {user ? <button onClick={signOut}>Sign out {user.fullName}</button> : <Link to="/auth">Sign in</Link>}
+      {user ? <div className="shop-account"><Link to="/me">My profile</Link>
+        <button onClick={signOut}>Sign out {user.fullName}</button></div> : <Link to="/auth">Sign in</Link>}
     </div>
     <h1>Products</h1>
     {status === 'loading' && <p>Loading products…</p>}
@@ -48,5 +50,6 @@ export default function App() {
     <Route path="/verify-email" element={<VerifyPage />} />
     <Route path="/forgot-password" element={<PasswordResetPage />} />
     <Route path="/reset-password" element={<PasswordResetPage />} />
+    <Route path="/me" element={<ProfilePage />} />
   </Routes>
 }
