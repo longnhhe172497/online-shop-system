@@ -168,4 +168,13 @@ class AuthFlowTests {
                 .andExpect(status().isAccepted());
         verify(mail, never()).send(any(SimpleMailMessage.class));
     }
+
+    @Test
+    void forgedResetTokenIsRejected() throws Exception {
+        mvc.perform(post("/api/auth/password-reset/confirm").contentType(MediaType.APPLICATION_JSON)
+                .content(json.writeValueAsString(new AuthDtos.PasswordResetConfirmRequest(
+                        "not-a-real-token", "NewPassword123", "NewPassword123"))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("INVALID_RESET_TOKEN"));
+    }
 }
