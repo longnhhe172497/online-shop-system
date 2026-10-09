@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { login, registerAccount } from './api/auth'
 import { getUiError } from './uiError'
+import { isInternalRole } from './internalAccess'
 
 export default function AuthPage() {
   const [mode, setMode] = useState<'login' | 'register'>('login')
@@ -31,8 +32,8 @@ export default function AuthPage() {
         setPassword('')
         setConfirmPassword('')
       } else {
-        await login({ email, password })
-        navigate('/')
+        const session = await login({ email, password })
+        navigate(isInternalRole(session.user.role) ? '/internal' : '/')
       }
     } catch (failure) {
       setError(getUiError(failure))

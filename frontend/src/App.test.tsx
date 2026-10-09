@@ -139,7 +139,7 @@ describe('App', () => {
   it('hides admin controls from a customer', async () => {
     vi.mocked(getProfile).mockResolvedValue({ id: 1, email: 'customer@example.com',
       fullName: 'Khách hàng', phone: null, role: 'CUSTOMER' })
-    renderAt('/admin')
+    renderAt('/internal')
     expect(await screen.findByText('Không có quyền truy cập')).toBeInTheDocument()
     expect(listUsers).not.toHaveBeenCalled()
   })
@@ -150,16 +150,39 @@ describe('App', () => {
     vi.mocked(listUsers).mockResolvedValue({ items: [], page: 0, size: 20, totalItems: 0, totalPages: 0 })
     vi.mocked(listSettings).mockResolvedValue([])
     vi.mocked(listAudit).mockResolvedValue({ items: [], page: 0, size: 20, totalItems: 0, totalPages: 0 })
-    renderAt('/admin')
+    renderAt('/internal')
     expect(await screen.findByRole('heading', { name: 'Tổng quan' })).toBeInTheDocument()
     expect(screen.getByText('BẢN XEM TRƯỚC')).toBeInTheDocument()
     expect(listUsers).not.toHaveBeenCalled()
-    fireEvent.click(within(screen.getByRole('navigation', { name: 'Mục quản trị' }))
+    fireEvent.click(within(screen.getByRole('navigation', { name: 'Điều hướng nội bộ' }))
       .getByRole('button', { name: 'Tài khoản' }))
     expect(await screen.findByText('Danh sách tài khoản')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Thiết lập' }))
     expect(await screen.findByRole('heading', { name: 'Thiết lập hệ thống', level: 1 })).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Nhật ký' }))
     expect(await screen.findByRole('heading', { name: 'Nhật ký thao tác', level: 1 })).toBeInTheDocument()
+  })
+
+  it('lets staff open the internal workspace without showing Admin-only tools', async () => {
+    vi.mocked(getProfile).mockResolvedValue({ id: 3, email: 'warehouse@example.com',
+      fullName: 'Nhân viên kho', phone: null, role: 'WAREHOUSE' })
+    renderAt('/internal')
+    expect(await screen.findByRole('heading', { name: 'Tổng quan' })).toBeInTheDocument()
+    expect(screen.getAllByText('Nhân viên kho').length).toBeGreaterThan(0)
+    expect(screen.queryByRole('button', { name: 'Tài khoản' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Thiết lập' })).not.toBeInTheDocument()
+    expect(listUsers).not.toHaveBeenCalled()
+  })
+
+  it('sends internal staff to the internal workspace after login', async () => {
+    vi.mocked(login).mockResolvedValue({ accessToken: 'token', expiresAt: '2026-10-10T00:00:00Z',
+      user: { id: 4, email: 'support@example.com', fullName: 'Nhân viên hỗ trợ', role: 'SUPPORT' } })
+    vi.mocked(getProfile).mockResolvedValue({ id: 4, email: 'support@example.com',
+      fullName: 'Nhân viên hỗ trợ', phone: null, role: 'SUPPORT' })
+    renderAt('/auth')
+    fireEvent.change(screen.getByLabelText('ĐỊA CHỈ EMAIL'), { target: { value: 'support@example.com' } })
+    fireEvent.change(screen.getByLabelText('MẬT KHẨU'), { target: { value: 'Password123' } })
+    fireEvent.click(screen.getByRole('button', { name: 'ĐĂNG NHẬP' }))
+    expect(await screen.findByRole('heading', { name: 'Tổng quan' })).toBeInTheDocument()
   })
 })

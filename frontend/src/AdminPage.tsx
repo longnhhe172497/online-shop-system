@@ -5,6 +5,7 @@ import { changeRole, changeSetting, changeStatus, createUser, listAudit, listSet
   updateUser, type AuditLog, type ManagedUser, type Setting } from './api/admin'
 import { getUiError } from './uiError'
 import InternalLayout, { type InternalNavItem } from './InternalLayout'
+import { internalRoleNames, isInternalRole } from './internalAccess'
 
 const roles: Record<string, string> = { CUSTOMER: 'Khách hàng', ADMIN: 'Quản trị viên',
   MANAGER: 'Quản lý', SUPPORT: 'Hỗ trợ', WAREHOUSE: 'Nhân viên kho', DELIVERY: 'Giao hàng' }
@@ -37,7 +38,8 @@ type Editor = { id?: number; email: string; fullName: string; phone: string; pas
 const emptyEditor: Editor = { email: '', fullName: '', phone: '', password: '', role: 'SUPPORT' }
 
 export default function AdminPage() {
-  const [authorized, setAuthorized] = useState<boolean | null>(null)
+  const [role, setRole] = useState<string | null>(null)
+  const [accessChecked, setAccessChecked] = useState(false)
   const [tab, setTab] = useState<Tab>('dashboard')
   const [users, setUsers] = useState<ManagedUser[]>([])
   const [total, setTotal] = useState(0)
@@ -55,10 +57,10 @@ export default function AdminPage() {
   const [busy, setBusy] = useState(false)
 
   useEffect(() => { let active = true; getProfile().then((me) => {
-    if (active) setAuthorized(me.role === 'ADMIN')
-  }).catch(() => { if (active) setAuthorized(false) }); return () => { active = false } }, [])
+    if (active) { setRole(isInternalRole(me.role) ? me.role : null); setAccessChecked(true) }
+  }).catch(() => { if (active) setAccessChecked(true) }); return () => { active = false } }, [])
   useEffect(() => {
-    if (!authorized) return
+    if (role !== 'ADMIN') return
     let active = true
     if (tab === 'users') listUsers({ search, role: roleFilter, status: statusFilter, page })
       .then((data) => { if (active) { setUsers(data.items); setTotal(data.totalItems) } })
@@ -69,7 +71,7 @@ export default function AdminPage() {
       if (active) { setAudit(data.items); setAuditTotal(data.totalItems) }
     }).catch((failure) => { if (active) setError(getUiError(failure)) })
     return () => { active = false }
-  }, [authorized, tab, search, roleFilter, statusFilter, page, auditPage])
+  }, [role, tab, search, roleFilter, statusFilter, page, auditPage])
 
   async function reloadUsers() {
     const data = await listUsers({ search, role: roleFilter, status: statusFilter, page })
@@ -101,16 +103,17 @@ export default function AdminPage() {
   }
 
   return <>
-      {authorized === null && <div className="internal-access"><p>Đang kiểm tra quyền truy cập…</p></div>}
-      {authorized === false && <div className="internal-access"><div className="admin-panel">
-        <h2>Không có quyền truy cập</h2><p>Chỉ quản trị viên được xem trang này.</p>
+      {!accessChecked && <div className="internal-access"><p>Đang kiểm tra quyền truy cập…</p></div>}
+      {accessChecked && !role && <div className="internal-access"><div className="admin-panel">
+        <h2>Không có quyền truy cập</h2><p>Chỉ nhân viên nội bộ được xem trang này.</p>
         <Link to="/">Về cửa hàng</Link></div></div>}
-      {authorized && <InternalLayout items={navigation} active={tab} onNavigate={(next) => {
+      {role && <InternalLayout items={role === 'ADMIN' ? navigation : navigation.slice(0, 1)}
+        active={tab} roleName={internalRoleNames[role] ?? 'Nhân viên'} onNavigate={(next) => {
         setTab(next); setError(''); setNotice('') }} title={pageTitles[tab]} subtitle={pageDescriptions[tab]}>
       {error && <p className="auth-error" role="alert">{error}</p>}
       {notice && <p className="auth-notice" role="status">{notice}</p>}
-      {tab === 'dashboard' && <Dashboard onNavigate={setTab} />}
-      {tab === 'users' && <section className="admin-panel"><div className="admin-section-head"><div>
+      {tab === 'dashboard' && <Dashboard isAdmin={role === 'ADMIN'} roleName={internalRoleNames[role] ?? 'Nhân viên'} onNavigate={setTab} />}
+      {role === 'ADMIN' && tab === 'users' && <section className="admin-panel"><div className="admin-section-head"><div>
         <h2>Danh sách tài khoản</h2><p>{total} tài khoản</p></div>
         <button className="account-primary" onClick={() => setEditor(emptyEditor)}>＋ Tạo tài khoản</button></div>
         <div className="admin-filters"><input aria-label="Tìm tài khoản" placeholder="Tìm tên hoặc email…"
@@ -138,11 +141,11 @@ export default function AdminPage() {
         <div className="admin-pagination"><button disabled={page === 0} onClick={() => setPage(page - 1)}>← Trước</button>
           <span>Trang {page + 1} / {Math.max(1, Math.ceil(total / 20))}</span>
           <button disabled={(page + 1) * 20 >= total} onClick={() => setPage(page + 1)}>Sau →</button></div></section>}
-      {tab === 'settings' && <section className="admin-panel"><h2>Thiết lập hệ thống</h2>
+      {role === 'ADMIN' && tab === 'settings' && <section className="admin-panel"><h2>Thiết lập hệ thống</h2>
         <p>Giá trị được kiểm tra giới hạn trước khi lưu.</p><div className="settings-list">
           {settings.map((setting) => <SettingRow key={`${setting.key}:${setting.value}`} setting={setting} busy={busy}
             onSave={(value) => void saveSetting(setting, value)} />)}</div></section>}
-      {tab === 'audit' && <section className="admin-panel"><h2>Nhật ký thao tác</h2>
+      {role === 'ADMIN' && tab === 'audit' && <section className="admin-panel"><h2>Nhật ký thao tác</h2>
         <div className="admin-table-wrap"><table className="address-table admin-table"><thead><tr>
           <th>THỜI GIAN</th><th>NGƯỜI THỰC HIỆN</th><th>HÀNH ĐỘNG</th><th>ĐỐI TƯỢNG</th></tr></thead><tbody>
           {audit.map((item) => <tr key={item.id}><td>{new Date(item.createdAt).toLocaleString('vi-VN')}</td>
@@ -174,12 +177,13 @@ export default function AdminPage() {
   </>
 }
 
-function Dashboard({ onNavigate }: { onNavigate: (tab: Tab) => void }) {
+function Dashboard({ isAdmin, roleName, onNavigate }: { isAdmin: boolean; roleName: string;
+  onNavigate: (tab: Tab) => void }) {
   return <div className="internal-dashboard">
     <div className="dashboard-intro"><div><span className="dashboard-tag">BẢN XEM TRƯỚC</span>
-      <h2>Chào mừng đến với khu quản trị</h2>
+      <h2>Chào mừng đến với khu nội bộ</h2>
       <p>Đây là bố cục tổng quan tĩnh. Các chỉ số sẽ lấy dữ liệu thật khi những phần đơn hàng, kho và báo cáo được triển khai.</p></div>
-      <button type="button" className="account-primary" onClick={() => onNavigate('users')}>Quản lý tài khoản →</button></div>
+      {isAdmin && <button type="button" className="account-primary" onClick={() => onNavigate('users')}>Quản lý tài khoản →</button>}</div>
     <div className="dashboard-metrics" aria-label="Chỉ số dự kiến">
       {[['Tài khoản', 'Sẽ cập nhật', 'Thông tin người dùng'],
         ['Đơn hàng', 'Sẽ cập nhật', 'Tình trạng xử lý'],
@@ -190,17 +194,21 @@ function Dashboard({ onNavigate }: { onNavigate: (tab: Tab) => void }) {
     </div>
     <div className="dashboard-panels"><section className="dashboard-panel"><div className="dashboard-panel-head">
       <div><p className="card-eyebrow">THEO DÕI HOẠT ĐỘNG</p><h3>Hoạt động gần đây</h3></div>
-      <button type="button" onClick={() => onNavigate('audit')}>Xem nhật ký →</button></div>
+      {isAdmin && <button type="button" onClick={() => onNavigate('audit')}>Xem nhật ký →</button>}</div>
       <div className="dashboard-placeholder"><span aria-hidden="true">◷</span>
         <strong>Chưa có dữ liệu tổng quan</strong><p>Nhật ký và các sự kiện mới sẽ xuất hiện tại đây sau khi kết nối dashboard.</p></div>
     </section><section className="dashboard-panel"><div className="dashboard-panel-head">
-      <div><p className="card-eyebrow">TRUY CẬP NHANH</p><h3>Công cụ quản trị</h3></div></div>
+      <div><p className="card-eyebrow">KHÔNG GIAN LÀM VIỆC</p><h3>{isAdmin ? 'Công cụ quản trị' : 'Công việc của bạn'}</h3></div></div>
+      {!isAdmin && <div className="dashboard-placeholder"><strong>{roleName}</strong>
+        <p>Các chức năng nghiệp vụ dành cho vai trò này sẽ được bổ sung khi nhóm triển khai phần tương ứng.</p></div>}
+      {isAdmin && <>
       <button type="button" className="dashboard-quick-link" onClick={() => onNavigate('users')}>
         <span>01</span><div><strong>Tài khoản</strong><small>Thêm, sửa vai trò và trạng thái</small></div><b>→</b></button>
       <button type="button" className="dashboard-quick-link" onClick={() => onNavigate('settings')}>
         <span>02</span><div><strong>Thiết lập</strong><small>Điều chỉnh giới hạn hệ thống</small></div><b>→</b></button>
       <button type="button" className="dashboard-quick-link" onClick={() => onNavigate('audit')}>
         <span>03</span><div><strong>Nhật ký</strong><small>Xem lịch sử thao tác quản trị</small></div><b>→</b></button>
+      </>}
     </section></div>
   </div>
 }

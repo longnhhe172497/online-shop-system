@@ -23,15 +23,16 @@ function NavIcon({ name }: { name: InternalIconName }) {
 }
 
 export default function InternalLayout<T extends string>({ items, active, onNavigate, title, subtitle,
-  children }: { items: InternalNavItem<T>[]; active: T; onNavigate: (id: T) => void;
+  roleName, children }: { items: InternalNavItem<T>[]; active: T; onNavigate: (id: T) => void;
+  roleName: string;
   title: string; subtitle: string; children: ReactNode }) {
   return <div className="internal-shell">
     <aside className="internal-sidebar" aria-label="Điều hướng quản lý nội bộ">
       <div className="internal-sidebar-top"><Link to="/" className="internal-logo">FORME<span>QUẢN LÝ NỘI BỘ</span></Link>
         <div className="internal-workspace"><span className="internal-workspace-mark">F</span>
-          <div><strong>Không gian quản trị</strong><small>Hệ thống cửa hàng</small></div></div>
+          <div><strong>Không gian nội bộ</strong><small>{roleName}</small></div></div>
         <p className="internal-nav-caption">ĐIỀU HƯỚNG</p>
-        <nav className="internal-nav" aria-label="Mục quản trị">
+        <nav className="internal-nav" aria-label="Điều hướng nội bộ">
           {items.map((item) => <button key={item.id} type="button" className={active === item.id ? 'active' : ''}
             aria-current={active === item.id ? 'page' : undefined} onClick={() => onNavigate(item.id)}>
             <NavIcon name={item.icon} /><span>{item.label}</span></button>)}
@@ -41,8 +42,8 @@ export default function InternalLayout<T extends string>({ items, active, onNavi
         <Link to="/">← Về cửa hàng</Link></div>
     </aside>
     <div className="internal-content"><header className="internal-topbar"><div>
-      <span className="internal-topbar-kicker">KHÔNG GIAN QUẢN TRỊ</span><strong>{title}</strong></div>
-      <Link to="/me" className="internal-profile-link" aria-label="Mở hồ sơ cá nhân">QT</Link></header>
+      <span className="internal-topbar-kicker">KHÔNG GIAN NỘI BỘ · {roleName.toLocaleUpperCase('vi')}</span><strong>{title}</strong></div>
+      <Link to="/me" className="internal-profile-link" aria-label="Mở hồ sơ cá nhân">F</Link></header>
       <main className="internal-main"><div className="internal-page-heading"><p className="auth-kicker">QUẢN LÝ NỘI BỘ</p>
         <h1>{title}</h1><p>{subtitle}</p></div>{children}</main>
     </div>

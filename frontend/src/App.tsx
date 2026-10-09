@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, Route, Routes } from 'react-router-dom'
+import { Link, Navigate, Route, Routes } from 'react-router-dom'
 import { listProducts, type Product } from './api/products'
 import { getMe, logout, type AuthUser } from './api/auth'
 import { hasAccessToken } from './api/client'
@@ -8,6 +8,7 @@ import VerifyPage from './VerifyPage'
 import PasswordResetPage from './PasswordResetPage'
 import ProfilePage from './ProfilePage'
 import AdminPage from './AdminPage'
+import { isInternalRole } from './internalAccess'
 import './App.css'
 
 function ProductsPage() {
@@ -30,7 +31,7 @@ function ProductsPage() {
 
   return <main className="app-shell"><section className="status-card">
     <div className="shop-topline"><p className="eyebrow">FORME</p>
-      {user ? <div className="shop-account">{user.role === 'ADMIN' && <Link to="/admin">Quản trị</Link>}
+      {user ? <div className="shop-account">{isInternalRole(user.role) && <Link to="/internal">Quản lý nội bộ</Link>}
         <Link to="/me">Hồ sơ của tôi</Link>
         <button onClick={signOut}>Đăng xuất · {user.fullName}</button></div> : <Link to="/auth">Đăng nhập</Link>}
     </div>
@@ -53,6 +54,7 @@ export default function App() {
     <Route path="/forgot-password" element={<PasswordResetPage />} />
     <Route path="/reset-password" element={<PasswordResetPage />} />
     <Route path="/me" element={<ProfilePage />} />
-    <Route path="/admin" element={<AdminPage />} />
+    <Route path="/internal" element={<AdminPage />} />
+    <Route path="/admin" element={<Navigate to="/internal" replace />} />
   </Routes>
 }
