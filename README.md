@@ -58,6 +58,27 @@ npm run dev
 
 To send real verification email from your own mailbox, follow [`docs/SMTP_SETUP.md`](docs/SMTP_SETUP.md). MailHog remains the safe default for local development.
 
+## First Admin account (local only)
+
+1. Register your own account in the frontend and verify its email first.
+2. Open the local PostgreSQL console with `docker compose exec postgres psql -U online_shop -d online_shop` (adjust the user/database if you changed `.env`).
+3. Replace the example email and run this once:
+
+```sql
+WITH promoted AS (
+  UPDATE users SET role = 'ADMIN', updated_at = now()
+  WHERE email = 'your-verified-email@example.com'
+    AND status = 'ACTIVE' AND verified_at IS NOT NULL
+  RETURNING id
+)
+INSERT INTO audit_logs(actor_id, action, entity_type, entity_id, details)
+SELECT NULL, 'INITIAL_ADMIN_BOOTSTRAP', 'USER', id::text, '{}'::jsonb FROM promoted;
+```
+
+4. Sign out and sign in again, then open `http://localhost:5173/admin`.
+
+The command does not create a shared or hard-coded Admin password. It only promotes your already verified account in your local database. The Admin screen can then create staff accounts. Each teammate's local database needs its own initial Admin if they want to test Admin functions.
+
 ## Git workflow
 
 - `main`: stable demonstration branch
