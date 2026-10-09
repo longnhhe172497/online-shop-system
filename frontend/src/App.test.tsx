@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
@@ -101,11 +101,11 @@ describe('App', () => {
     vi.mocked(updateProfile).mockResolvedValue({ id: 1, email: 'test@example.com',
       fullName: 'Updated User', phone: '0901234567', role: 'CUSTOMER' })
     renderAt('/me')
-    expect(await screen.findByText('Email: test@example.com · Role: CUSTOMER')).toBeInTheDocument()
-    fireEvent.change(screen.getByLabelText('FULL NAME'), { target: { value: 'Updated User' } })
-    fireEvent.change(screen.getByLabelText('PHONE'), { target: { value: '0901234567' } })
-    fireEvent.click(screen.getByRole('button', { name: 'SAVE PROFILE' }))
-    expect(await screen.findByText('Profile updated.')).toBeInTheDocument()
+    expect(await screen.findByText('test@example.com')).toBeInTheDocument()
+    fireEvent.change(screen.getByLabelText('HỌ VÀ TÊN'), { target: { value: 'Updated User' } })
+    fireEvent.change(screen.getByLabelText('SỐ ĐIỆN THOẠI'), { target: { value: '0901234567' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Lưu thay đổi' }))
+    expect(await screen.findByText('Đã cập nhật hồ sơ cá nhân.')).toBeInTheDocument()
     expect(updateProfile).toHaveBeenCalledWith({ fullName: 'Updated User', phone: '0901234567' })
   })
 
@@ -118,15 +118,18 @@ describe('App', () => {
     vi.mocked(createAddress).mockResolvedValue({ id: 2, recipientName: 'Test User', phone: '0901234567',
       addressLine: '123 Main Street', ward: null, district: null, province: 'Hanoi', isDefault: true })
     renderAt('/me')
-    expect(await screen.findByText('No saved addresses yet.')).toBeInTheDocument()
-    fireEvent.change(screen.getByLabelText('RECIPIENT NAME'), { target: { value: 'Test User' } })
-    fireEvent.change(screen.getByLabelText('RECIPIENT PHONE'), { target: { value: '0901234567' } })
-    fireEvent.change(screen.getByLabelText('ADDRESS LINE'), { target: { value: '123 Main Street' } })
-    fireEvent.change(screen.getByLabelText('PROVINCE'), { target: { value: 'Hanoi' } })
-    fireEvent.click(screen.getByRole('button', { name: 'SAVE ADDRESS' }))
-    expect(await screen.findByText('Address saved.')).toBeInTheDocument()
+    expect(await screen.findByText('Chưa có địa chỉ giao hàng')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Thêm địa chỉ' }))
+    const dialog = screen.getByRole('dialog', { name: 'Thêm địa chỉ mới' })
+    fireEvent.change(within(dialog).getByLabelText('HỌ TÊN NGƯỜI NHẬN'), { target: { value: 'Test User' } })
+    fireEvent.change(within(dialog).getByLabelText('SỐ ĐIỆN THOẠI'), { target: { value: '0901234567' } })
+    fireEvent.change(within(dialog).getByLabelText('ĐỊA CHỈ CỤ THỂ'), { target: { value: '123 Main Street' } })
+    fireEvent.change(within(dialog).getByLabelText('TỈNH / THÀNH PHỐ'), { target: { value: 'Hanoi' } })
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Thêm địa chỉ' }))
+    expect(await screen.findByText('Đã lưu địa chỉ giao hàng.')).toBeInTheDocument()
     expect(createAddress).toHaveBeenCalledWith({ recipientName: 'Test User', phone: '0901234567',
       addressLine: '123 Main Street', ward: '', district: '', province: 'Hanoi', isDefault: false })
-    expect(screen.getByText('Test User · Default')).toBeInTheDocument()
+    expect(screen.getByRole('table')).toHaveTextContent('Test User')
+    expect(screen.getByText('Mặc định')).toBeInTheDocument()
   })
 })

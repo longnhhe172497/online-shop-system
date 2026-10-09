@@ -37,20 +37,70 @@
 .verify-card { max-width: 420px; width: 100%; }
 .verify-card .auth-submit { margin: 16px 0; }
 .verify-card a { color: #2438c5; }
-.profile-main { margin: 0 auto; max-width: 760px; min-height: 700px; padding: 72px 24px 96px; }
-.profile-main h1 { font-family: Georgia, 'Times New Roman', serif; font-size: clamp(42px, 7vw, 60px); letter-spacing: -.05em; margin: 0 0 32px; }
-.profile-panel { border-top: 1px solid #dedbd5; padding: 28px 0; }
-.profile-panel h2 { font-family: Georgia, serif; font-size: 28px; margin: 0 0 12px; }
-.profile-panel h3 { font-family: Georgia, serif; font-size: 23px; margin-top: 28px; }
-.profile-readonly { color: #68635f; font-size: 14px; }
-.profile-panel form { max-width: 420px; }
-.profile-panel form label { display: block; font-size: 11px; font-weight: 700; letter-spacing: .09em; margin: 16px 0; }
-.profile-panel form input:not([type='checkbox']) { background: #fff; border: 1px solid #d9d6d0; color: #1b1716; display: block; font-size: 16px; height: 46px; margin-top: 7px; padding: 8px 12px; width: 100%; }
-.profile-panel .default-check { align-items: center; display: flex; gap: 10px; }
-.profile-actions { display: flex; gap: 12px; }
-.profile-actions .auth-submit { max-width: 220px; }
-.address-list { list-style: none; padding: 0; }
-.address-list li { border-bottom: 1px solid #dedbd5; display: flex; flex-direction: column; gap: 5px; padding: 16px 0; }
-.address-list li div { display: flex; gap: 12px; margin-top: 7px; }
-.address-list button, .profile-actions button:not(.auth-submit) { background: none; border: 0; color: #2438c5; cursor: pointer; padding: 0; }
+.account-main { margin: 0 auto; max-width: 1320px; min-height: 700px; padding: 56px 32px 100px; }
+.account-heading { align-items: end; display: flex; gap: 24px; justify-content: space-between; margin-bottom: 32px; }
+.account-heading h1 { font-family: Georgia, 'Times New Roman', serif; font-size: clamp(36px, 4vw, 54px); letter-spacing: -.055em; line-height: 1.05; margin: 0 0 10px; }
+.account-heading p:last-child, .address-section-head p:last-child, .address-modal-head p:last-child { color: #77736e; font-size: 14px; margin: 0; }
+.account-back { color: #2438c5; flex-shrink: 0; font-size: 13px; font-weight: 700; padding-bottom: 5px; text-decoration: none; }
+.account-grid { align-items: start; display: grid; gap: 22px; grid-template-columns: minmax(290px, 340px) minmax(0, 1fr); }
+.account-card { background: #fff; border: 1px solid #e6e2dc; border-radius: 16px; box-shadow: 0 8px 30px rgba(31, 26, 20, .035); padding: 28px; }
+.personal-intro { align-items: center; display: flex; gap: 15px; padding-bottom: 24px; }
+.account-avatar { align-items: center; background: #e9ecff; border-radius: 50%; color: #2438c5; display: flex; flex: 0 0 54px; font-family: Georgia, serif; font-size: 27px; font-weight: 700; height: 54px; justify-content: center; }
+.card-eyebrow { color: #77736e; font-size: 10px; font-weight: 800; letter-spacing: .14em; margin: 0 0 7px; }
+.account-card h2 { font-family: Georgia, serif; font-size: 25px; letter-spacing: -.03em; line-height: 1.1; margin: 0 0 9px; }
+.role-pill { background: #f0f2ff; border-radius: 20px; color: #2438c5; display: inline-block; font-size: 11px; font-weight: 700; padding: 5px 9px; }
+.account-readonly { background: #faf9f6; border: 1px solid #eeebe6; border-radius: 10px; display: flex; flex-direction: column; gap: 5px; margin-bottom: 24px; padding: 14px; }
+.account-readonly span, .account-readonly small { color: #77736e; font-size: 11px; }
+.account-readonly strong { font-size: 13px; overflow-wrap: anywhere; }
+.account-form label, .address-form-grid label { color: #34302d; display: block; font-size: 11px; font-weight: 800; letter-spacing: .07em; }
+.account-form label { margin-bottom: 18px; }
+.account-form input, .address-form-grid input { background: #fff; border: 1px solid #dcd8d2; border-radius: 8px; color: #1b1716; display: block; font-size: 14px; font-weight: 400; height: 44px; letter-spacing: 0; margin-top: 8px; padding: 9px 12px; width: 100%; }
+.account-form input:focus, .address-form-grid input:focus { border-color: #2438c5; outline: 2px solid #dce2ff; }
+.account-primary { background: #2438c5; border: 1px solid #2438c5; border-radius: 8px; color: #fff; cursor: pointer; font-size: 12px; font-weight: 800; min-height: 44px; padding: 0 18px; }
+.account-primary:hover { background: #1b2da9; }
+.account-primary:disabled, .account-secondary:disabled { cursor: wait; opacity: .55; }
+.account-form .account-primary { width: 100%; }
+.addresses-card { min-height: 390px; padding: 0; }
+.address-section-head { align-items: center; display: flex; gap: 20px; justify-content: space-between; padding: 27px 28px 25px; }
+.address-section-head h2 { font-size: 29px; }
+.add-address { flex-shrink: 0; }
+.add-address span { font-size: 19px; font-weight: 400; margin-right: 4px; vertical-align: -1px; }
+.address-table-wrap { overflow-x: auto; }
+.address-table { border-collapse: collapse; text-align: left; width: 100%; }
+.address-table th { background: #faf9f6; border-bottom: 1px solid #eeeae4; border-top: 1px solid #eeeae4; color: #77736e; font-size: 10px; font-weight: 800; letter-spacing: .1em; padding: 14px 18px; white-space: nowrap; }
+.address-table td { border-bottom: 1px solid #eeeae4; font-size: 13px; line-height: 1.5; padding: 20px 18px; vertical-align: middle; }
+.address-table tbody tr:last-child td { border-bottom: 0; }
+.address-table td:first-child { min-width: 145px; padding-left: 28px; }
+.address-table td:first-child strong, .address-table td:first-child span { display: block; }
+.address-table td:first-child span { color: #77736e; margin-top: 4px; }
+.address-location { color: #5f5b57; min-width: 230px; overflow-wrap: anywhere; }
+.default-badge, .secondary-badge { border-radius: 5px; display: inline-block; font-size: 11px; font-weight: 700; padding: 6px 9px; white-space: nowrap; }
+.default-badge { background: #eaf5ed; color: #247245; }
+.secondary-badge { background: #f2f1ef; color: #77736e; }
+.address-row-actions { display: flex; gap: 14px; white-space: nowrap; }
+.address-row-actions button { background: none; border: 0; color: #2438c5; cursor: pointer; font-size: 12px; font-weight: 700; padding: 3px 0; }
+.address-row-actions button:last-child { color: #b74b57; }
+.address-row-actions button:disabled { cursor: wait; opacity: .5; }
+.address-empty { align-items: center; border-top: 1px solid #eeeae4; color: #77736e; display: flex; flex-direction: column; padding: 55px 24px 65px; text-align: center; }
+.address-empty div { align-items: center; background: #f1f2fb; border-radius: 50%; color: #2438c5; display: flex; font-size: 38px; height: 64px; justify-content: center; margin-bottom: 16px; width: 64px; }
+.address-empty strong { color: #1b1716; font-size: 16px; }
+.address-empty p { font-size: 13px; margin: 7px 0 16px; }
+.address-empty button { background: none; border: 0; color: #2438c5; cursor: pointer; font-size: 13px; font-weight: 700; }
+.account-message { margin: 0 0 22px; }
+.address-modal-backdrop { align-items: center; background: rgba(20, 21, 33, .55); display: flex; inset: 0; justify-content: center; overflow-y: auto; padding: 24px; position: fixed; z-index: 10; }
+.address-modal { background: #fff; border-radius: 16px; box-shadow: 0 24px 80px rgba(0, 0, 0, .2); max-height: calc(100vh - 48px); max-width: 720px; overflow-y: auto; padding: 30px; width: 100%; }
+.address-modal-head { align-items: start; display: flex; justify-content: space-between; margin-bottom: 25px; }
+.address-modal-head h2 { font-family: Georgia, serif; font-size: 32px; letter-spacing: -.04em; margin: 0 0 6px; }
+.modal-close { background: #f4f2ef; border: 0; border-radius: 50%; color: #514c48; cursor: pointer; font-size: 25px; height: 36px; line-height: 1; width: 36px; }
+.address-form-grid { display: grid; gap: 18px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.form-span-2 { grid-column: span 2; }
+.default-option { align-items: start; background: #faf9f6; border: 1px solid #eeeae4; border-radius: 9px; cursor: pointer; display: flex; gap: 10px; margin-top: 22px; padding: 13px; }
+.default-option input { accent-color: #2438c5; margin-top: 3px; }
+.default-option strong, .default-option small { display: block; }
+.default-option strong { font-size: 13px; }
+.default-option small { color: #77736e; font-size: 12px; margin-top: 3px; }
+.address-modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 26px; }
+.account-secondary { background: #fff; border: 1px solid #dcd8d2; border-radius: 8px; color: #34302d; cursor: pointer; font-size: 12px; font-weight: 700; min-height: 44px; padding: 0 20px; }
+@media (max-width: 1000px) { .account-grid { grid-template-columns: 1fr; } .account-main { max-width: 860px; } }
+@media (max-width: 650px) { .account-main { padding: 36px 16px 70px; } .account-heading { align-items: start; flex-direction: column; gap: 10px; } .account-heading h1 { font-size: 38px; } .account-card { padding: 22px; } .addresses-card { padding: 0; } .address-section-head { align-items: start; flex-direction: column; padding: 22px; } .add-address { width: 100%; } .address-modal { padding: 22px; } .address-form-grid { grid-template-columns: 1fr; } .form-span-2 { grid-column: auto; } .address-modal-actions button { flex: 1; } }
 @media (max-width: 600px) { .forme-header nav { gap: 16px; } .auth-main { padding-top: 54px; } .forme-footer { flex-direction: column; gap: 8px; } }
