@@ -23,7 +23,7 @@ This is the **agreed route inventory for implementation**, not a claim that ever
 | `GET /products` | P | `page,size` → page of `{id,sku,name,description,imageUrl,price,categoryName,availableQuantity}` **implemented** |
 | `GET /products/{id}` | P | none → product detail |
 | `GET /categories` | P | none → active categories |
-| `POST /auth/register` | P | `{email,password,fullName,phone}` → `{userId,verificationRequired}` |
+| `POST /auth/register` | P | `{email,password,confirmPassword,fullName,phone}` → `{userId,verificationRequired}`; passwords must match |
 | `POST /auth/verify` | P | `{token}` → `{verified}` |
 | `POST /auth/login` | P | `{email,password}` → `{accessToken,expiresAt,user:{id,fullName,role}}`; opaque 24-hour bearer token |
 | `POST /auth/logout` | C/M/S/W/D/A | authenticated request → `204` |

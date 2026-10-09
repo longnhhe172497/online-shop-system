@@ -34,6 +34,7 @@ describe('App', () => {
     fireEvent.click(screen.getByRole('tab', { name: 'REGISTER' }))
     expect(screen.getByRole('heading', { name: 'Create account' })).toBeInTheDocument()
     expect(screen.getByLabelText('FULL NAME')).toBeInTheDocument()
+    expect(screen.getByLabelText('CONFIRM PASSWORD')).toBeInTheDocument()
   })
 
   it('registers then directs the user to verify email', async () => {
@@ -43,8 +44,23 @@ describe('App', () => {
     fireEvent.change(screen.getByLabelText('FULL NAME'), { target: { value: 'Test User' } })
     fireEvent.change(screen.getByLabelText('EMAIL ADDRESS'), { target: { value: 'test@example.com' } })
     fireEvent.change(screen.getByLabelText('PASSWORD'), { target: { value: 'password123' } })
+    fireEvent.change(screen.getByLabelText('CONFIRM PASSWORD'), { target: { value: 'password123' } })
     fireEvent.click(screen.getByRole('button', { name: 'CREATE ACCOUNT' }))
     expect(await screen.findByText(/Account created/)).toBeInTheDocument()
+    expect(registerAccount).toHaveBeenCalledWith({ fullName: 'Test User', email: 'test@example.com',
+      password: 'password123', confirmPassword: 'password123' })
     expect(login).not.toHaveBeenCalled()
+  })
+
+  it('does not submit registration when passwords differ', () => {
+    renderAt('/auth')
+    fireEvent.click(screen.getByRole('tab', { name: 'REGISTER' }))
+    fireEvent.change(screen.getByLabelText('FULL NAME'), { target: { value: 'Test User' } })
+    fireEvent.change(screen.getByLabelText('EMAIL ADDRESS'), { target: { value: 'test@example.com' } })
+    fireEvent.change(screen.getByLabelText('PASSWORD'), { target: { value: 'password123' } })
+    fireEvent.change(screen.getByLabelText('CONFIRM PASSWORD'), { target: { value: 'different123' } })
+    fireEvent.click(screen.getByRole('button', { name: 'CREATE ACCOUNT' }))
+    expect(screen.getByRole('alert')).toHaveTextContent('Passwords do not match.')
+    expect(registerAccount).not.toHaveBeenCalled()
   })
 })

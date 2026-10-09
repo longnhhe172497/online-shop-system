@@ -3,6 +3,7 @@ package com.osmshop.auth;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.never;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -39,7 +40,7 @@ class AuthFlowTests {
         String email = "auth-" + UUID.randomUUID() + "@example.com";
         mvc.perform(post("/api/auth/register").contentType(MediaType.APPLICATION_JSON)
                 .content(json.writeValueAsString(new AuthDtos.RegisterRequest(
-                        "Test Customer", email, "StrongPass123", null))))
+                        "Test Customer", email, "StrongPass123", "StrongPass123", null))))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.verificationRequired").value(true));
 
@@ -89,8 +90,19 @@ class AuthFlowTests {
         String email = "mail-failure-" + UUID.randomUUID() + "@example.com";
         mvc.perform(post("/api/auth/register").contentType(MediaType.APPLICATION_JSON)
                 .content(json.writeValueAsString(new AuthDtos.RegisterRequest(
-                        "Test Customer", email, "StrongPass123", null))))
+                        "Test Customer", email, "StrongPass123", "StrongPass123", null))))
                 .andExpect(status().isServiceUnavailable())
                 .andExpect(jsonPath("$.code").value("EMAIL_DELIVERY_FAILED"));
+    }
+
+    @Test
+    void mismatchedPasswordIsRejectedBeforeSendingEmail() throws Exception {
+        String email = "mismatch-" + UUID.randomUUID() + "@example.com";
+        mvc.perform(post("/api/auth/register").contentType(MediaType.APPLICATION_JSON)
+                .content(json.writeValueAsString(new AuthDtos.RegisterRequest(
+                        "Test Customer", email, "StrongPass123", "DifferentPass123", null))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("PASSWORD_MISMATCH"));
+        verify(mail, never()).send(any(SimpleMailMessage.class));
     }
 }

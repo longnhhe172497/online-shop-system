@@ -13,6 +13,7 @@ export default function AuthPage() {
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
   const [busy, setBusy] = useState(false)
@@ -22,13 +23,18 @@ export default function AuthPage() {
     event.preventDefault()
     setError('')
     setNotice('')
+    if (mode === 'register' && password !== confirmPassword) {
+      setError('Passwords do not match.')
+      return
+    }
     setBusy(true)
     try {
       if (mode === 'register') {
-        await registerAccount({ fullName, email, password })
+        await registerAccount({ fullName, email, password, confirmPassword })
         setNotice('Account created. Check your email and open the verification link before signing in.')
         setMode('login')
         setPassword('')
+        setConfirmPassword('')
       } else {
         await login({ email, password })
         navigate('/')
@@ -63,6 +69,7 @@ export default function AuthPage() {
             {mode === 'register' && <label>FULL NAME<input value={fullName} onChange={(e) => setFullName(e.target.value)} required maxLength={150} autoComplete="name" /></label>}
             <label>EMAIL ADDRESS<input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="email" /></label>
             <label>PASSWORD<input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={mode === 'register' ? 8 : undefined} autoComplete={mode === 'login' ? 'current-password' : 'new-password'} /></label>
+            {mode === 'register' && <label>CONFIRM PASSWORD<input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required minLength={8} autoComplete="new-password" /></label>}
             <button className="auth-submit" disabled={busy} type="submit">{busy ? 'PLEASE WAIT…' : mode === 'login' ? 'SIGN IN' : 'CREATE ACCOUNT'}</button>
           </form>
           {mode === 'login' && <p className="auth-help">Forgot your password? Password reset is planned for the next auth PR.</p>}
