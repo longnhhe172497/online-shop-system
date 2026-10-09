@@ -23,6 +23,19 @@ export async function verifyAccount(token: string) {
   return data
 }
 
+export async function requestPasswordReset(email: string) {
+  await api.post('/auth/password-reset/request', { email })
+}
+
+export async function confirmPasswordReset(input: {
+  token: string
+  newPassword: string
+  confirmPassword: string
+}) {
+  const { data } = await api.post<{ reset: boolean }>('/auth/password-reset/confirm', input)
+  return data
+}
+
 export async function login(input: { email: string; password: string }) {
   const { data } = await api.post<{ accessToken: string; expiresAt: string; user: AuthUser }>('/auth/login', input)
   setAccessToken(data.accessToken)

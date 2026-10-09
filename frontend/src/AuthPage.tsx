@@ -72,7 +72,7 @@ export default function AuthPage() {
             {mode === 'register' && <label>CONFIRM PASSWORD<input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required minLength={8} autoComplete="new-password" /></label>}
             <button className="auth-submit" disabled={busy} type="submit">{busy ? 'PLEASE WAIT…' : mode === 'login' ? 'SIGN IN' : 'CREATE ACCOUNT'}</button>
           </form>
-          {mode === 'login' && <p className="auth-help">Forgot your password? Password reset is planned for the next auth PR.</p>}
+          {mode === 'login' && <p className="auth-help"><Link to="/forgot-password">Forgot your password?</Link></p>}
         </section>
       </main>
       <footer className="forme-footer"><strong>FORME</strong><span>Online Shop System · Local demo</span></footer>

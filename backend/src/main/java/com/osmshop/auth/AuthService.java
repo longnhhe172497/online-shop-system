@@ -2,6 +2,8 @@ package com.osmshop.auth;
 
 import com.osmshop.auth.AuthDtos.LoginRequest;
 import com.osmshop.auth.AuthDtos.LoginResponse;
+import com.osmshop.auth.AuthDtos.PasswordResetConfirmRequest;
+import com.osmshop.auth.AuthDtos.PasswordResetConfirmResponse;
 import com.osmshop.auth.AuthDtos.RegisterRequest;
 import com.osmshop.auth.AuthDtos.RegisterResponse;
 import com.osmshop.auth.AuthDtos.UserResponse;
@@ -18,17 +20,22 @@ import java.util.HexFormat;
 import java.util.List;
 import java.util.Locale;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.mail.SimpleMailMessage;
+import org.springframework.mail.MailException;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.interceptor.TransactionAspectSupport;
 
 @Service
 public class AuthService {
+    private static final Logger LOGGER = LoggerFactory.getLogger(AuthService.class);
     private static final SecureRandom RANDOM = new SecureRandom();
     private final JdbcTemplate jdbc;
     private final PasswordEncoder passwords;
@@ -119,6 +126,81 @@ public class AuthService {
                 user.id(), hash(token), Timestamp.from(expiresAt));
         return new LoginResponse(token, expiresAt,
                 new UserResponse(user.id(), user.email(), user.fullName(), user.role()));
+    }
+
+    @Transactional
+    public void requestPasswordReset(String requestedEmail) {
+        String email = requestedEmail.trim().toLowerCase(Locale.ROOT);
+        List<Long> userIds = jdbc.query("""
+                SELECT id FROM users
+                WHERE email = ? AND status = 'ACTIVE' AND verified_at IS NOT NULL
+                """, (rs, row) -> rs.getLong("id"), email);
+        if (userIds.isEmpty()) {
+            return;
+        }
+        long userId = userIds.getFirst();
+        Long recentTokens = jdbc.queryForObject("""
+                SELECT count(*) FROM auth_tokens
+                WHERE user_id = ? AND purpose = 'PASSWORD_RESET'
+                  AND used_at IS NULL AND created_at > now() - interval '5 minutes'
+                """, Long.class, userId);
+        if (recentTokens != null && recentTokens > 0) {
+            return;
+        }
+        jdbc.update("""
+                UPDATE auth_tokens SET used_at = now()
+                WHERE user_id = ? AND purpose = 'PASSWORD_RESET' AND used_at IS NULL
+                """, userId);
+        String token = newToken();
+        jdbc.update("""
+                INSERT INTO auth_tokens(user_id,token_hash,purpose,expires_at)
+                VALUES (?, ?, 'PASSWORD_RESET', ?)
+                """, userId, hash(token), Timestamp.from(Instant.now().plus(30, ChronoUnit.MINUTES)));
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setFrom(mailFrom);
+        message.setTo(email);
+        message.setSubject("Reset your Online Shop System password");
+        message.setText("Open this password reset link within 30 minutes:\n"
+                + frontendBaseUrl + "/reset-password?token=" + token
+                + "\nIf you did not request this, you can ignore this email.");
+        try {
+            mail.send(message);
+        } catch (MailException exception) {
+            // Keep the response identical for known and unknown accounts.
+            TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
+            LOGGER.warn("Password reset email delivery failed for user id {} ({})",
+                    userId, exception.getClass().getSimpleName());
+        }
+    }
+
+    @Transactional
+    public PasswordResetConfirmResponse confirmPasswordReset(PasswordResetConfirmRequest request) {
+        if (!request.newPassword().equals(request.confirmPassword())) {
+            throw new AuthApiException(HttpStatus.BAD_REQUEST, "PASSWORD_MISMATCH",
+                    "Passwords do not match");
+        }
+        List<Long> userIds = jdbc.query("""
+                UPDATE auth_tokens SET used_at = now()
+                WHERE token_hash = ? AND purpose = 'PASSWORD_RESET'
+                  AND used_at IS NULL AND expires_at > now()
+                  AND EXISTS (SELECT 1 FROM users u WHERE u.id = auth_tokens.user_id
+                              AND u.status = 'ACTIVE' AND u.verified_at IS NOT NULL)
+                RETURNING user_id
+                """, (rs, row) -> rs.getLong("user_id"), hash(request.token()));
+        if (userIds.isEmpty()) {
+            throw new AuthApiException(HttpStatus.BAD_REQUEST, "INVALID_RESET_TOKEN",
+                    "Password reset link is invalid or expired");
+        }
+        long userId = userIds.getFirst();
+        jdbc.update("UPDATE users SET password_hash = ?, updated_at = now() WHERE id = ?",
+                passwords.encode(request.newPassword()), userId);
+        jdbc.update("UPDATE user_sessions SET revoked_at = now() WHERE user_id = ? AND revoked_at IS NULL",
+                userId);
+        jdbc.update("""
+                UPDATE auth_tokens SET used_at = now()
+                WHERE user_id = ? AND purpose = 'PASSWORD_RESET' AND used_at IS NULL
+                """, userId);
+        return new PasswordResetConfirmResponse(true);
     }
 
     @Transactional

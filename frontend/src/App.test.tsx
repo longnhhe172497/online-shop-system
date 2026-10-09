@@ -3,11 +3,12 @@ import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
 import { listProducts } from './api/products'
-import { login, registerAccount } from './api/auth'
+import { confirmPasswordReset, login, registerAccount, requestPasswordReset } from './api/auth'
 
 vi.mock('./api/products', () => ({ listProducts: vi.fn() }))
 vi.mock('./api/auth', () => ({
   login: vi.fn(), registerAccount: vi.fn(), getMe: vi.fn(), logout: vi.fn(), verifyAccount: vi.fn(),
+  requestPasswordReset: vi.fn(), confirmPasswordReset: vi.fn(),
 }))
 vi.mock('./api/client', () => ({ hasAccessToken: () => false }))
 
@@ -62,5 +63,31 @@ describe('App', () => {
     fireEvent.click(screen.getByRole('button', { name: 'CREATE ACCOUNT' }))
     expect(screen.getByRole('alert')).toHaveTextContent('Passwords do not match.')
     expect(registerAccount).not.toHaveBeenCalled()
+  })
+
+  it('requests a password reset without revealing whether the account exists', async () => {
+    vi.mocked(requestPasswordReset).mockResolvedValue(undefined)
+    renderAt('/auth')
+    fireEvent.click(screen.getByRole('link', { name: 'Forgot your password?' }))
+    expect(screen.getByRole('heading', { name: 'Forgot password' })).toBeInTheDocument()
+    fireEvent.change(screen.getByLabelText('EMAIL ADDRESS'), { target: { value: 'test@example.com' } })
+    fireEvent.click(screen.getByRole('button', { name: 'SEND RESET LINK' }))
+    expect(await screen.findByText(/If an active account exists/)).toBeInTheDocument()
+    expect(requestPasswordReset).toHaveBeenCalledWith('test@example.com')
+  })
+
+  it('requires matching passwords before confirming a reset', async () => {
+    vi.mocked(confirmPasswordReset).mockResolvedValue({ reset: true })
+    renderAt('/reset-password?token=test-token')
+    fireEvent.change(screen.getByLabelText('NEW PASSWORD'), { target: { value: 'NewPassword123' } })
+    fireEvent.change(screen.getByLabelText('CONFIRM NEW PASSWORD'), { target: { value: 'Different123' } })
+    fireEvent.click(screen.getByRole('button', { name: 'SET NEW PASSWORD' }))
+    expect(screen.getByRole('alert')).toHaveTextContent('Passwords do not match.')
+    expect(confirmPasswordReset).not.toHaveBeenCalled()
+    fireEvent.change(screen.getByLabelText('CONFIRM NEW PASSWORD'), { target: { value: 'NewPassword123' } })
+    fireEvent.click(screen.getByRole('button', { name: 'SET NEW PASSWORD' }))
+    expect(await screen.findByText(/Password updated/)).toBeInTheDocument()
+    expect(confirmPasswordReset).toHaveBeenCalledWith({ token: 'test-token',
+      newPassword: 'NewPassword123', confirmPassword: 'NewPassword123' })
   })
 })
