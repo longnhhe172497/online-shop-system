@@ -200,6 +200,117 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
+  /admin/users:
+    get:
+      summary: Search managed accounts (Admin only)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { in: query, name: search, schema: { type: string } }
+        - { in: query, name: role, schema: { type: string } }
+        - { in: query, name: status, schema: { type: string } }
+        - { in: query, name: page, schema: { type: integer, default: 0 } }
+        - { in: query, name: size, schema: { type: integer, default: 20, maximum: 100 } }
+      responses:
+        '200': { description: Paginated accounts without password hashes }
+        '403': { description: Admin role required }
+    post:
+      summary: Create an active verified account (Admin only)
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AdminCreateUser' }
+      responses:
+        '201': { description: Created account }
+        '409': { description: Email already registered }
+  /admin/users/{id}:
+    parameters:
+      - { in: path, name: id, required: true, schema: { type: integer, format: int64 } }
+    patch:
+      summary: Update account name and phone (Admin only)
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [fullName]
+              properties:
+                fullName: { type: string, maxLength: 150 }
+                phone: { type: string, maxLength: 30 }
+      responses:
+        '200': { description: Updated account }
+  /admin/users/{id}/role:
+    parameters:
+      - { in: path, name: id, required: true, schema: { type: integer, format: int64 } }
+    patch:
+      summary: Change account role; final active Admin is protected
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [role]
+              properties:
+                role: { type: string, enum: [CUSTOMER, ADMIN, MANAGER, SUPPORT, WAREHOUSE, DELIVERY] }
+      responses:
+        '200': { description: Updated account }
+        '409': { description: Cannot remove final active Admin }
+  /admin/users/{id}/status:
+    parameters:
+      - { in: path, name: id, required: true, schema: { type: integer, format: int64 } }
+    patch:
+      summary: Activate, deactivate, or lock account; final active Admin is protected
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status: { type: string, enum: [ACTIVE, INACTIVE, LOCKED] }
+      responses:
+        '200': { description: Updated account }
+        '409': { description: Email not verified or final active Admin protected }
+  /admin/settings:
+    get:
+      summary: List system settings (Admin only)
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: System settings }
+  /admin/settings/{key}:
+    parameters:
+      - { in: path, name: key, required: true, schema: { type: string } }
+    patch:
+      summary: Update a validated system setting (Admin only)
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [value]
+              properties:
+                value: { type: string }
+      responses:
+        '200': { description: Updated setting }
+        '400': { description: Setting outside allowed range }
+  /admin/audit-logs:
+    get:
+      summary: Read append-only audit trail (Admin only)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { in: query, name: page, schema: { type: integer, default: 0 } }
+        - { in: query, name: size, schema: { type: integer, default: 20, maximum: 100 } }
+      responses:
+        '200': { description: Paginated audit entries }
 components:
   securitySchemes:
     bearerAuth:
@@ -207,6 +318,15 @@ components:
       scheme: bearer
       description: Opaque 24-hour token issued by /auth/login
   schemas:
+    AdminCreateUser:
+      type: object
+      required: [email, fullName, password, role]
+      properties:
+        email: { type: string, format: email }
+        fullName: { type: string, maxLength: 150 }
+        phone: { type: string, maxLength: 30 }
+        password: { type: string, format: password, minLength: 8, maxLength: 72 }
+        role: { type: string, enum: [CUSTOMER, ADMIN, MANAGER, SUPPORT, WAREHOUSE, DELIVERY] }
     RegisterRequest:
       type: object
       required: [fullName, email, password, confirmPassword]

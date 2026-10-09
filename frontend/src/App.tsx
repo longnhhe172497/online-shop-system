@@ -7,6 +7,7 @@ import AuthPage from './AuthPage'
 import VerifyPage from './VerifyPage'
 import PasswordResetPage from './PasswordResetPage'
 import ProfilePage from './ProfilePage'
+import AdminPage from './AdminPage'
 import './App.css'
 
 function ProductsPage() {
@@ -29,7 +30,8 @@ function ProductsPage() {
 
   return <main className="app-shell"><section className="status-card">
     <div className="shop-topline"><p className="eyebrow">FORME</p>
-      {user ? <div className="shop-account"><Link to="/me">Hồ sơ của tôi</Link>
+      {user ? <div className="shop-account">{user.role === 'ADMIN' && <Link to="/admin">Quản trị</Link>}
+        <Link to="/me">Hồ sơ của tôi</Link>
         <button onClick={signOut}>Đăng xuất · {user.fullName}</button></div> : <Link to="/auth">Đăng nhập</Link>}
     </div>
     <h1>Sản phẩm</h1>
@@ -51,5 +53,6 @@ export default function App() {
     <Route path="/forgot-password" element={<PasswordResetPage />} />
     <Route path="/reset-password" element={<PasswordResetPage />} />
     <Route path="/me" element={<ProfilePage />} />
+    <Route path="/admin" element={<AdminPage />} />
   </Routes>
 }

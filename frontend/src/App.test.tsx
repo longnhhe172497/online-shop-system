@@ -5,6 +5,7 @@ import App from './App'
 import { listProducts } from './api/products'
 import { confirmPasswordReset, login, registerAccount, requestPasswordReset } from './api/auth'
 import { createAddress, getProfile, listAddresses, updateProfile } from './api/profile'
+import { listAudit, listSettings, listUsers } from './api/admin'
 
 vi.mock('./api/products', () => ({ listProducts: vi.fn() }))
 vi.mock('./api/auth', () => ({
@@ -14,6 +15,8 @@ vi.mock('./api/auth', () => ({
 vi.mock('./api/client', () => ({ hasAccessToken: () => false }))
 vi.mock('./api/profile', () => ({ getProfile: vi.fn(), updateProfile: vi.fn(), listAddresses: vi.fn(),
   createAddress: vi.fn(), updateAddress: vi.fn(), deleteAddress: vi.fn() }))
+vi.mock('./api/admin', () => ({ listUsers: vi.fn(), createUser: vi.fn(), updateUser: vi.fn(),
+  changeRole: vi.fn(), changeStatus: vi.fn(), listSettings: vi.fn(), changeSetting: vi.fn(), listAudit: vi.fn() }))
 
 function renderAt(path: string) {
   return render(<MemoryRouter initialEntries={[path]}><App /></MemoryRouter>)
@@ -131,5 +134,27 @@ describe('App', () => {
       addressLine: '123 Main Street', ward: '', district: '', province: 'Hanoi', isDefault: false })
     expect(screen.getByRole('table')).toHaveTextContent('Test User')
     expect(screen.getByText('Mặc định')).toBeInTheDocument()
+  })
+
+  it('hides admin controls from a customer', async () => {
+    vi.mocked(getProfile).mockResolvedValue({ id: 1, email: 'customer@example.com',
+      fullName: 'Khách hàng', phone: null, role: 'CUSTOMER' })
+    renderAt('/admin')
+    expect(await screen.findByText('Không có quyền truy cập')).toBeInTheDocument()
+    expect(listUsers).not.toHaveBeenCalled()
+  })
+
+  it('shows account, settings and audit tabs to an admin', async () => {
+    vi.mocked(getProfile).mockResolvedValue({ id: 2, email: 'admin@example.com',
+      fullName: 'Quản trị viên', phone: null, role: 'ADMIN' })
+    vi.mocked(listUsers).mockResolvedValue({ items: [], page: 0, size: 20, totalItems: 0, totalPages: 0 })
+    vi.mocked(listSettings).mockResolvedValue([])
+    vi.mocked(listAudit).mockResolvedValue({ items: [], page: 0, size: 20, totalItems: 0, totalPages: 0 })
+    renderAt('/admin')
+    expect(await screen.findByText('Danh sách tài khoản')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('tab', { name: 'Thiết lập' }))
+    expect(await screen.findByText('Thiết lập hệ thống')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('tab', { name: 'Nhật ký' }))
+    expect(await screen.findByText('Nhật ký thao tác')).toBeInTheDocument()
   })
 })
