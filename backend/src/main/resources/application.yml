@@ -11,6 +11,8 @@ spring:
     open-in-view: false
   flyway:
     enabled: true
+  config:
+    import: "optional:file:../.env[.properties]"
   mail:
     host: ${MAIL_HOST:localhost}
     port: ${MAIL_PORT:1025}
