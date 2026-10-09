@@ -1,12 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { isAxiosError } from 'axios'
 import { confirmPasswordReset, requestPasswordReset } from './api/auth'
-
-function getError(error: unknown) {
-  if (isAxiosError(error)) return error.response?.data?.detail || 'The request could not be completed.'
-  return 'The request could not be completed.'
-}
+import { getUiError } from './uiError'
 
 export default function PasswordResetPage() {
   const [searchParams] = useSearchParams()
@@ -22,7 +17,7 @@ export default function PasswordResetPage() {
     event.preventDefault()
     setError('')
     if (token && newPassword !== confirmPassword) {
-      setError('Passwords do not match.')
+      setError('Mật khẩu nhập lại không khớp.')
       return
     }
     setBusy(true)
@@ -36,43 +31,43 @@ export default function PasswordResetPage() {
       setNewPassword('')
       setConfirmPassword('')
     } catch (failure) {
-      setError(getError(failure))
+      setError(getUiError(failure))
     } finally {
       setBusy(false)
     }
   }
 
   return <div className="forme-page">
-    <div className="announcement">ONLINE SHOP SYSTEM · LOCAL DEVELOPMENT</div>
+    <div className="announcement">CỬA HÀNG TRỰC TUYẾN · BẢN CHẠY TRÊN MÁY CÁ NHÂN</div>
     <header className="forme-header"><Link to="/" className="brand">FORME</Link>
-      <nav aria-label="Main navigation"><Link to="/">SHOP</Link><Link to="/auth">SIGN IN</Link></nav>
+      <nav aria-label="Điều hướng chính"><Link to="/">CỬA HÀNG</Link><Link to="/auth">ĐĂNG NHẬP</Link></nav>
     </header>
     <main className="auth-main"><section className="auth-card">
-      <p className="auth-kicker">ACCOUNT RECOVERY</p>
-      <h1>{token ? 'Reset password' : 'Forgot password'}</h1>
+      <p className="auth-kicker">KHÔI PHỤC TÀI KHOẢN</p>
+      <h1>{token ? 'Đặt lại mật khẩu' : 'Quên mật khẩu'}</h1>
       {success ? <>
         <p className="auth-notice" role="status">{token
-          ? 'Password updated. Sign in with your new password.'
-          : 'If an active account exists for this email, a reset link has been sent. Check your inbox.'}</p>
-        <p className="auth-help"><Link to="/auth">Back to sign in</Link></p>
+          ? 'Mật khẩu đã được cập nhật. Hãy đăng nhập bằng mật khẩu mới.'
+          : 'Nếu email thuộc một tài khoản đang hoạt động, chúng tôi đã gửi liên kết đặt lại mật khẩu. Hãy kiểm tra hộp thư.'}</p>
+        <p className="auth-help"><Link to="/auth">Quay lại đăng nhập</Link></p>
       </> : <>
         {error && <p className="auth-error" role="alert">{error}</p>}
         <form onSubmit={submit}>
           {token ? <>
-            <label>NEW PASSWORD<input type="password" value={newPassword}
+            <label>MẬT KHẨU MỚI<input type="password" value={newPassword}
               onChange={(event) => setNewPassword(event.target.value)} required minLength={8}
               maxLength={72} autoComplete="new-password" /></label>
-            <label>CONFIRM NEW PASSWORD<input type="password" value={confirmPassword}
+            <label>NHẬP LẠI MẬT KHẨU MỚI<input type="password" value={confirmPassword}
               onChange={(event) => setConfirmPassword(event.target.value)} required minLength={8}
               maxLength={72} autoComplete="new-password" /></label>
-          </> : <label>EMAIL ADDRESS<input type="email" value={email}
+          </> : <label>ĐỊA CHỈ EMAIL<input type="email" value={email}
             onChange={(event) => setEmail(event.target.value)} required autoComplete="email" /></label>}
-          <button className="auth-submit" type="submit" disabled={busy}>{busy ? 'PLEASE WAIT…'
-            : token ? 'SET NEW PASSWORD' : 'SEND RESET LINK'}</button>
+          <button className="auth-submit" type="submit" disabled={busy}>{busy ? 'VUI LÒNG ĐỢI…'
+            : token ? 'ĐẶT LẠI MẬT KHẨU' : 'GỬI LIÊN KẾT'}</button>
         </form>
-        <p className="auth-help"><Link to="/auth">Back to sign in</Link></p>
+        <p className="auth-help"><Link to="/auth">Quay lại đăng nhập</Link></p>
       </>}
     </section></main>
-    <footer className="forme-footer"><strong>FORME</strong><span>Online Shop System · Local demo</span></footer>
+    <footer className="forme-footer"><strong>FORME</strong><span>Cửa hàng trực tuyến · Bản chạy thử trên máy cá nhân</span></footer>
   </div>
 }

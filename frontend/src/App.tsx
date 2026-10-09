@@ -28,17 +28,17 @@ function ProductsPage() {
   }
 
   return <main className="app-shell"><section className="status-card">
-    <div className="shop-topline"><p className="eyebrow">Online Shop System</p>
-      {user ? <div className="shop-account"><Link to="/me">My profile</Link>
-        <button onClick={signOut}>Sign out {user.fullName}</button></div> : <Link to="/auth">Sign in</Link>}
+    <div className="shop-topline"><p className="eyebrow">FORME</p>
+      {user ? <div className="shop-account"><Link to="/me">Hồ sơ của tôi</Link>
+        <button onClick={signOut}>Đăng xuất · {user.fullName}</button></div> : <Link to="/auth">Đăng nhập</Link>}
     </div>
-    <h1>Products</h1>
-    {status === 'loading' && <p>Loading products…</p>}
-    {status === 'error' && <p role="alert">Cannot load products. Check that the backend and PostgreSQL are running.</p>}
-    {status === 'ready' && products.length === 0 && <p>No active products yet. Add one in PostgreSQL to verify the full flow.</p>}
+    <h1>Sản phẩm</h1>
+    {status === 'loading' && <p>Đang tải sản phẩm…</p>}
+    {status === 'error' && <p role="alert">Không thể tải sản phẩm. Hãy kiểm tra backend và PostgreSQL đang chạy.</p>}
+    {status === 'ready' && products.length === 0 && <p>Chưa có sản phẩm đang bán.</p>}
     {status === 'ready' && products.length > 0 && <ul className="product-list">{products.map((product) => <li key={product.id}>
       <strong>{product.name}</strong><span>{product.categoryName} · {product.price.toLocaleString('vi-VN')} ₫</span>
-      <small>Available: {product.availableQuantity}</small>
+      <small>Còn hàng: {product.availableQuantity}</small>
     </li>)}</ul>}
   </section></main>
 }

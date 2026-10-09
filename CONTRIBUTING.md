@@ -1,5 +1,12 @@
 # Contributing
 
+## Frontend language and typography
+
+- Use Vietnamese for all user-visible interface text, including labels, buttons, notifications, errors, navigation, and page titles. `FORME` is the only brand text kept as written.
+- Set HTML document language to `vi`. Keep UTF-8 encoding for source files.
+- Use the shared system-font stack in `frontend/src/index.css`; do not rely on a font that teammates must install separately. Check Vietnamese diacritics on every new screen.
+- Backend error details may be English. Map stable API error codes to Vietnamese UI messages instead of displaying raw details.
+
 ## Start a task
 
 ```powershell
@@ -37,4 +44,3 @@ docs(setup): clarify Docker requirements
 3. Explain how the change was tested.
 4. Request at least one team review.
 5. Merge only when the automated checks pass.
-

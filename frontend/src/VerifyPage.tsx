@@ -13,19 +13,19 @@ export default function VerifyPage() {
     setBusy(true)
     try {
       await verifyAccount(token)
-      setStatus('Email verified. You can now sign in.')
+      setStatus('Email đã được xác minh. Bạn có thể đăng nhập.')
     } catch {
-      setStatus('This verification link is invalid, expired, or already used.')
+      setStatus('Liên kết xác minh không hợp lệ, đã hết hạn hoặc đã được sử dụng.')
     } finally {
       setBusy(false)
     }
   }
 
   return <main className="verify-page"><div className="verify-card">
-    <p className="auth-kicker">ONLINE SHOP SYSTEM</p><h1>Verify email</h1>
-    <p>{token ? 'Confirm your email address to activate your account.' : 'No verification token was provided.'}</p>
-    {token && !status && <button className="auth-submit" disabled={busy} onClick={verify}>{busy ? 'VERIFYING…' : 'VERIFY EMAIL'}</button>}
+    <p className="auth-kicker">XÁC MINH TÀI KHOẢN</p><h1>Xác minh email</h1>
+    <p>{token ? 'Xác nhận email để kích hoạt tài khoản của bạn.' : 'Không tìm thấy mã xác minh trong liên kết.'}</p>
+    {token && !status && <button className="auth-submit" disabled={busy} onClick={verify}>{busy ? 'ĐANG XÁC MINH…' : 'XÁC MINH EMAIL'}</button>}
     {status && <p role="status">{status}</p>}
-    <Link to="/auth">Back to sign in</Link>
+    <Link to="/auth">Quay lại đăng nhập</Link>
   </div></main>
 }

@@ -1,16 +1,11 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
-import { isAxiosError } from 'axios'
 import { createAddress, deleteAddress, getProfile, listAddresses, updateAddress, updateProfile,
   type Address, type AddressInput, type Profile } from './api/profile'
+import { getUiError } from './uiError'
 
 const emptyAddress: AddressInput = {
   recipientName: '', phone: '', addressLine: '', ward: '', district: '', province: '', isDefault: false,
-}
-
-function getError(error: unknown) {
-  if (isAxiosError(error)) return error.response?.data?.detail || 'Không thể hoàn tất yêu cầu. Vui lòng thử lại.'
-  return 'Không thể hoàn tất yêu cầu. Vui lòng thử lại.'
 }
 
 function formatAddress(address: Address) {
@@ -46,7 +41,7 @@ export default function ProfilePage() {
           if (active) setAddresses(saved)
         }
       } catch (failure) {
-        if (active) setError(getError(failure))
+        if (active) setError(getUiError(failure))
       } finally {
         if (active) setLoading(false)
       }
@@ -73,7 +68,7 @@ export default function ProfilePage() {
       setProfile(await updateProfile({ fullName, phone }))
       setNotice('Đã cập nhật hồ sơ cá nhân.')
     } catch (failure) {
-      setError(getError(failure))
+      setError(getUiError(failure))
     } finally {
       setBusy(false)
     }
@@ -93,7 +88,7 @@ export default function ProfilePage() {
       setEditorOpen(false)
       setNotice('Đã lưu địa chỉ giao hàng.')
     } catch (failure) {
-      setAddressError(getError(failure))
+      setAddressError(getUiError(failure))
     } finally {
       setBusy(false)
     }
@@ -109,7 +104,7 @@ export default function ProfilePage() {
       setAddresses(await listAddresses())
       setNotice('Đã xóa địa chỉ giao hàng.')
     } catch (failure) {
-      setError(getError(failure))
+      setError(getUiError(failure))
     } finally {
       setBusy(false)
     }
@@ -136,9 +131,9 @@ export default function ProfilePage() {
   }
 
   return <div className="forme-page">
-    <div className="announcement">ONLINE SHOP SYSTEM · LOCAL DEVELOPMENT</div>
+    <div className="announcement">CỬA HÀNG TRỰC TUYẾN · BẢN CHẠY TRÊN MÁY CÁ NHÂN</div>
     <header className="forme-header"><Link to="/" className="brand">FORME</Link>
-      <nav aria-label="Main navigation"><Link to="/">SHOP</Link><Link to="/me">TÀI KHOẢN</Link></nav>
+      <nav aria-label="Điều hướng chính"><Link to="/">CỬA HÀNG</Link><Link to="/me">TÀI KHOẢN</Link></nav>
     </header>
     <main className="account-main">
       <div className="account-heading">
@@ -155,7 +150,7 @@ export default function ProfilePage() {
           <div className="personal-intro"><div className="account-avatar" aria-hidden="true">
             {profile.fullName.trim().charAt(0).toLocaleUpperCase('vi')}</div>
             <div><p className="card-eyebrow">THÔNG TIN CÁ NHÂN</p><h2 id="personal-title">{profile.fullName}</h2>
-              <span className="role-pill">{profile.role === 'CUSTOMER' ? 'Khách hàng' : profile.role}</span></div></div>
+              <span className="role-pill">{({ CUSTOMER: 'Khách hàng', ADMIN: 'Quản trị viên', MANAGER: 'Quản lý', SUPPORT: 'Hỗ trợ', WAREHOUSE: 'Nhân viên kho', DELIVERY: 'Nhân viên giao hàng' } as Record<string, string>)[profile.role] ?? 'Vai trò khác'}</span></div></div>
           <div className="account-readonly"><span>Email đăng nhập</span><strong>{profile.email}</strong>
             <small>Email và vai trò không thể chỉnh sửa tại đây.</small></div>
           <form className="account-form" onSubmit={saveProfile}>
@@ -230,6 +225,6 @@ export default function ProfilePage() {
             {busy ? 'Đang lưu…' : editingId === null ? 'Thêm địa chỉ' : 'Lưu thay đổi'}</button></div>
       </form>
     </section></div>}
-    <footer className="forme-footer"><strong>FORME</strong><span>Online Shop System · Local demo</span></footer>
+    <footer className="forme-footer"><strong>FORME</strong><span>Cửa hàng trực tuyến · Bản chạy thử trên máy cá nhân</span></footer>
   </div>
 }
