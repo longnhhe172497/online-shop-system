@@ -4,6 +4,7 @@ import { getProfile } from './api/profile'
 import { changeRole, changeSetting, changeStatus, createUser, listAudit, listSettings, listUsers,
   updateUser, type AuditLog, type ManagedUser, type Setting } from './api/admin'
 import { getUiError } from './uiError'
+import InternalLayout, { type InternalNavItem } from './InternalLayout'
 
 const roles: Record<string, string> = { CUSTOMER: 'Khách hàng', ADMIN: 'Quản trị viên',
   MANAGER: 'Quản lý', SUPPORT: 'Hỗ trợ', WAREHOUSE: 'Nhân viên kho', DELIVERY: 'Giao hàng' }
@@ -17,13 +18,27 @@ const actionNames: Record<string, string> = { USER_CREATED: 'Tạo tài khoản'
   USER_ROLE_CHANGED: 'Đổi vai trò', USER_STATUS_CHANGED: 'Đổi trạng thái', SETTING_CHANGED: 'Đổi thiết lập' }
 const entityNames: Record<string, string> = { USER: 'Tài khoản', SYSTEM_SETTING: 'Thiết lập' }
 
-type Tab = 'users' | 'settings' | 'audit'
+type Tab = 'dashboard' | 'users' | 'settings' | 'audit'
+const navigation: InternalNavItem<Tab>[] = [
+  { id: 'dashboard', label: 'Tổng quan', icon: 'dashboard' },
+  { id: 'users', label: 'Tài khoản', icon: 'users' },
+  { id: 'settings', label: 'Thiết lập', icon: 'settings' },
+  { id: 'audit', label: 'Nhật ký', icon: 'audit' },
+]
+const pageTitles: Record<Tab, string> = { dashboard: 'Tổng quan', users: 'Quản lý tài khoản',
+  settings: 'Thiết lập hệ thống', audit: 'Nhật ký thao tác' }
+const pageDescriptions: Record<Tab, string> = {
+  dashboard: 'Một nơi theo dõi hoạt động của hệ thống khi các tính năng được hoàn thiện.',
+  users: 'Quản lý tài khoản, vai trò và trạng thái truy cập.',
+  settings: 'Điều chỉnh các giới hạn vận hành của cửa hàng.',
+  audit: 'Theo dõi các thao tác quản trị đã được ghi nhận.',
+}
 type Editor = { id?: number; email: string; fullName: string; phone: string; password: string; role: string }
 const emptyEditor: Editor = { email: '', fullName: '', phone: '', password: '', role: 'SUPPORT' }
 
 export default function AdminPage() {
   const [authorized, setAuthorized] = useState<boolean | null>(null)
-  const [tab, setTab] = useState<Tab>('users')
+  const [tab, setTab] = useState<Tab>('dashboard')
   const [users, setUsers] = useState<ManagedUser[]>([])
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(0)
@@ -85,21 +100,16 @@ export default function AdminPage() {
     finally { setBusy(false) }
   }
 
-  return <div className="forme-page"><div className="announcement">FORME · QUẢN TRỊ HỆ THỐNG</div>
-    <header className="forme-header"><Link to="/" className="brand">FORME</Link>
-      <nav aria-label="Điều hướng chính"><Link to="/">CỬA HÀNG</Link><Link to="/me">HỒ SƠ</Link></nav></header>
-    <main className="admin-main"><div className="admin-heading"><div><p className="auth-kicker">KHU VỰC QUẢN TRỊ</p>
-      <h1>Quản trị hệ thống</h1><p>Quản lý tài khoản, thiết lập và theo dõi hoạt động.</p></div></div>
-      {authorized === null && <p>Đang kiểm tra quyền truy cập…</p>}
-      {authorized === false && <div className="admin-panel"><h2>Không có quyền truy cập</h2>
-        <p>Chỉ quản trị viên được xem trang này.</p><Link to="/">Về cửa hàng</Link></div>}
-      {authorized && <><div className="admin-tabs" role="tablist" aria-label="Mục quản trị">
-        <button role="tab" aria-selected={tab === 'users'} onClick={() => setTab('users')}>Tài khoản</button>
-        <button role="tab" aria-selected={tab === 'settings'} onClick={() => setTab('settings')}>Thiết lập</button>
-        <button role="tab" aria-selected={tab === 'audit'} onClick={() => setTab('audit')}>Nhật ký</button>
-      </div>
+  return <>
+      {authorized === null && <div className="internal-access"><p>Đang kiểm tra quyền truy cập…</p></div>}
+      {authorized === false && <div className="internal-access"><div className="admin-panel">
+        <h2>Không có quyền truy cập</h2><p>Chỉ quản trị viên được xem trang này.</p>
+        <Link to="/">Về cửa hàng</Link></div></div>}
+      {authorized && <InternalLayout items={navigation} active={tab} onNavigate={(next) => {
+        setTab(next); setError(''); setNotice('') }} title={pageTitles[tab]} subtitle={pageDescriptions[tab]}>
       {error && <p className="auth-error" role="alert">{error}</p>}
       {notice && <p className="auth-notice" role="status">{notice}</p>}
+      {tab === 'dashboard' && <Dashboard onNavigate={setTab} />}
       {tab === 'users' && <section className="admin-panel"><div className="admin-section-head"><div>
         <h2>Danh sách tài khoản</h2><p>{total} tài khoản</p></div>
         <button className="account-primary" onClick={() => setEditor(emptyEditor)}>＋ Tạo tài khoản</button></div>
@@ -142,8 +152,7 @@ export default function AdminPage() {
         <div className="admin-pagination"><button disabled={auditPage === 0} onClick={() => setAuditPage(auditPage - 1)}>← Trước</button>
           <span>Trang {auditPage + 1} / {Math.max(1, Math.ceil(auditTotal / 20))}</span>
           <button disabled={(auditPage + 1) * 20 >= auditTotal} onClick={() => setAuditPage(auditPage + 1)}>Sau →</button></div></section>}
-      </>}
-    </main>
+      </InternalLayout>}
     {editor && <div className="address-modal-backdrop"><section className="address-modal admin-editor" role="dialog"
       aria-modal="true" aria-labelledby="admin-editor-title"><div className="address-modal-head"><div>
         <p className="card-eyebrow">TÀI KHOẢN</p><h2 id="admin-editor-title">{editor.id ? 'Chỉnh sửa tài khoản' : 'Tạo tài khoản mới'}</h2></div>
@@ -162,7 +171,37 @@ export default function AdminPage() {
         </div><div className="address-modal-actions"><button type="button" className="account-secondary"
           onClick={() => setEditor(null)}>Hủy</button><button className="account-primary" disabled={busy} type="submit">
             {editor.id ? 'Lưu thay đổi' : 'Tạo tài khoản'}</button></div></form></section></div>}
-    <footer className="forme-footer"><strong>FORME</strong><span>Quản trị hệ thống</span></footer>
+  </>
+}
+
+function Dashboard({ onNavigate }: { onNavigate: (tab: Tab) => void }) {
+  return <div className="internal-dashboard">
+    <div className="dashboard-intro"><div><span className="dashboard-tag">BẢN XEM TRƯỚC</span>
+      <h2>Chào mừng đến với khu quản trị</h2>
+      <p>Đây là bố cục tổng quan tĩnh. Các chỉ số sẽ lấy dữ liệu thật khi những phần đơn hàng, kho và báo cáo được triển khai.</p></div>
+      <button type="button" className="account-primary" onClick={() => onNavigate('users')}>Quản lý tài khoản →</button></div>
+    <div className="dashboard-metrics" aria-label="Chỉ số dự kiến">
+      {[['Tài khoản', 'Sẽ cập nhật', 'Thông tin người dùng'],
+        ['Đơn hàng', 'Sẽ cập nhật', 'Tình trạng xử lý'],
+        ['Sản phẩm', 'Sẽ cập nhật', 'Danh mục đang bán'],
+        ['Doanh thu', 'Sẽ cập nhật', 'Tổng hợp theo kỳ']].map(([name, value, description]) =>
+        <div className="dashboard-metric" key={name}><span>{name}</span><strong>{value}</strong>
+          <small>{description}</small></div>)}
+    </div>
+    <div className="dashboard-panels"><section className="dashboard-panel"><div className="dashboard-panel-head">
+      <div><p className="card-eyebrow">THEO DÕI HOẠT ĐỘNG</p><h3>Hoạt động gần đây</h3></div>
+      <button type="button" onClick={() => onNavigate('audit')}>Xem nhật ký →</button></div>
+      <div className="dashboard-placeholder"><span aria-hidden="true">◷</span>
+        <strong>Chưa có dữ liệu tổng quan</strong><p>Nhật ký và các sự kiện mới sẽ xuất hiện tại đây sau khi kết nối dashboard.</p></div>
+    </section><section className="dashboard-panel"><div className="dashboard-panel-head">
+      <div><p className="card-eyebrow">TRUY CẬP NHANH</p><h3>Công cụ quản trị</h3></div></div>
+      <button type="button" className="dashboard-quick-link" onClick={() => onNavigate('users')}>
+        <span>01</span><div><strong>Tài khoản</strong><small>Thêm, sửa vai trò và trạng thái</small></div><b>→</b></button>
+      <button type="button" className="dashboard-quick-link" onClick={() => onNavigate('settings')}>
+        <span>02</span><div><strong>Thiết lập</strong><small>Điều chỉnh giới hạn hệ thống</small></div><b>→</b></button>
+      <button type="button" className="dashboard-quick-link" onClick={() => onNavigate('audit')}>
+        <span>03</span><div><strong>Nhật ký</strong><small>Xem lịch sử thao tác quản trị</small></div><b>→</b></button>
+    </section></div>
   </div>
 }
 

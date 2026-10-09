@@ -144,17 +144,22 @@ describe('App', () => {
     expect(listUsers).not.toHaveBeenCalled()
   })
 
-  it('shows account, settings and audit tabs to an admin', async () => {
+  it('opens a static dashboard and navigates through the internal sidebar', async () => {
     vi.mocked(getProfile).mockResolvedValue({ id: 2, email: 'admin@example.com',
       fullName: 'Quản trị viên', phone: null, role: 'ADMIN' })
     vi.mocked(listUsers).mockResolvedValue({ items: [], page: 0, size: 20, totalItems: 0, totalPages: 0 })
     vi.mocked(listSettings).mockResolvedValue([])
     vi.mocked(listAudit).mockResolvedValue({ items: [], page: 0, size: 20, totalItems: 0, totalPages: 0 })
     renderAt('/admin')
+    expect(await screen.findByRole('heading', { name: 'Tổng quan' })).toBeInTheDocument()
+    expect(screen.getByText('BẢN XEM TRƯỚC')).toBeInTheDocument()
+    expect(listUsers).not.toHaveBeenCalled()
+    fireEvent.click(within(screen.getByRole('navigation', { name: 'Mục quản trị' }))
+      .getByRole('button', { name: 'Tài khoản' }))
     expect(await screen.findByText('Danh sách tài khoản')).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('tab', { name: 'Thiết lập' }))
-    expect(await screen.findByText('Thiết lập hệ thống')).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('tab', { name: 'Nhật ký' }))
-    expect(await screen.findByText('Nhật ký thao tác')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Thiết lập' }))
+    expect(await screen.findByRole('heading', { name: 'Thiết lập hệ thống', level: 1 })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Nhật ký' }))
+    expect(await screen.findByRole('heading', { name: 'Nhật ký thao tác', level: 1 })).toBeInTheDocument()
   })
 })
