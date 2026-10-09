@@ -15,7 +15,7 @@ This is the **agreed route inventory for implementation**, not a claim that ever
 
 ## Endpoint ownership and minimum request/response fields
 
-`P` = public, `C` = customer-owned resource, `M` = Manager, `S` = Support, `W` = Warehouse, `D` = Delivery, `A` = Admin. All mutating endpoints require an authenticated actor except registration and verification. The feature owner must define precise validation and example values in OpenAPI.
+`P` = public, `C` = customer-owned resource, `M` = Manager, `S` = Support, `W` = Warehouse, `D` = Delivery, `A` = Admin. All mutating endpoints require an authenticated actor except registration, verification, login and password-reset routes. The feature owner must define precise validation and example values in OpenAPI.
 
 | Method and path | Role | Minimum request → response |
 | --- | --- | --- |
@@ -27,8 +27,8 @@ This is the **agreed route inventory for implementation**, not a claim that ever
 | `POST /auth/verify` | P | `{token}` → `{verified}` |
 | `POST /auth/login` | P | `{email,password}` → `{accessToken,expiresAt,user:{id,fullName,role}}`; opaque 24-hour bearer token |
 | `POST /auth/logout` | C/M/S/W/D/A | authenticated request → `204` |
-| `POST /auth/password-reset/request` | P | `{email}` → `202` regardless of whether account exists |
-| `POST /auth/password-reset/confirm` | P | `{token,newPassword}` → `204` |
+| `POST /auth/password-reset/request` | P | `{email}` → `202` regardless of whether account exists; active accounts receive a 30-minute single-use link, at most one email per five minutes |
+| `POST /auth/password-reset/confirm` | P | `{token,newPassword,confirmPassword}` → `{reset:true}`; consumes link and revokes existing sessions |
 | `GET /me`, `PATCH /me` | authenticated | profile read/update → profile without password hash |
 | `GET/POST /me/addresses` | C | none / address fields → own addresses / created address |
 | `PATCH/DELETE /me/addresses/{id}` | C | address fields / none → updated address / `204` |

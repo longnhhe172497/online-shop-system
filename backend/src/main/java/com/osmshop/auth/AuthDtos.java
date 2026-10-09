@@ -19,6 +19,12 @@ public final class AuthDtos {
     public record VerifyRequest(@NotBlank String token) {}
     public record VerifyResponse(boolean verified) {}
     public record LoginRequest(@NotBlank @Email String email, @NotBlank String password) {}
+    public record PasswordResetRequest(@NotBlank @Email String email) {}
+    public record PasswordResetConfirmRequest(
+            @NotBlank String token,
+            @NotBlank @Size(min = 8, max = 72) String newPassword,
+            @NotBlank @Size(min = 8, max = 72) String confirmPassword) {}
+    public record PasswordResetConfirmResponse(boolean reset) {}
     public record UserResponse(long id, String email, String fullName, String role) {}
     public record LoginResponse(String accessToken, Instant expiresAt, UserResponse user) {}
 }

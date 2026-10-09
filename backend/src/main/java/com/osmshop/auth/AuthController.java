@@ -2,6 +2,9 @@ package com.osmshop.auth;
 
 import com.osmshop.auth.AuthDtos.LoginRequest;
 import com.osmshop.auth.AuthDtos.LoginResponse;
+import com.osmshop.auth.AuthDtos.PasswordResetRequest;
+import com.osmshop.auth.AuthDtos.PasswordResetConfirmRequest;
+import com.osmshop.auth.AuthDtos.PasswordResetConfirmResponse;
 import com.osmshop.auth.AuthDtos.RegisterRequest;
 import com.osmshop.auth.AuthDtos.RegisterResponse;
 import com.osmshop.auth.AuthDtos.UserResponse;
@@ -41,6 +44,18 @@ public class AuthController {
     @PostMapping("/login")
     public LoginResponse login(@Valid @RequestBody LoginRequest request) {
         return auth.login(request);
+    }
+
+    @PostMapping("/password-reset/request")
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    public void requestPasswordReset(@Valid @RequestBody PasswordResetRequest request) {
+        auth.requestPasswordReset(request.email());
+    }
+
+    @PostMapping("/password-reset/confirm")
+    public PasswordResetConfirmResponse confirmPasswordReset(
+            @Valid @RequestBody PasswordResetConfirmRequest request) {
+        return auth.confirmPasswordReset(request);
     }
 
     @PostMapping("/logout")

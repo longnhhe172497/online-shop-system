@@ -5,6 +5,7 @@ import { getMe, logout, type AuthUser } from './api/auth'
 import { hasAccessToken } from './api/client'
 import AuthPage from './AuthPage'
 import VerifyPage from './VerifyPage'
+import PasswordResetPage from './PasswordResetPage'
 import './App.css'
 
 function ProductsPage() {
@@ -45,5 +46,7 @@ export default function App() {
     <Route path="/" element={<ProductsPage />} />
     <Route path="/auth" element={<AuthPage />} />
     <Route path="/verify-email" element={<VerifyPage />} />
+    <Route path="/forgot-password" element={<PasswordResetPage />} />
+    <Route path="/reset-password" element={<PasswordResetPage />} />
   </Routes>
 }

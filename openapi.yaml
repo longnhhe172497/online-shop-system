@@ -14,7 +14,7 @@ paths:
           description: Backend is running
   /auth/register:
     post:
-      summary: Register a Customer account and send a verification email to local MailHog
+      summary: Register a Customer account and send a verification email using the configured mail transport
       requestBody:
         required: true
         content:
@@ -58,6 +58,33 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/LoginResponse' }
         '401': { description: Wrong credentials or inactive account }
+  /auth/password-reset/request:
+    post:
+      summary: Send a single-use password reset link for an active account
+      description: Always returns 202 for valid email input, including unknown accounts. Links expire after 30 minutes; requests are limited to one email per account per five minutes.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PasswordResetRequest' }
+      responses:
+        '202': { description: Request accepted regardless of account existence }
+        '400': { description: Invalid email }
+  /auth/password-reset/confirm:
+    post:
+      summary: Consume a password reset link and revoke existing sessions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PasswordResetConfirmRequest' }
+      responses:
+        '200':
+          description: Password changed and previous sessions revoked
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PasswordResetConfirmResponse' }
+        '400': { description: Invalid or used token, or passwords do not match }
   /auth/logout:
     post:
       summary: Revoke the current bearer token
@@ -137,6 +164,23 @@ components:
       properties:
         email: { type: string, format: email }
         password: { type: string, format: password }
+    PasswordResetRequest:
+      type: object
+      required: [email]
+      properties:
+        email: { type: string, format: email }
+    PasswordResetConfirmRequest:
+      type: object
+      required: [token, newPassword, confirmPassword]
+      properties:
+        token: { type: string }
+        newPassword: { type: string, format: password, minLength: 8, maxLength: 72 }
+        confirmPassword: { type: string, format: password, minLength: 8, maxLength: 72 }
+    PasswordResetConfirmResponse:
+      type: object
+      required: [reset]
+      properties:
+        reset: { type: boolean }
     AuthUser:
       type: object
       required: [id, email, fullName, role]

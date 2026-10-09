@@ -4,6 +4,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.clearInvocations;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -104,5 +105,76 @@ class AuthFlowTests {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("PASSWORD_MISMATCH"));
         verify(mail, never()).send(any(SimpleMailMessage.class));
+    }
+
+    @Test
+    void resetPasswordRevokesSessionsAndRejectsUsedToken() throws Exception {
+        String email = "reset-" + UUID.randomUUID() + "@example.com";
+        mvc.perform(post("/api/auth/register").contentType(MediaType.APPLICATION_JSON)
+                .content(json.writeValueAsString(new AuthDtos.RegisterRequest(
+                        "Test Customer", email, "OldPassword123", "OldPassword123", null))))
+                .andExpect(status().isCreated());
+        ArgumentCaptor<SimpleMailMessage> registrationMail = ArgumentCaptor.forClass(SimpleMailMessage.class);
+        verify(mail).send(registrationMail.capture());
+        String verificationText = registrationMail.getValue().getText();
+        String verificationToken = verificationText.substring(verificationText.indexOf("?token=") + 7).trim();
+        mvc.perform(post("/api/auth/verify").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"token\":\"" + verificationToken + "\"}"))
+                .andExpect(status().isOk());
+        String loginBody = mvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"email\":\"" + email + "\",\"password\":\"OldPassword123\"}"))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        String bearer = "Bearer " + json.readTree(loginBody).get("accessToken").asText();
+
+        clearInvocations(mail);
+        mvc.perform(post("/api/auth/password-reset/request").contentType(MediaType.APPLICATION_JSON)
+                .content(json.writeValueAsString(new AuthDtos.PasswordResetRequest(email))))
+                .andExpect(status().isAccepted());
+        mvc.perform(post("/api/auth/password-reset/request").contentType(MediaType.APPLICATION_JSON)
+                .content(json.writeValueAsString(new AuthDtos.PasswordResetRequest(email))))
+                .andExpect(status().isAccepted());
+        ArgumentCaptor<SimpleMailMessage> resetMail = ArgumentCaptor.forClass(SimpleMailMessage.class);
+        verify(mail).send(resetMail.capture());
+        String resetText = resetMail.getValue().getText();
+        String resetToken = resetText.substring(resetText.indexOf("?token=") + 7).split("\\s")[0];
+
+        mvc.perform(post("/api/auth/password-reset/confirm").contentType(MediaType.APPLICATION_JSON)
+                .content(json.writeValueAsString(new AuthDtos.PasswordResetConfirmRequest(
+                        resetToken, "NewPassword123", "WrongPassword123"))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("PASSWORD_MISMATCH"));
+        mvc.perform(post("/api/auth/password-reset/confirm").contentType(MediaType.APPLICATION_JSON)
+                .content(json.writeValueAsString(new AuthDtos.PasswordResetConfirmRequest(
+                        resetToken, "NewPassword123", "NewPassword123"))))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.reset").value(true));
+        mvc.perform(get("/api/me").header("Authorization", bearer)).andExpect(status().isUnauthorized());
+        mvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"email\":\"" + email + "\",\"password\":\"OldPassword123\"}"))
+                .andExpect(status().isUnauthorized());
+        mvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"email\":\"" + email + "\",\"password\":\"NewPassword123\"}"))
+                .andExpect(status().isOk());
+        mvc.perform(post("/api/auth/password-reset/confirm").contentType(MediaType.APPLICATION_JSON)
+                .content(json.writeValueAsString(new AuthDtos.PasswordResetConfirmRequest(
+                        resetToken, "AnotherPassword123", "AnotherPassword123"))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("INVALID_RESET_TOKEN"));
+    }
+
+    @Test
+    void resetRequestForUnknownEmailDoesNotRevealAccountOrSendMail() throws Exception {
+        mvc.perform(post("/api/auth/password-reset/request").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"email\":\"unknown-" + UUID.randomUUID() + "@example.com\"}"))
+                .andExpect(status().isAccepted());
+        verify(mail, never()).send(any(SimpleMailMessage.class));
+    }
+
+    @Test
+    void forgedResetTokenIsRejected() throws Exception {
+        mvc.perform(post("/api/auth/password-reset/confirm").contentType(MediaType.APPLICATION_JSON)
+                .content(json.writeValueAsString(new AuthDtos.PasswordResetConfirmRequest(
+                        "not-a-real-token", "NewPassword123", "NewPassword123"))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("INVALID_RESET_TOKEN"));
     }
 }
