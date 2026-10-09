@@ -1,16 +1,16 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
-import { isAxiosError } from 'axios'
 import { createAddress, deleteAddress, getProfile, listAddresses, updateAddress, updateProfile,
   type Address, type AddressInput, type Profile } from './api/profile'
+import { getUiError } from './uiError'
 
 const emptyAddress: AddressInput = {
   recipientName: '', phone: '', addressLine: '', ward: '', district: '', province: '', isDefault: false,
 }
 
-function getError(error: unknown) {
-  if (isAxiosError(error)) return error.response?.data?.detail || 'The request could not be completed.'
-  return 'The request could not be completed.'
+function formatAddress(address: Address) {
+  return [address.addressLine, address.ward, address.district, address.province]
+    .filter(Boolean).join(', ')
 }
 
 export default function ProfilePage() {
@@ -20,9 +20,11 @@ export default function ProfilePage() {
   const [addresses, setAddresses] = useState<Address[]>([])
   const [addressForm, setAddressForm] = useState<AddressInput>(emptyAddress)
   const [editingId, setEditingId] = useState<number | null>(null)
+  const [editorOpen, setEditorOpen] = useState(false)
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  const [addressError, setAddressError] = useState('')
   const [notice, setNotice] = useState('')
 
   useEffect(() => {
@@ -39,7 +41,7 @@ export default function ProfilePage() {
           if (active) setAddresses(saved)
         }
       } catch (failure) {
-        if (active) setError(getError(failure))
+        if (active) setError(getUiError(failure))
       } finally {
         if (active) setLoading(false)
       }
@@ -48,6 +50,15 @@ export default function ProfilePage() {
     return () => { active = false }
   }, [])
 
+  useEffect(() => {
+    if (!editorOpen) return
+    function onEscape(event: KeyboardEvent) {
+      if (event.key === 'Escape' && !busy) setEditorOpen(false)
+    }
+    window.addEventListener('keydown', onEscape)
+    return () => window.removeEventListener('keydown', onEscape)
+  }, [editorOpen, busy])
+
   async function saveProfile(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setError('')
@@ -55,9 +66,9 @@ export default function ProfilePage() {
     setBusy(true)
     try {
       setProfile(await updateProfile({ fullName, phone }))
-      setNotice('Profile updated.')
+      setNotice('Đã cập nhật hồ sơ cá nhân.')
     } catch (failure) {
-      setError(getError(failure))
+      setError(getUiError(failure))
     } finally {
       setBusy(false)
     }
@@ -65,7 +76,7 @@ export default function ProfilePage() {
 
   async function saveAddress(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    setError('')
+    setAddressError('')
     setNotice('')
     setBusy(true)
     try {
@@ -74,29 +85,36 @@ export default function ProfilePage() {
       setAddresses(await listAddresses())
       setAddressForm(emptyAddress)
       setEditingId(null)
-      setNotice('Address saved.')
+      setEditorOpen(false)
+      setNotice('Đã lưu địa chỉ giao hàng.')
     } catch (failure) {
-      setError(getError(failure))
+      setAddressError(getUiError(failure))
     } finally {
       setBusy(false)
     }
   }
 
   async function removeAddress(id: number) {
-    if (!window.confirm('Delete this saved address?')) return
+    if (!window.confirm('Bạn có chắc muốn xóa địa chỉ này?')) return
     setError('')
     setNotice('')
     setBusy(true)
     try {
       await deleteAddress(id)
       setAddresses(await listAddresses())
-      if (editingId === id) { setEditingId(null); setAddressForm(emptyAddress) }
-      setNotice('Address deleted.')
+      setNotice('Đã xóa địa chỉ giao hàng.')
     } catch (failure) {
-      setError(getError(failure))
+      setError(getUiError(failure))
     } finally {
       setBusy(false)
     }
+  }
+
+  function addAddress() {
+    setEditingId(null)
+    setAddressForm(emptyAddress)
+    setAddressError('')
+    setEditorOpen(true)
   }
 
   function editAddress(address: Address) {
@@ -104,8 +122,8 @@ export default function ProfilePage() {
     setAddressForm({ recipientName: address.recipientName, phone: address.phone,
       addressLine: address.addressLine, ward: address.ward ?? '', district: address.district ?? '',
       province: address.province, isDefault: address.isDefault })
-    setError('')
-    setNotice('')
+    setAddressError('')
+    setEditorOpen(true)
   }
 
   function updateAddressField<K extends keyof AddressInput>(field: K, value: AddressInput[K]) {
@@ -113,64 +131,100 @@ export default function ProfilePage() {
   }
 
   return <div className="forme-page">
-    <div className="announcement">ONLINE SHOP SYSTEM · LOCAL DEVELOPMENT</div>
+    <div className="announcement">CỬA HÀNG TRỰC TUYẾN · BẢN CHẠY TRÊN MÁY CÁ NHÂN</div>
     <header className="forme-header"><Link to="/" className="brand">FORME</Link>
-      <nav aria-label="Main navigation"><Link to="/">SHOP</Link><Link to="/auth">SIGN IN</Link></nav>
+      <nav aria-label="Điều hướng chính"><Link to="/">CỬA HÀNG</Link><Link to="/me">TÀI KHOẢN</Link></nav>
     </header>
-    <main className="profile-main">
-      <p className="auth-kicker">MY ACCOUNT</p>
-      <h1>Profile & addresses</h1>
-      {loading && <p>Loading your profile…</p>}
-      {error && <p className="auth-error" role="alert">{error}</p>}
-      {notice && <p className="auth-notice" role="status">{notice}</p>}
-      {!loading && !profile && <p><Link to="/auth">Sign in to view your profile</Link></p>}
-      {profile && <>
-        <section className="profile-panel">
-          <h2>Personal information</h2>
-          <p className="profile-readonly">Email: {profile.email} · Role: {profile.role}</p>
-          <form onSubmit={saveProfile}>
-            <label>FULL NAME<input value={fullName} onChange={(event) => setFullName(event.target.value)}
+    <main className="account-main">
+      <div className="account-heading">
+        <div><p className="auth-kicker">TÀI KHOẢN CỦA TÔI</p><h1>Hồ sơ & địa chỉ giao hàng</h1>
+          <p>Quản lý thông tin cá nhân và địa chỉ nhận hàng của bạn tại một nơi.</p></div>
+        <Link to="/" className="account-back">← Tiếp tục mua sắm</Link>
+      </div>
+      {loading && <p className="account-message">Đang tải thông tin tài khoản…</p>}
+      {error && <p className="auth-error account-message" role="alert">{error}</p>}
+      {notice && <p className="auth-notice account-message" role="status">{notice}</p>}
+      {!loading && !profile && <p className="account-message"><Link to="/auth">Đăng nhập để xem tài khoản</Link></p>}
+      {profile && <div className="account-grid">
+        <section className="account-card personal-card" aria-labelledby="personal-title">
+          <div className="personal-intro"><div className="account-avatar" aria-hidden="true">
+            {profile.fullName.trim().charAt(0).toLocaleUpperCase('vi')}</div>
+            <div><p className="card-eyebrow">THÔNG TIN CÁ NHÂN</p><h2 id="personal-title">{profile.fullName}</h2>
+              <span className="role-pill">{({ CUSTOMER: 'Khách hàng', ADMIN: 'Quản trị viên', MANAGER: 'Quản lý', SUPPORT: 'Hỗ trợ', WAREHOUSE: 'Nhân viên kho', DELIVERY: 'Nhân viên giao hàng' } as Record<string, string>)[profile.role] ?? 'Vai trò khác'}</span></div></div>
+          <div className="account-readonly"><span>Email đăng nhập</span><strong>{profile.email}</strong>
+            <small>Email và vai trò không thể chỉnh sửa tại đây.</small></div>
+          <form className="account-form" onSubmit={saveProfile}>
+            <label>HỌ VÀ TÊN<input value={fullName} onChange={(event) => setFullName(event.target.value)}
               required maxLength={150} autoComplete="name" /></label>
-            <label>PHONE<input value={phone} onChange={(event) => setPhone(event.target.value)}
-              maxLength={30} autoComplete="tel" /></label>
-            <button className="auth-submit" type="submit" disabled={busy}>SAVE PROFILE</button>
+            <label>SỐ ĐIỆN THOẠI<input value={phone} onChange={(event) => setPhone(event.target.value)}
+              maxLength={30} autoComplete="tel" placeholder="Thêm số điện thoại" /></label>
+            <button className="account-primary" type="submit" disabled={busy}>Lưu thay đổi</button>
           </form>
         </section>
-        {profile.role === 'CUSTOMER' && <section className="profile-panel">
-          <h2>Saved addresses</h2>
-          {addresses.length === 0 && <p>No saved addresses yet.</p>}
-          <ul className="address-list">{addresses.map((address) => <li key={address.id}>
-            <strong>{address.recipientName}{address.isDefault ? ' · Default' : ''}</strong>
-            <span>{address.addressLine}, {address.ward ? `${address.ward}, ` : ''}
-              {address.district ? `${address.district}, ` : ''}{address.province}</span>
-            <span>{address.phone}</span>
-            <div><button type="button" onClick={() => editAddress(address)}>Edit</button>
-              <button type="button" onClick={() => void removeAddress(address.id)} disabled={busy}>Delete</button></div>
-          </li>)}</ul>
-          <h3>{editingId === null ? 'Add address' : 'Edit address'}</h3>
-          <form onSubmit={saveAddress}>
-            <label>RECIPIENT NAME<input value={addressForm.recipientName}
-              onChange={(event) => updateAddressField('recipientName', event.target.value)} required maxLength={150} /></label>
-            <label>RECIPIENT PHONE<input value={addressForm.phone}
-              onChange={(event) => updateAddressField('phone', event.target.value)} required maxLength={30} /></label>
-            <label>ADDRESS LINE<input value={addressForm.addressLine}
-              onChange={(event) => updateAddressField('addressLine', event.target.value)} required maxLength={300} /></label>
-            <label>WARD<input value={addressForm.ward}
-              onChange={(event) => updateAddressField('ward', event.target.value)} maxLength={120} /></label>
-            <label>DISTRICT<input value={addressForm.district}
-              onChange={(event) => updateAddressField('district', event.target.value)} maxLength={120} /></label>
-            <label>PROVINCE<input value={addressForm.province}
-              onChange={(event) => updateAddressField('province', event.target.value)} required maxLength={120} /></label>
-            <label className="default-check"><input type="checkbox" checked={addressForm.isDefault}
-              onChange={(event) => updateAddressField('isDefault', event.target.checked)} /> SET AS DEFAULT</label>
-            <div className="profile-actions"><button className="auth-submit" type="submit" disabled={busy}>SAVE ADDRESS</button>
-              {editingId !== null && <button type="button" onClick={() => {
-                setEditingId(null); setAddressForm(emptyAddress)
-              }}>CANCEL EDIT</button>}</div>
-          </form>
+
+        {profile.role === 'CUSTOMER' && <section className="account-card addresses-card" aria-labelledby="address-title">
+          <div className="address-section-head"><div><p className="card-eyebrow">SỔ ĐỊA CHỈ</p>
+            <h2 id="address-title">Địa chỉ của bạn</h2>
+            <p>{addresses.length} địa chỉ đã lưu · Tối đa 10 địa chỉ</p></div>
+            <button className="account-primary add-address" type="button" onClick={addAddress}>
+              <span aria-hidden="true">＋</span> Thêm địa chỉ</button></div>
+          {addresses.length === 0 ? <div className="address-empty"><div aria-hidden="true">⌂</div>
+            <strong>Chưa có địa chỉ giao hàng</strong><p>Thêm địa chỉ đầu tiên để đặt hàng nhanh hơn.</p>
+            <button type="button" onClick={addAddress}>Thêm địa chỉ ngay →</button></div>
+            : <div className="address-table-wrap"><table className="address-table">
+              <thead><tr><th scope="col">NGƯỜI NHẬN</th><th scope="col">ĐỊA CHỈ GIAO HÀNG</th>
+                <th scope="col">TRẠNG THÁI</th><th scope="col">THAO TÁC</th></tr></thead>
+              <tbody>{addresses.map((address) => <tr key={address.id}>
+                <td><strong>{address.recipientName}</strong><span>{address.phone}</span></td>
+                <td className="address-location">{formatAddress(address)}</td>
+                <td>{address.isDefault ? <span className="default-badge">Mặc định</span>
+                  : <span className="secondary-badge">Địa chỉ phụ</span>}</td>
+                <td><div className="address-row-actions"><button type="button"
+                  onClick={() => editAddress(address)}>Chỉnh sửa</button>
+                  <button type="button" onClick={() => void removeAddress(address.id)}
+                    disabled={busy}>Xóa</button></div></td>
+              </tr>)}</tbody>
+            </table></div>}
         </section>}
-      </>}
+      </div>}
     </main>
-    <footer className="forme-footer"><strong>FORME</strong><span>Online Shop System · Local demo</span></footer>
+
+    {editorOpen && <div className="address-modal-backdrop"><section className="address-modal"
+      role="dialog" aria-modal="true" aria-labelledby="address-modal-title">
+      <div className="address-modal-head"><div><p className="card-eyebrow">ĐỊA CHỈ GIAO HÀNG</p>
+        <h2 id="address-modal-title">{editingId === null ? 'Thêm địa chỉ mới' : 'Chỉnh sửa địa chỉ'}</h2>
+        <p>Điền đầy đủ thông tin để giao hàng chính xác.</p></div>
+        <button className="modal-close" type="button" aria-label="Đóng" disabled={busy}
+          onClick={() => setEditorOpen(false)}>×</button></div>
+      <form onSubmit={saveAddress}>
+        {addressError && <p className="auth-error" role="alert">{addressError}</p>}
+        <div className="address-form-grid">
+          <label>HỌ TÊN NGƯỜI NHẬN<input value={addressForm.recipientName} autoFocus
+            onChange={(event) => updateAddressField('recipientName', event.target.value)}
+            required maxLength={150} placeholder="Ví dụ: Nguyễn Văn A" /></label>
+          <label>SỐ ĐIỆN THOẠI<input value={addressForm.phone}
+            onChange={(event) => updateAddressField('phone', event.target.value)}
+            required maxLength={30} autoComplete="tel" placeholder="Số điện thoại nhận hàng" /></label>
+          <label className="form-span-2">ĐỊA CHỈ CỤ THỂ<input value={addressForm.addressLine}
+            onChange={(event) => updateAddressField('addressLine', event.target.value)}
+            required maxLength={300} placeholder="Số nhà, tên đường, tòa nhà…" /></label>
+          <label>PHƯỜNG / XÃ<input value={addressForm.ward}
+            onChange={(event) => updateAddressField('ward', event.target.value)} maxLength={120} /></label>
+          <label>QUẬN / HUYỆN<input value={addressForm.district}
+            onChange={(event) => updateAddressField('district', event.target.value)} maxLength={120} /></label>
+          <label className="form-span-2">TỈNH / THÀNH PHỐ<input value={addressForm.province}
+            onChange={(event) => updateAddressField('province', event.target.value)}
+            required maxLength={120} placeholder="Ví dụ: Hà Nội" /></label>
+        </div>
+        <label className="default-option"><input type="checkbox" checked={addressForm.isDefault}
+          onChange={(event) => updateAddressField('isDefault', event.target.checked)} />
+          <span><strong>Đặt làm địa chỉ mặc định</strong><small>Địa chỉ này sẽ được ưu tiên khi đặt hàng.</small></span></label>
+        <div className="address-modal-actions"><button type="button" className="account-secondary"
+          disabled={busy} onClick={() => setEditorOpen(false)}>Hủy</button>
+          <button type="submit" className="account-primary" disabled={busy}>
+            {busy ? 'Đang lưu…' : editingId === null ? 'Thêm địa chỉ' : 'Lưu thay đổi'}</button></div>
+      </form>
+    </section></div>}
+    <footer className="forme-footer"><strong>FORME</strong><span>Cửa hàng trực tuyến · Bản chạy thử trên máy cá nhân</span></footer>
   </div>
 }

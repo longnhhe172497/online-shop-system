@@ -1,10 +1,11 @@
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
 import { listProducts } from './api/products'
 import { confirmPasswordReset, login, registerAccount, requestPasswordReset } from './api/auth'
 import { createAddress, getProfile, listAddresses, updateProfile } from './api/profile'
+import { listAudit, listSettings, listUsers } from './api/admin'
 
 vi.mock('./api/products', () => ({ listProducts: vi.fn() }))
 vi.mock('./api/auth', () => ({
@@ -14,6 +15,8 @@ vi.mock('./api/auth', () => ({
 vi.mock('./api/client', () => ({ hasAccessToken: () => false }))
 vi.mock('./api/profile', () => ({ getProfile: vi.fn(), updateProfile: vi.fn(), listAddresses: vi.fn(),
   createAddress: vi.fn(), updateAddress: vi.fn(), deleteAddress: vi.fn() }))
+vi.mock('./api/admin', () => ({ listUsers: vi.fn(), createUser: vi.fn(), updateUser: vi.fn(),
+  changeRole: vi.fn(), changeStatus: vi.fn(), listSettings: vi.fn(), changeSetting: vi.fn(), listAudit: vi.fn() }))
 
 function renderAt(path: string) {
   return render(<MemoryRouter initialEntries={[path]}><App /></MemoryRouter>)
@@ -35,22 +38,22 @@ describe('App', () => {
 
   it('switches from sign in to registration', () => {
     renderAt('/auth')
-    fireEvent.click(screen.getByRole('tab', { name: 'REGISTER' }))
-    expect(screen.getByRole('heading', { name: 'Create account' })).toBeInTheDocument()
-    expect(screen.getByLabelText('FULL NAME')).toBeInTheDocument()
-    expect(screen.getByLabelText('CONFIRM PASSWORD')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('tab', { name: 'ĐĂNG KÝ' }))
+    expect(screen.getByRole('heading', { name: 'Tạo tài khoản' })).toBeInTheDocument()
+    expect(screen.getByLabelText('HỌ VÀ TÊN')).toBeInTheDocument()
+    expect(screen.getByLabelText('NHẬP LẠI MẬT KHẨU')).toBeInTheDocument()
   })
 
   it('registers then directs the user to verify email', async () => {
     vi.mocked(registerAccount).mockResolvedValue({ userId: 1, verificationRequired: true })
     renderAt('/auth')
-    fireEvent.click(screen.getByRole('tab', { name: 'REGISTER' }))
-    fireEvent.change(screen.getByLabelText('FULL NAME'), { target: { value: 'Test User' } })
-    fireEvent.change(screen.getByLabelText('EMAIL ADDRESS'), { target: { value: 'test@example.com' } })
-    fireEvent.change(screen.getByLabelText('PASSWORD'), { target: { value: 'password123' } })
-    fireEvent.change(screen.getByLabelText('CONFIRM PASSWORD'), { target: { value: 'password123' } })
-    fireEvent.click(screen.getByRole('button', { name: 'CREATE ACCOUNT' }))
-    expect(await screen.findByText(/Account created/)).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('tab', { name: 'ĐĂNG KÝ' }))
+    fireEvent.change(screen.getByLabelText('HỌ VÀ TÊN'), { target: { value: 'Test User' } })
+    fireEvent.change(screen.getByLabelText('ĐỊA CHỈ EMAIL'), { target: { value: 'test@example.com' } })
+    fireEvent.change(screen.getByLabelText('MẬT KHẨU'), { target: { value: 'password123' } })
+    fireEvent.change(screen.getByLabelText('NHẬP LẠI MẬT KHẨU'), { target: { value: 'password123' } })
+    fireEvent.click(screen.getByRole('button', { name: 'TẠO TÀI KHOẢN' }))
+    expect(await screen.findByText(/Tài khoản đã được tạo/)).toBeInTheDocument()
     expect(registerAccount).toHaveBeenCalledWith({ fullName: 'Test User', email: 'test@example.com',
       password: 'password123', confirmPassword: 'password123' })
     expect(login).not.toHaveBeenCalled()
@@ -58,38 +61,38 @@ describe('App', () => {
 
   it('does not submit registration when passwords differ', () => {
     renderAt('/auth')
-    fireEvent.click(screen.getByRole('tab', { name: 'REGISTER' }))
-    fireEvent.change(screen.getByLabelText('FULL NAME'), { target: { value: 'Test User' } })
-    fireEvent.change(screen.getByLabelText('EMAIL ADDRESS'), { target: { value: 'test@example.com' } })
-    fireEvent.change(screen.getByLabelText('PASSWORD'), { target: { value: 'password123' } })
-    fireEvent.change(screen.getByLabelText('CONFIRM PASSWORD'), { target: { value: 'different123' } })
-    fireEvent.click(screen.getByRole('button', { name: 'CREATE ACCOUNT' }))
-    expect(screen.getByRole('alert')).toHaveTextContent('Passwords do not match.')
+    fireEvent.click(screen.getByRole('tab', { name: 'ĐĂNG KÝ' }))
+    fireEvent.change(screen.getByLabelText('HỌ VÀ TÊN'), { target: { value: 'Test User' } })
+    fireEvent.change(screen.getByLabelText('ĐỊA CHỈ EMAIL'), { target: { value: 'test@example.com' } })
+    fireEvent.change(screen.getByLabelText('MẬT KHẨU'), { target: { value: 'password123' } })
+    fireEvent.change(screen.getByLabelText('NHẬP LẠI MẬT KHẨU'), { target: { value: 'different123' } })
+    fireEvent.click(screen.getByRole('button', { name: 'TẠO TÀI KHOẢN' }))
+    expect(screen.getByRole('alert')).toHaveTextContent('Mật khẩu nhập lại không khớp.')
     expect(registerAccount).not.toHaveBeenCalled()
   })
 
   it('requests a password reset without revealing whether the account exists', async () => {
     vi.mocked(requestPasswordReset).mockResolvedValue(undefined)
     renderAt('/auth')
-    fireEvent.click(screen.getByRole('link', { name: 'Forgot your password?' }))
-    expect(screen.getByRole('heading', { name: 'Forgot password' })).toBeInTheDocument()
-    fireEvent.change(screen.getByLabelText('EMAIL ADDRESS'), { target: { value: 'test@example.com' } })
-    fireEvent.click(screen.getByRole('button', { name: 'SEND RESET LINK' }))
-    expect(await screen.findByText(/If an active account exists/)).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('link', { name: 'Quên mật khẩu?' }))
+    expect(screen.getByRole('heading', { name: 'Quên mật khẩu' })).toBeInTheDocument()
+    fireEvent.change(screen.getByLabelText('ĐỊA CHỈ EMAIL'), { target: { value: 'test@example.com' } })
+    fireEvent.click(screen.getByRole('button', { name: 'GỬI LIÊN KẾT' }))
+    expect(await screen.findByText(/Nếu email thuộc một tài khoản/)).toBeInTheDocument()
     expect(requestPasswordReset).toHaveBeenCalledWith('test@example.com')
   })
 
   it('requires matching passwords before confirming a reset', async () => {
     vi.mocked(confirmPasswordReset).mockResolvedValue({ reset: true })
     renderAt('/reset-password?token=test-token')
-    fireEvent.change(screen.getByLabelText('NEW PASSWORD'), { target: { value: 'NewPassword123' } })
-    fireEvent.change(screen.getByLabelText('CONFIRM NEW PASSWORD'), { target: { value: 'Different123' } })
-    fireEvent.click(screen.getByRole('button', { name: 'SET NEW PASSWORD' }))
-    expect(screen.getByRole('alert')).toHaveTextContent('Passwords do not match.')
+    fireEvent.change(screen.getByLabelText('MẬT KHẨU MỚI'), { target: { value: 'NewPassword123' } })
+    fireEvent.change(screen.getByLabelText('NHẬP LẠI MẬT KHẨU MỚI'), { target: { value: 'Different123' } })
+    fireEvent.click(screen.getByRole('button', { name: 'ĐẶT LẠI MẬT KHẨU' }))
+    expect(screen.getByRole('alert')).toHaveTextContent('Mật khẩu nhập lại không khớp.')
     expect(confirmPasswordReset).not.toHaveBeenCalled()
-    fireEvent.change(screen.getByLabelText('CONFIRM NEW PASSWORD'), { target: { value: 'NewPassword123' } })
-    fireEvent.click(screen.getByRole('button', { name: 'SET NEW PASSWORD' }))
-    expect(await screen.findByText(/Password updated/)).toBeInTheDocument()
+    fireEvent.change(screen.getByLabelText('NHẬP LẠI MẬT KHẨU MỚI'), { target: { value: 'NewPassword123' } })
+    fireEvent.click(screen.getByRole('button', { name: 'ĐẶT LẠI MẬT KHẨU' }))
+    expect(await screen.findByText(/Mật khẩu đã được cập nhật/)).toBeInTheDocument()
     expect(confirmPasswordReset).toHaveBeenCalledWith({ token: 'test-token',
       newPassword: 'NewPassword123', confirmPassword: 'NewPassword123' })
   })
@@ -101,11 +104,11 @@ describe('App', () => {
     vi.mocked(updateProfile).mockResolvedValue({ id: 1, email: 'test@example.com',
       fullName: 'Updated User', phone: '0901234567', role: 'CUSTOMER' })
     renderAt('/me')
-    expect(await screen.findByText('Email: test@example.com · Role: CUSTOMER')).toBeInTheDocument()
-    fireEvent.change(screen.getByLabelText('FULL NAME'), { target: { value: 'Updated User' } })
-    fireEvent.change(screen.getByLabelText('PHONE'), { target: { value: '0901234567' } })
-    fireEvent.click(screen.getByRole('button', { name: 'SAVE PROFILE' }))
-    expect(await screen.findByText('Profile updated.')).toBeInTheDocument()
+    expect(await screen.findByText('test@example.com')).toBeInTheDocument()
+    fireEvent.change(screen.getByLabelText('HỌ VÀ TÊN'), { target: { value: 'Updated User' } })
+    fireEvent.change(screen.getByLabelText('SỐ ĐIỆN THOẠI'), { target: { value: '0901234567' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Lưu thay đổi' }))
+    expect(await screen.findByText('Đã cập nhật hồ sơ cá nhân.')).toBeInTheDocument()
     expect(updateProfile).toHaveBeenCalledWith({ fullName: 'Updated User', phone: '0901234567' })
   })
 
@@ -118,15 +121,40 @@ describe('App', () => {
     vi.mocked(createAddress).mockResolvedValue({ id: 2, recipientName: 'Test User', phone: '0901234567',
       addressLine: '123 Main Street', ward: null, district: null, province: 'Hanoi', isDefault: true })
     renderAt('/me')
-    expect(await screen.findByText('No saved addresses yet.')).toBeInTheDocument()
-    fireEvent.change(screen.getByLabelText('RECIPIENT NAME'), { target: { value: 'Test User' } })
-    fireEvent.change(screen.getByLabelText('RECIPIENT PHONE'), { target: { value: '0901234567' } })
-    fireEvent.change(screen.getByLabelText('ADDRESS LINE'), { target: { value: '123 Main Street' } })
-    fireEvent.change(screen.getByLabelText('PROVINCE'), { target: { value: 'Hanoi' } })
-    fireEvent.click(screen.getByRole('button', { name: 'SAVE ADDRESS' }))
-    expect(await screen.findByText('Address saved.')).toBeInTheDocument()
+    expect(await screen.findByText('Chưa có địa chỉ giao hàng')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Thêm địa chỉ' }))
+    const dialog = screen.getByRole('dialog', { name: 'Thêm địa chỉ mới' })
+    fireEvent.change(within(dialog).getByLabelText('HỌ TÊN NGƯỜI NHẬN'), { target: { value: 'Test User' } })
+    fireEvent.change(within(dialog).getByLabelText('SỐ ĐIỆN THOẠI'), { target: { value: '0901234567' } })
+    fireEvent.change(within(dialog).getByLabelText('ĐỊA CHỈ CỤ THỂ'), { target: { value: '123 Main Street' } })
+    fireEvent.change(within(dialog).getByLabelText('TỈNH / THÀNH PHỐ'), { target: { value: 'Hanoi' } })
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Thêm địa chỉ' }))
+    expect(await screen.findByText('Đã lưu địa chỉ giao hàng.')).toBeInTheDocument()
     expect(createAddress).toHaveBeenCalledWith({ recipientName: 'Test User', phone: '0901234567',
       addressLine: '123 Main Street', ward: '', district: '', province: 'Hanoi', isDefault: false })
-    expect(screen.getByText('Test User · Default')).toBeInTheDocument()
+    expect(screen.getByRole('table')).toHaveTextContent('Test User')
+    expect(screen.getByText('Mặc định')).toBeInTheDocument()
+  })
+
+  it('hides admin controls from a customer', async () => {
+    vi.mocked(getProfile).mockResolvedValue({ id: 1, email: 'customer@example.com',
+      fullName: 'Khách hàng', phone: null, role: 'CUSTOMER' })
+    renderAt('/admin')
+    expect(await screen.findByText('Không có quyền truy cập')).toBeInTheDocument()
+    expect(listUsers).not.toHaveBeenCalled()
+  })
+
+  it('shows account, settings and audit tabs to an admin', async () => {
+    vi.mocked(getProfile).mockResolvedValue({ id: 2, email: 'admin@example.com',
+      fullName: 'Quản trị viên', phone: null, role: 'ADMIN' })
+    vi.mocked(listUsers).mockResolvedValue({ items: [], page: 0, size: 20, totalItems: 0, totalPages: 0 })
+    vi.mocked(listSettings).mockResolvedValue([])
+    vi.mocked(listAudit).mockResolvedValue({ items: [], page: 0, size: 20, totalItems: 0, totalPages: 0 })
+    renderAt('/admin')
+    expect(await screen.findByText('Danh sách tài khoản')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('tab', { name: 'Thiết lập' }))
+    expect(await screen.findByText('Thiết lập hệ thống')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('tab', { name: 'Nhật ký' }))
+    expect(await screen.findByText('Nhật ký thao tác')).toBeInTheDocument()
   })
 })

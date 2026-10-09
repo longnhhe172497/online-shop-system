@@ -1,56 +1,1013 @@
-.app-shell { align-items: flex-start; background: #f8fafc; display: flex; justify-content: center; min-height: 100vh; padding: 48px 24px; }
-.status-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; max-width: 760px; padding: 40px; width: 100%; }
-.shop-topline { align-items: center; display: flex; justify-content: space-between; }
-.shop-topline button { background: none; border: 0; color: #1e40af; cursor: pointer; }
-.shop-account { display: flex; gap: 16px; }
-.eyebrow { color: #2563eb; font-weight: 700; }
-.status-card h1 { margin: 8px 0 24px; }
-.product-list { list-style: none; margin: 0; padding: 0; }
-.product-list li { border-top: 1px solid #e2e8f0; display: flex; flex-direction: column; gap: 6px; padding: 18px 0; }
-.product-list span, .product-list small { color: #475569; }
+.app-shell {
+    align-items: flex-start;
+    background: #f8fafc;
+    display: flex;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 48px 24px;
+}
 
-.forme-page { background: #faf9f6; color: #1b1716; min-height: 100vh; }
-.announcement { background: #2438c5; color: #fff; font-size: 11px; font-weight: 700; letter-spacing: .12em; padding: 9px; text-align: center; }
-.forme-header { align-items: center; border-bottom: 1px solid #dedbd5; display: flex; justify-content: space-between; min-height: 72px; padding: 0 3%; }
-.brand { color: #1b1716; font-family: Georgia, serif; font-size: 28px; font-weight: 900; letter-spacing: -.09em; text-decoration: none; }
-.forme-header nav { display: flex; gap: 36px; }
-.forme-header nav a { color: #272323; font-size: 12px; font-weight: 700; letter-spacing: .08em; text-decoration: none; }
-.auth-main { display: flex; justify-content: center; min-height: 700px; padding: 72px 24px 96px; }
-.auth-card { width: min(100%, 364px); }
-.auth-kicker { color: #77736e; font-size: 11px; font-weight: 700; letter-spacing: .16em; margin: 0 0 10px; }
-.auth-card h1, .verify-card h1 { font-family: Georgia, 'Times New Roman', serif; font-size: clamp(48px, 7vw, 62px); letter-spacing: -.055em; line-height: .93; margin: 0 0 32px; }
-.auth-tabs { border-bottom: 1px solid #dad7d2; display: flex; gap: 20px; margin-bottom: 34px; }
-.auth-tabs button { background: none; border: 0; border-bottom: 2px solid transparent; color: #77736e; cursor: pointer; font-size: 12px; font-weight: 700; letter-spacing: .09em; padding: 0 0 14px; }
-.auth-tabs button.active { border-color: #2438c5; color: #222; }
-.auth-card form label { display: block; font-size: 11px; font-weight: 700; letter-spacing: .09em; margin-bottom: 18px; }
-.auth-card input { background: #fff; border: 1px solid #d9d6d0; border-radius: 0; color: #1b1716; display: block; font-size: 16px; height: 46px; margin-top: 7px; padding: 8px 12px; width: 100%; }
-.auth-card input:focus { border-color: #2438c5; outline: 1px solid #2438c5; }
-.auth-submit { background: #2438c5; border: 0; color: #fff; cursor: pointer; font-size: 12px; font-weight: 700; height: 46px; letter-spacing: .09em; width: 100%; }
-.auth-submit:disabled { cursor: wait; opacity: .55; }
-.auth-help { color: #68635f; font-size: 13px; margin-top: 22px; text-decoration: underline; }
-.auth-error { color: #9b1c1c; font-size: 13px; }
-.auth-notice { background: #eef5ee; color: #1f5c35; font-size: 13px; padding: 12px; }
-.forme-footer { border-top: 1px solid #dedbd5; display: flex; gap: 28px; padding: 32px 4%; }
-.forme-footer strong { font-family: Georgia, serif; font-size: 23px; }
-.forme-footer span { color: #68635f; font-size: 13px; }
-.verify-page { align-items: center; background: #faf9f6; display: flex; justify-content: center; min-height: 100vh; padding: 24px; }
-.verify-card { max-width: 420px; width: 100%; }
-.verify-card .auth-submit { margin: 16px 0; }
-.verify-card a { color: #2438c5; }
-.profile-main { margin: 0 auto; max-width: 760px; min-height: 700px; padding: 72px 24px 96px; }
-.profile-main h1 { font-family: Georgia, 'Times New Roman', serif; font-size: clamp(42px, 7vw, 60px); letter-spacing: -.05em; margin: 0 0 32px; }
-.profile-panel { border-top: 1px solid #dedbd5; padding: 28px 0; }
-.profile-panel h2 { font-family: Georgia, serif; font-size: 28px; margin: 0 0 12px; }
-.profile-panel h3 { font-family: Georgia, serif; font-size: 23px; margin-top: 28px; }
-.profile-readonly { color: #68635f; font-size: 14px; }
-.profile-panel form { max-width: 420px; }
-.profile-panel form label { display: block; font-size: 11px; font-weight: 700; letter-spacing: .09em; margin: 16px 0; }
-.profile-panel form input:not([type='checkbox']) { background: #fff; border: 1px solid #d9d6d0; color: #1b1716; display: block; font-size: 16px; height: 46px; margin-top: 7px; padding: 8px 12px; width: 100%; }
-.profile-panel .default-check { align-items: center; display: flex; gap: 10px; }
-.profile-actions { display: flex; gap: 12px; }
-.profile-actions .auth-submit { max-width: 220px; }
-.address-list { list-style: none; padding: 0; }
-.address-list li { border-bottom: 1px solid #dedbd5; display: flex; flex-direction: column; gap: 5px; padding: 16px 0; }
-.address-list li div { display: flex; gap: 12px; margin-top: 7px; }
-.address-list button, .profile-actions button:not(.auth-submit) { background: none; border: 0; color: #2438c5; cursor: pointer; padding: 0; }
-@media (max-width: 600px) { .forme-header nav { gap: 16px; } .auth-main { padding-top: 54px; } .forme-footer { flex-direction: column; gap: 8px; } }
+.status-card {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    max-width: 760px;
+    padding: 40px;
+    width: 100%;
+}
+
+.shop-topline {
+    align-items: center;
+    display: flex;
+    justify-content: space-between;
+}
+
+.shop-topline button {
+    background: none;
+    border: 0;
+    color: #1e40af;
+    cursor: pointer;
+}
+
+.shop-account {
+    display: flex;
+    gap: 16px;
+}
+
+.eyebrow {
+    color: #2563eb;
+    font-weight: 700;
+}
+
+.status-card h1 {
+    margin: 8px 0 24px;
+}
+
+.product-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.product-list li {
+    border-top: 1px solid #e2e8f0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 18px 0;
+}
+
+.product-list span,
+.product-list small {
+    color: #475569;
+}
+
+.forme-page {
+    background: #faf9f6;
+    color: #1b1716;
+    min-height: 100vh;
+}
+
+.announcement {
+    background: #2438c5;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .12em;
+    padding: 9px;
+    text-align: center;
+}
+
+.forme-header {
+    align-items: center;
+    border-bottom: 1px solid #dedbd5;
+    display: flex;
+    justify-content: space-between;
+    min-height: 72px;
+    padding: 0 3%;
+}
+
+.brand {
+    color: #1b1716;
+    font-family: Georgia, serif;
+    font-size: 28px;
+    font-weight: 900;
+    letter-spacing: -.09em;
+    text-decoration: none;
+}
+
+.forme-header nav {
+    display: flex;
+    gap: 36px;
+}
+
+.forme-header nav a {
+    color: #272323;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-decoration: none;
+}
+
+.auth-main {
+    display: flex;
+    justify-content: center;
+    min-height: 700px;
+    padding: 72px 24px 96px;
+}
+
+.auth-card {
+    width: min(100%, 364px);
+}
+
+.auth-kicker {
+    color: #77736e;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .16em;
+    margin: 0 0 10px;
+}
+
+.auth-card h1,
+.verify-card h1 {
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: clamp(48px, 7vw, 62px);
+    letter-spacing: -.055em;
+    line-height: .93;
+    margin: 0 0 32px;
+}
+
+.auth-tabs {
+    border-bottom: 1px solid #dad7d2;
+    display: flex;
+    gap: 20px;
+    margin-bottom: 34px;
+}
+
+.auth-tabs button {
+    background: none;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    color: #77736e;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: .09em;
+    padding: 0 0 14px;
+}
+
+.auth-tabs button.active {
+    border-color: #2438c5;
+    color: #222;
+}
+
+.auth-card form label {
+    display: block;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .09em;
+    margin-bottom: 18px;
+}
+
+.auth-card input {
+    background: #fff;
+    border: 1px solid #d9d6d0;
+    border-radius: 0;
+    color: #1b1716;
+    display: block;
+    font-size: 16px;
+    height: 46px;
+    margin-top: 7px;
+    padding: 8px 12px;
+    width: 100%;
+}
+
+.auth-card input:focus {
+    border-color: #2438c5;
+    outline: 1px solid #2438c5;
+}
+
+.auth-submit {
+    background: #2438c5;
+    border: 0;
+    color: #fff;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 700;
+    height: 46px;
+    letter-spacing: .09em;
+    width: 100%;
+}
+
+.auth-submit:disabled {
+    cursor: wait;
+    opacity: .55;
+}
+
+.auth-help {
+    color: #68635f;
+    font-size: 13px;
+    margin-top: 22px;
+    text-decoration: underline;
+}
+
+.auth-error {
+    color: #9b1c1c;
+    font-size: 13px;
+}
+
+.auth-notice {
+    background: #eef5ee;
+    color: #1f5c35;
+    font-size: 13px;
+    padding: 12px;
+}
+
+.forme-footer {
+    border-top: 1px solid #dedbd5;
+    display: flex;
+    gap: 28px;
+    padding: 32px 4%;
+}
+
+.forme-footer strong {
+    font-family: Georgia, serif;
+    font-size: 23px;
+}
+
+.forme-footer span {
+    color: #68635f;
+    font-size: 13px;
+}
+
+.verify-page {
+    align-items: center;
+    background: #faf9f6;
+    display: flex;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 24px;
+}
+
+.verify-card {
+    max-width: 420px;
+    width: 100%;
+}
+
+.verify-card .auth-submit {
+    margin: 16px 0;
+}
+
+.verify-card a {
+    color: #2438c5;
+}
+
+.account-main {
+    margin: 0 auto;
+    max-width: 1320px;
+    min-height: 700px;
+    padding: 56px 32px 100px;
+}
+
+.account-heading {
+    align-items: end;
+    display: flex;
+    gap: 24px;
+    justify-content: space-between;
+    margin-bottom: 32px;
+}
+
+.account-heading h1 {
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: clamp(36px, 4vw, 54px);
+    letter-spacing: -.055em;
+    line-height: 1.05;
+    margin: 0 0 10px;
+}
+
+.account-heading p:last-child,
+.address-section-head p:last-child,
+.address-modal-head p:last-child {
+    color: #77736e;
+    font-size: 14px;
+    margin: 0;
+}
+
+.account-back {
+    color: #2438c5;
+    flex-shrink: 0;
+    font-size: 13px;
+    font-weight: 700;
+    padding-bottom: 5px;
+    text-decoration: none;
+}
+
+.account-grid {
+    align-items: start;
+    display: grid;
+    gap: 22px;
+    grid-template-columns: minmax(290px, 340px) minmax(0, 1fr);
+}
+
+.account-card {
+    background: #fff;
+    border: 1px solid #e6e2dc;
+    border-radius: 16px;
+    box-shadow: 0 8px 30px rgba(31, 26, 20, .035);
+    padding: 28px;
+}
+
+.personal-intro {
+    align-items: center;
+    display: flex;
+    gap: 15px;
+    padding-bottom: 24px;
+}
+
+.account-avatar {
+    align-items: center;
+    background: #e9ecff;
+    border-radius: 50%;
+    color: #2438c5;
+    display: flex;
+    flex: 0 0 54px;
+    font-family: Georgia, serif;
+    font-size: 27px;
+    font-weight: 700;
+    height: 54px;
+    justify-content: center;
+}
+
+.card-eyebrow {
+    color: #77736e;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: .14em;
+    margin: 0 0 7px;
+}
+
+.account-card h2 {
+    font-family: Georgia, serif;
+    font-size: 25px;
+    letter-spacing: -.03em;
+    line-height: 1.1;
+    margin: 0 0 9px;
+}
+
+.role-pill {
+    background: #f0f2ff;
+    border-radius: 20px;
+    color: #2438c5;
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 5px 9px;
+}
+
+.account-readonly {
+    background: #faf9f6;
+    border: 1px solid #eeebe6;
+    border-radius: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    margin-bottom: 24px;
+    padding: 14px;
+}
+
+.account-readonly span,
+.account-readonly small {
+    color: #77736e;
+    font-size: 11px;
+}
+
+.account-readonly strong {
+    font-size: 13px;
+    overflow-wrap: anywhere;
+}
+
+.account-form label,
+.address-form-grid label {
+    color: #34302d;
+    display: block;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: .07em;
+}
+
+.account-form label {
+    margin-bottom: 18px;
+}
+
+.account-form input,
+.address-form-grid input {
+    background: #fff;
+    border: 1px solid #dcd8d2;
+    border-radius: 8px;
+    color: #1b1716;
+    display: block;
+    font-size: 14px;
+    font-weight: 400;
+    height: 44px;
+    letter-spacing: 0;
+    margin-top: 8px;
+    padding: 9px 12px;
+    width: 100%;
+}
+
+.account-form input:focus,
+.address-form-grid input:focus {
+    border-color: #2438c5;
+    outline: 2px solid #dce2ff;
+}
+
+.account-primary {
+    background: #2438c5;
+    border: 1px solid #2438c5;
+    border-radius: 8px;
+    color: #fff;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 800;
+    min-height: 44px;
+    padding: 0 18px;
+}
+
+.account-primary:hover {
+    background: #1b2da9;
+}
+
+.account-primary:disabled,
+.account-secondary:disabled {
+    cursor: wait;
+    opacity: .55;
+}
+
+.account-form .account-primary {
+    width: 100%;
+}
+
+.addresses-card {
+    min-height: 390px;
+    padding: 0;
+}
+
+.address-section-head {
+    align-items: center;
+    display: flex;
+    gap: 20px;
+    justify-content: space-between;
+    padding: 27px 28px 25px;
+}
+
+.address-section-head h2 {
+    font-size: 29px;
+}
+
+.add-address {
+    flex-shrink: 0;
+}
+
+.add-address span {
+    font-size: 19px;
+    font-weight: 400;
+    margin-right: 4px;
+    vertical-align: -1px;
+}
+
+.address-table-wrap {
+    overflow-x: auto;
+}
+
+.address-table {
+    border-collapse: collapse;
+    text-align: left;
+    width: 100%;
+}
+
+.address-table th {
+    background: #faf9f6;
+    border-bottom: 1px solid #eeeae4;
+    border-top: 1px solid #eeeae4;
+    color: #77736e;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: .1em;
+    padding: 14px 18px;
+    white-space: nowrap;
+}
+
+.address-table td {
+    border-bottom: 1px solid #eeeae4;
+    font-size: 13px;
+    line-height: 1.5;
+    padding: 20px 18px;
+    vertical-align: middle;
+}
+
+.address-table tbody tr:last-child td {
+    border-bottom: 0;
+}
+
+.address-table td:first-child {
+    min-width: 145px;
+    padding-left: 28px;
+}
+
+.address-table td:first-child strong,
+.address-table td:first-child span {
+    display: block;
+}
+
+.address-table td:first-child span {
+    color: #77736e;
+    margin-top: 4px;
+}
+
+.address-location {
+    color: #5f5b57;
+    min-width: 230px;
+    overflow-wrap: anywhere;
+}
+
+.default-badge,
+.secondary-badge {
+    border-radius: 5px;
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 6px 9px;
+    white-space: nowrap;
+}
+
+.default-badge {
+    background: #eaf5ed;
+    color: #247245;
+}
+
+.secondary-badge {
+    background: #f2f1ef;
+    color: #77736e;
+}
+
+.address-row-actions {
+    display: flex;
+    gap: 14px;
+    white-space: nowrap;
+}
+
+.address-row-actions button {
+    background: none;
+    border: 0;
+    color: #2438c5;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 3px 0;
+}
+
+.address-row-actions button:last-child {
+    color: #b74b57;
+}
+
+.address-row-actions button:disabled {
+    cursor: wait;
+    opacity: .5;
+}
+
+.address-empty {
+    align-items: center;
+    border-top: 1px solid #eeeae4;
+    color: #77736e;
+    display: flex;
+    flex-direction: column;
+    padding: 55px 24px 65px;
+    text-align: center;
+}
+
+.address-empty div {
+    align-items: center;
+    background: #f1f2fb;
+    border-radius: 50%;
+    color: #2438c5;
+    display: flex;
+    font-size: 38px;
+    height: 64px;
+    justify-content: center;
+    margin-bottom: 16px;
+    width: 64px;
+}
+
+.address-empty strong {
+    color: #1b1716;
+    font-size: 16px;
+}
+
+.address-empty p {
+    font-size: 13px;
+    margin: 7px 0 16px;
+}
+
+.address-empty button {
+    background: none;
+    border: 0;
+    color: #2438c5;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.account-message {
+    margin: 0 0 22px;
+}
+
+.address-modal-backdrop {
+    align-items: center;
+    background: rgba(20, 21, 33, .55);
+    display: flex;
+    inset: 0;
+    justify-content: center;
+    overflow-y: auto;
+    padding: 24px;
+    position: fixed;
+    z-index: 10;
+}
+
+.address-modal {
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 24px 80px rgba(0, 0, 0, .2);
+    max-height: calc(100vh - 48px);
+    max-width: 720px;
+    overflow-y: auto;
+    padding: 30px;
+    width: 100%;
+}
+
+.address-modal-head {
+    align-items: start;
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 25px;
+}
+
+.address-modal-head h2 {
+    font-family: Georgia, serif;
+    font-size: 32px;
+    letter-spacing: -.04em;
+    margin: 0 0 6px;
+}
+
+.modal-close {
+    background: #f4f2ef;
+    border: 0;
+    border-radius: 50%;
+    color: #514c48;
+    cursor: pointer;
+    font-size: 25px;
+    height: 36px;
+    line-height: 1;
+    width: 36px;
+}
+
+.address-form-grid {
+    display: grid;
+    gap: 18px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.form-span-2 {
+    grid-column: span 2;
+}
+
+.default-option {
+    align-items: start;
+    background: #faf9f6;
+    border: 1px solid #eeeae4;
+    border-radius: 9px;
+    cursor: pointer;
+    display: flex;
+    gap: 10px;
+    margin-top: 22px;
+    padding: 13px;
+}
+
+.default-option input {
+    accent-color: #2438c5;
+    margin-top: 3px;
+}
+
+.default-option strong,
+.default-option small {
+    display: block;
+}
+
+.default-option strong {
+    font-size: 13px;
+}
+
+.default-option small {
+    color: #77736e;
+    font-size: 12px;
+    margin-top: 3px;
+}
+
+.address-modal-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    margin-top: 26px;
+}
+
+.account-secondary {
+    background: #fff;
+    border: 1px solid #dcd8d2;
+    border-radius: 8px;
+    color: #34302d;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 700;
+    min-height: 44px;
+    padding: 0 20px;
+}
+
+@media (max-width: 1000px) {
+    .account-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .account-main {
+        max-width: 860px;
+    }
+}
+
+@media (max-width: 650px) {
+    .account-main {
+        padding: 36px 16px 70px;
+    }
+
+    .account-heading {
+        align-items: start;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .account-heading h1 {
+        font-size: 38px;
+    }
+
+    .account-card {
+        padding: 22px;
+    }
+
+    .addresses-card {
+        padding: 0;
+    }
+
+    .address-section-head {
+        align-items: start;
+        flex-direction: column;
+        padding: 22px;
+    }
+
+    .add-address {
+        width: 100%;
+    }
+
+    .address-modal {
+        padding: 22px;
+    }
+
+    .address-form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .form-span-2 {
+        grid-column: auto;
+    }
+
+    .address-modal-actions button {
+        flex: 1;
+    }
+}
+
+.admin-main {
+    margin: 0 auto;
+    max-width: 1280px;
+    min-height: 700px;
+    padding: 56px 32px 100px;
+}
+
+.admin-heading {
+    margin-bottom: 28px;
+}
+
+.admin-heading h1 {
+    font-family: Georgia, Cambria, serif;
+    font-size: clamp(38px, 4vw, 54px);
+    letter-spacing: -.05em;
+    margin: 0 0 8px;
+}
+
+.admin-heading p:last-child,
+.admin-panel>p,
+.admin-section-head p {
+    color: #77736e;
+    font-size: 14px;
+    margin: 0;
+}
+
+.admin-tabs {
+    border-bottom: 1px solid #dedbd5;
+    display: flex;
+    gap: 30px;
+    margin-bottom: 24px;
+}
+
+.admin-tabs button {
+    background: none;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    color: #77736e;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 700;
+    padding: 14px 2px;
+}
+
+.admin-tabs button[aria-selected='true'] {
+    border-color: #2438c5;
+    color: #2438c5;
+}
+
+.admin-panel {
+    background: #fff;
+    border: 1px solid #e6e2dc;
+    border-radius: 16px;
+    overflow: hidden;
+    padding: 26px;
+}
+
+.admin-panel h2 {
+    font-family: Georgia, Cambria, serif;
+    font-size: 27px;
+    margin: 0 0 7px;
+}
+
+.admin-section-head {
+    align-items: center;
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 22px;
+}
+
+.admin-filters {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.admin-filters input,
+.admin-filters select,
+.admin-table select,
+.setting-row input,
+.admin-editor select {
+    background: #fff;
+    border: 1px solid #dcd8d2;
+    border-radius: 8px;
+    color: #34302d;
+    font-size: 13px;
+    min-height: 42px;
+    padding: 8px 11px;
+}
+
+.admin-filters input {
+    flex: 1;
+    min-width: 180px;
+}
+
+.admin-filters select {
+    min-width: 150px;
+}
+
+.admin-table-wrap {
+    border: 1px solid #eeeae4;
+    border-radius: 10px;
+    overflow-x: auto;
+}
+
+.admin-table td:first-child {
+    min-width: 210px;
+}
+
+.admin-table td {
+    min-width: 150px;
+}
+
+.admin-table select {
+    max-width: 180px;
+    width: 100%;
+}
+
+.admin-link {
+    background: none;
+    border: 0;
+    color: #2438c5;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.admin-pagination {
+    align-items: center;
+    display: flex;
+    gap: 16px;
+    justify-content: flex-end;
+    padding-top: 20px;
+}
+
+.admin-pagination button {
+    background: none;
+    border: 0;
+    color: #2438c5;
+    cursor: pointer;
+    font-weight: 700;
+}
+
+.admin-pagination button:disabled {
+    color: #aaa;
+    cursor: default;
+}
+
+.admin-empty {
+    color: #77736e;
+    padding: 20px;
+    text-align: center;
+}
+
+.settings-list {
+    margin-top: 22px;
+}
+
+.setting-row {
+    align-items: center;
+    border-top: 1px solid #eeeae4;
+    display: grid;
+    gap: 18px;
+    grid-template-columns: minmax(220px, 1fr) minmax(150px, 280px) 70px;
+    padding: 16px 0;
+}
+
+.setting-row label {
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.setting-row input {
+    width: 100%;
+}
+
+.admin-editor select {
+    display: block;
+    margin-top: 8px;
+    width: 100%;
+}
+
+@media (max-width: 700px) {
+    .admin-main {
+        padding: 35px 16px 70px;
+    }
+
+    .admin-filters {
+        flex-direction: column;
+    }
+
+    .admin-section-head {
+        align-items: start;
+        flex-direction: column;
+        gap: 16px;
+    }
+
+    .setting-row {
+        grid-template-columns: 1fr 80px;
+    }
+
+    .setting-row label {
+        grid-column: span 2;
+    }
+}
+
+@media (max-width: 600px) {
+    .forme-header nav {
+        gap: 16px;
+    }
+
+    .auth-main {
+        padding-top: 54px;
+    }
+
+    .forme-footer {
+        flex-direction: column;
+        gap: 8px;
+    }
+}
