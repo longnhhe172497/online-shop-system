@@ -2,6 +2,7 @@
 .status-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; max-width: 760px; padding: 40px; width: 100%; }
 .shop-topline { align-items: center; display: flex; justify-content: space-between; }
 .shop-topline button { background: none; border: 0; color: #1e40af; cursor: pointer; }
+.shop-account { display: flex; gap: 16px; }
 .eyebrow { color: #2563eb; font-weight: 700; }
 .status-card h1 { margin: 8px 0 24px; }
 .product-list { list-style: none; margin: 0; padding: 0; }
@@ -36,4 +37,20 @@
 .verify-card { max-width: 420px; width: 100%; }
 .verify-card .auth-submit { margin: 16px 0; }
 .verify-card a { color: #2438c5; }
+.profile-main { margin: 0 auto; max-width: 760px; min-height: 700px; padding: 72px 24px 96px; }
+.profile-main h1 { font-family: Georgia, 'Times New Roman', serif; font-size: clamp(42px, 7vw, 60px); letter-spacing: -.05em; margin: 0 0 32px; }
+.profile-panel { border-top: 1px solid #dedbd5; padding: 28px 0; }
+.profile-panel h2 { font-family: Georgia, serif; font-size: 28px; margin: 0 0 12px; }
+.profile-panel h3 { font-family: Georgia, serif; font-size: 23px; margin-top: 28px; }
+.profile-readonly { color: #68635f; font-size: 14px; }
+.profile-panel form { max-width: 420px; }
+.profile-panel form label { display: block; font-size: 11px; font-weight: 700; letter-spacing: .09em; margin: 16px 0; }
+.profile-panel form input:not([type='checkbox']) { background: #fff; border: 1px solid #d9d6d0; color: #1b1716; display: block; font-size: 16px; height: 46px; margin-top: 7px; padding: 8px 12px; width: 100%; }
+.profile-panel .default-check { align-items: center; display: flex; gap: 10px; }
+.profile-actions { display: flex; gap: 12px; }
+.profile-actions .auth-submit { max-width: 220px; }
+.address-list { list-style: none; padding: 0; }
+.address-list li { border-bottom: 1px solid #dedbd5; display: flex; flex-direction: column; gap: 5px; padding: 16px 0; }
+.address-list li div { display: flex; gap: 12px; margin-top: 7px; }
+.address-list button, .profile-actions button:not(.auth-submit) { background: none; border: 0; color: #2438c5; cursor: pointer; padding: 0; }
 @media (max-width: 600px) { .forme-header nav { gap: 16px; } .auth-main { padding-top: 54px; } .forme-footer { flex-direction: column; gap: 8px; } }

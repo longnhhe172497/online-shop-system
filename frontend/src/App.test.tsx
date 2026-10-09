@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
 import { listProducts } from './api/products'
 import { confirmPasswordReset, login, registerAccount, requestPasswordReset } from './api/auth'
+import { createAddress, getProfile, listAddresses, updateProfile } from './api/profile'
 
 vi.mock('./api/products', () => ({ listProducts: vi.fn() }))
 vi.mock('./api/auth', () => ({
@@ -11,6 +12,8 @@ vi.mock('./api/auth', () => ({
   requestPasswordReset: vi.fn(), confirmPasswordReset: vi.fn(),
 }))
 vi.mock('./api/client', () => ({ hasAccessToken: () => false }))
+vi.mock('./api/profile', () => ({ getProfile: vi.fn(), updateProfile: vi.fn(), listAddresses: vi.fn(),
+  createAddress: vi.fn(), updateAddress: vi.fn(), deleteAddress: vi.fn() }))
 
 function renderAt(path: string) {
   return render(<MemoryRouter initialEntries={[path]}><App /></MemoryRouter>)
@@ -89,5 +92,41 @@ describe('App', () => {
     expect(await screen.findByText(/Password updated/)).toBeInTheDocument()
     expect(confirmPasswordReset).toHaveBeenCalledWith({ token: 'test-token',
       newPassword: 'NewPassword123', confirmPassword: 'NewPassword123' })
+  })
+
+  it('loads and updates the authenticated profile', async () => {
+    vi.mocked(getProfile).mockResolvedValue({ id: 1, email: 'test@example.com', fullName: 'Test User',
+      phone: null, role: 'CUSTOMER' })
+    vi.mocked(listAddresses).mockResolvedValue([])
+    vi.mocked(updateProfile).mockResolvedValue({ id: 1, email: 'test@example.com',
+      fullName: 'Updated User', phone: '0901234567', role: 'CUSTOMER' })
+    renderAt('/me')
+    expect(await screen.findByText('Email: test@example.com · Role: CUSTOMER')).toBeInTheDocument()
+    fireEvent.change(screen.getByLabelText('FULL NAME'), { target: { value: 'Updated User' } })
+    fireEvent.change(screen.getByLabelText('PHONE'), { target: { value: '0901234567' } })
+    fireEvent.click(screen.getByRole('button', { name: 'SAVE PROFILE' }))
+    expect(await screen.findByText('Profile updated.')).toBeInTheDocument()
+    expect(updateProfile).toHaveBeenCalledWith({ fullName: 'Updated User', phone: '0901234567' })
+  })
+
+  it('saves a customer address and reloads the list', async () => {
+    vi.mocked(getProfile).mockResolvedValue({ id: 1, email: 'test@example.com', fullName: 'Test User',
+      phone: null, role: 'CUSTOMER' })
+    vi.mocked(listAddresses).mockResolvedValueOnce([]).mockResolvedValueOnce([{ id: 2,
+      recipientName: 'Test User', phone: '0901234567', addressLine: '123 Main Street', ward: null,
+      district: null, province: 'Hanoi', isDefault: true }])
+    vi.mocked(createAddress).mockResolvedValue({ id: 2, recipientName: 'Test User', phone: '0901234567',
+      addressLine: '123 Main Street', ward: null, district: null, province: 'Hanoi', isDefault: true })
+    renderAt('/me')
+    expect(await screen.findByText('No saved addresses yet.')).toBeInTheDocument()
+    fireEvent.change(screen.getByLabelText('RECIPIENT NAME'), { target: { value: 'Test User' } })
+    fireEvent.change(screen.getByLabelText('RECIPIENT PHONE'), { target: { value: '0901234567' } })
+    fireEvent.change(screen.getByLabelText('ADDRESS LINE'), { target: { value: '123 Main Street' } })
+    fireEvent.change(screen.getByLabelText('PROVINCE'), { target: { value: 'Hanoi' } })
+    fireEvent.click(screen.getByRole('button', { name: 'SAVE ADDRESS' }))
+    expect(await screen.findByText('Address saved.')).toBeInTheDocument()
+    expect(createAddress).toHaveBeenCalledWith({ recipientName: 'Test User', phone: '0901234567',
+      addressLine: '123 Main Street', ward: '', district: '', province: 'Hanoi', isDefault: false })
+    expect(screen.getByText('Test User · Default')).toBeInTheDocument()
   })
 })
