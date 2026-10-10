@@ -34,20 +34,32 @@ public class BearerAuthenticationFilter extends OncePerRequestFilter {
             }
         }
         if (token != null && !token.isBlank()) {
-            List<AuthPrincipal> users = jdbc.query("""
-                    SELECT u.id,u.email,u.full_name,u.role
+            String tokenHash = AuthService.hash(token);
+            jdbc.update("""
+                    UPDATE user_sessions SET revoked_at=now()
+                    WHERE token_hash=? AND revoked_at IS NULL
+                      AND coalesce(last_seen_at,created_at)<=now()-interval '30 minutes'
+                    """, tokenHash);
+            List<AuthenticatedSession> sessions = jdbc.query("""
+                    SELECT s.id,u.id,u.email,u.full_name,u.role
                     FROM user_sessions s JOIN users u ON u.id = s.user_id
                     WHERE s.token_hash = ? AND s.revoked_at IS NULL AND s.expires_at > now()
+                      AND coalesce(s.last_seen_at,s.created_at)>now()-interval '30 minutes'
                       AND u.status = 'ACTIVE' AND u.verified_at IS NOT NULL
-                    """, (rs, row) -> new AuthPrincipal(rs.getLong("id"), rs.getString("email"),
-                            rs.getString("full_name"), rs.getString("role")), AuthService.hash(token));
-            if (!users.isEmpty()) {
-                AuthPrincipal user = users.getFirst();
+                    """, (rs, row) -> new AuthenticatedSession(rs.getLong(1),
+                            new AuthPrincipal(rs.getLong(2), rs.getString(3), rs.getString(4),
+                                    rs.getString(5))), tokenHash);
+            if (!sessions.isEmpty()) {
+                AuthenticatedSession session = sessions.getFirst();
+                AuthPrincipal user = session.user();
                 SecurityContextHolder.getContext().setAuthentication(
                         new UsernamePasswordAuthenticationToken(user, null,
                                 List.of(new SimpleGrantedAuthority("ROLE_" + user.role()))));
+                jdbc.update("UPDATE user_sessions SET last_seen_at=now() WHERE id=?", session.id());
             }
         }
         chain.doFilter(request, response);
     }
+
+    private record AuthenticatedSession(long id, AuthPrincipal user) {}
 }

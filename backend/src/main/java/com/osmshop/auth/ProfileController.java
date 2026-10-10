@@ -10,8 +10,13 @@ import java.util.List;
 import java.util.Map;
 import com.osmshop.auth.AuthDtos.ChangePasswordRequest;
 import com.osmshop.auth.AuthDtos.MfaDisableRequest;
+import com.osmshop.auth.AuthDtos.MfaSensitiveRequest;
+import com.osmshop.auth.AuthDtos.MfaStepUpResponse;
+import com.osmshop.auth.AuthDtos.MfaRecoveryResponse;
 import com.osmshop.auth.AuthDtos.MfaVerifyRequest;
 import com.osmshop.auth.AuthDtos.SessionView;
+import com.osmshop.auth.AuthDtos.TotpConfirmRequest;
+import com.osmshop.auth.AuthDtos.TotpStartResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -77,8 +82,9 @@ public class ProfileController {
     }
 
     @GetMapping("/security")
-    public Map<String, Boolean> security(@AuthenticationPrincipal AuthPrincipal user) {
-        return Map.of("mfaEnabled", auth.mfaEnabled(user.id()));
+    public Map<String, Object> security(@AuthenticationPrincipal AuthPrincipal user) {
+        return Map.of("mfaEnabled", auth.mfaEnabled(user.id()), "mfaMethod", auth.mfaMethod(user.id()),
+                "recoveryCodesRemaining", auth.recoveryCodesRemaining(user.id()));
     }
 
     @PostMapping("/password")
@@ -111,16 +117,40 @@ public class ProfileController {
     }
 
     @PostMapping("/mfa/confirm")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void confirmMfa(@AuthenticationPrincipal AuthPrincipal user,
+    public MfaRecoveryResponse confirmMfa(@AuthenticationPrincipal AuthPrincipal user,
                            @Valid @RequestBody MfaVerifyRequest request) {
-        auth.finishMfaEnrollment(user.id(), request.challengeToken(), request.code());
+        return new MfaRecoveryResponse(auth.finishMfaEnrollment(user.id(), request.challengeToken(), request.code()));
+    }
+
+    @PostMapping("/mfa/totp/start")
+    public TotpStartResponse startTotp(@AuthenticationPrincipal AuthPrincipal user,
+                                       @Valid @RequestBody MfaDisableRequest request) {
+        return auth.startTotpEnrollment(user.id(), request.password());
+    }
+
+    @PostMapping("/mfa/totp/confirm")
+    public MfaRecoveryResponse confirmTotp(@AuthenticationPrincipal AuthPrincipal user,
+                                           @Valid @RequestBody TotpConfirmRequest request) {
+        return new MfaRecoveryResponse(auth.confirmTotpEnrollment(user.id(), request.code()));
+    }
+
+    @PostMapping("/mfa/step-up/start")
+    public MfaStepUpResponse startMfaStepUp(@AuthenticationPrincipal AuthPrincipal user,
+                                            @Valid @RequestBody MfaDisableRequest request) {
+        return auth.startMfaStepUp(user.id(), request.password());
+    }
+
+    @PostMapping("/mfa/recovery/regenerate")
+    public MfaRecoveryResponse regenerateRecoveryCodes(@AuthenticationPrincipal AuthPrincipal user,
+                                                        @Valid @RequestBody MfaSensitiveRequest request) {
+        return new MfaRecoveryResponse(auth.regenerateRecoveryCodes(user.id(), request.password(),
+                request.challengeToken(), request.code()));
     }
 
     @PostMapping("/mfa/disable")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void disableMfa(@AuthenticationPrincipal AuthPrincipal user,
-                           @Valid @RequestBody MfaDisableRequest request) {
-        auth.disableMfa(user.id(), request.password());
+                           @Valid @RequestBody MfaSensitiveRequest request) {
+        auth.disableMfa(user.id(), request.password(), request.challengeToken(), request.code());
     }
 }

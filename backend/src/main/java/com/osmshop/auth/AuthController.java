@@ -130,7 +130,8 @@ public class AuthController {
     }
 
     private static BrowserLoginResponse browserResult(LoginResponse result) {
-        return new BrowserLoginResponse(result.user(), result.mfaRequired(), result.challengeToken());
+        return new BrowserLoginResponse(result.user(), result.mfaRequired(), result.challengeToken(),
+                result.mfaMethod());
     }
 
     private ResponseCookie sessionCookie(String value, Duration age) {

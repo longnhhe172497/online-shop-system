@@ -10,6 +10,7 @@ import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -32,6 +33,17 @@ public class InvitationController {
     @GetMapping("/api/admin/invitations")
     public List<InvitationView> list() { return invitations.list(); }
 
+    @PostMapping("/api/admin/invitations/{id}/resend")
+    @ResponseStatus(HttpStatus.CREATED)
+    public InvitationView resend(@AuthenticationPrincipal AuthPrincipal admin, @PathVariable long id) {
+        return invitations.resend(admin.id(), id);
+    }
+
+    @PostMapping("/api/admin/invitations/{id}/revoke")
+    public InvitationView revoke(@AuthenticationPrincipal AuthPrincipal admin, @PathVariable long id) {
+        return invitations.revoke(admin.id(), id);
+    }
+
     @PostMapping("/api/invitations/accept")
     @ResponseStatus(HttpStatus.CREATED)
     public void accept(@Valid @RequestBody AcceptRequest request) { invitations.accept(request); }
@@ -45,5 +57,5 @@ public class InvitationController {
                                 @NotBlank String confirmPassword) {}
     public record InvitationView(long id, String email, String fullName, String role,
                                  OffsetDateTime expiresAt, OffsetDateTime acceptedAt,
-                                 OffsetDateTime createdAt) {}
+                                 OffsetDateTime createdAt, String status) {}
 }

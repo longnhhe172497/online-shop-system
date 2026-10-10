@@ -867,6 +867,19 @@
     margin-bottom: 20px;
 }
 
+.audit-filters { flex-wrap: wrap; align-items: end; }
+.audit-filters label { display: grid; gap: 5px; color: #66615a; font-size: 12px; }
+.audit-filters label input { min-width: 150px; }
+.audit-filters .account-secondary { min-height: 42px; }
+.mfa-recovery-panel { background: #f0f1fb; border: 1px solid #cdd2f4; border-radius: 10px;
+    margin: 16px 0; padding: 18px; }
+.mfa-recovery-list { display: grid; gap: 8px; grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin: 12px 0 16px; }
+.mfa-recovery-list code { background: #fff; border-radius: 5px; padding: 8px; user-select: all; }
+.totp-secret { display: block; overflow-wrap: anywhere; background: #f0f1fb; border: 1px solid #cdd2f4;
+    border-radius: 5px; padding: 12px; letter-spacing: 1px; user-select: all; }
+@media (max-width: 700px) { .mfa-recovery-list { grid-template-columns: 1fr; } }
+
 .admin-filters input,
 .admin-filters select,
 .admin-table select,

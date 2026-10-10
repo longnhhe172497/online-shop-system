@@ -4,13 +4,13 @@ This repository is the **new Online Shop System**, unrelated to the earlier OSM&
 
 ## What is ready now
 
-- PostgreSQL 18 via Docker Compose; Flyway migrations create the B2C schema, login sessions, Auth security tables and email-change requests.
+- PostgreSQL 18 via Docker Compose; Flyway migrations V1–V8 create the B2C schema, login sessions, Auth security tables, email-change requests, invitation-delivery tracking, hashed MFA recovery codes and encrypted TOTP credentials.
 - Spring Boot backend with a running health endpoint, public paginated product endpoint, local CORS, validation errors, and Swagger UI.
 - React frontend with one real API client and a product-list page. The page is empty until an active product is created.
 - CI tests backend against PostgreSQL and runs frontend lint, build and tests on pull requests.
 - [`API_CONTRACT.md`](API_CONTRACT.md) reserves route names, roles and basic payload fields. [`openapi.yaml`](../openapi.yaml) describes **only implemented routes**. Planned routes must not be mistaken for working APIs.
 
-Identity & Admin is implemented on this branch: registration and email verification, login/logout, password reset, profile/addresses, role checks, Admin accounts/settings/audit, staff email invitations, optional email-code MFA, session management and email change. The React UI uses an HttpOnly session cookie and an XSRF token for writes; existing API clients may continue to use the bearer-token login contract. Staff enter `/internal`; customers use `/me`. The new migrations and integration tests must be run against PostgreSQL before merging this branch.
+Identity & Admin is implemented on this branch: registration and email verification, login/logout, password reset, profile/addresses, role checks, Admin accounts/settings/audit, staff email invitations, email-code or authenticator-app TOTP MFA with one-time recovery codes, session management and email change. MFA disable/recovery-code replacement requires the password plus an existing MFA factor; factor changes send a security notification. Admin creates staff accounts only through email invitations; there is no direct active-account creation endpoint. Password changes/resets invalidate pending email-change links and MFA challenges. Admin can revoke or resend invitations, including `PENDING` deliveries stalled for over five minutes, inspect account details and active sessions, revoke a user's sessions, and filter audit events. Login success/failure events are audited without credentials or tokens. Every authenticated request refreshes session activity; the server expires sessions after 30 idle minutes or 24 hours total. The React UI warns at roughly 25 idle minutes. The UI uses an HttpOnly session cookie and an XSRF token for writes; existing API clients may continue to use the bearer-token login contract. Staff enter `/internal`; customers use `/me`. The new migrations and integration tests must be run against PostgreSQL before merging this branch.
 
 ## First day on each machine
 
@@ -22,6 +22,12 @@ Identity & Admin is implemented on this branch: registration and email verificat
 6. Check `http://localhost:8080/api/health`, `http://localhost:8080/api/products`, `http://localhost:8080/swagger-ui/index.html`, and `http://localhost:5173`.
 
 No one should edit an applied Flyway migration. Use a new versioned migration for each schema change.
+
+## Isolated browser end-to-end check
+
+The browser test uses a separate PostgreSQL database and MailHog instance. It never uses Gmail or the normal local database. Start its dependencies from the repository root with `docker compose -f docker-compose.e2e.yml up -d`. Install the browser once from `frontend` with `npx playwright install chromium --only-shell`, then run `npm run test:e2e` there. Playwright starts a separate backend on port 8081 and frontend on port 5174. The test registers a unique account, reads verification/MFA/invitation messages from MailHog on port 8026, promotes only that new account to Admin in the isolated test database, and checks internal staff access. Ports 5434, 1026, 8026, 8081 and 5174 must be free. To stop only the E2E containers, run `docker compose -f docker-compose.e2e.yml down` from the repository root; omit `-v` to keep test data.
+
+TOTP secret encryption uses a generated local key in `.local/totp.key` (ignored by Git). The file is created on first backend start. Keep it with any database backup: losing the file prevents existing TOTP secrets from being decrypted. Each teammate's local checkout generates its own key automatically; never commit or share the key.
 
 ## Five balanced workstreams
 

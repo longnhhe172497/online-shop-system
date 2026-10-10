@@ -18,3 +18,8 @@ api.interceptors.request.use(async (config) => {
   }
   return config
 })
+
+api.interceptors.response.use((response) => {
+  if (typeof window !== 'undefined') window.dispatchEvent(new Event('forme:session-activity'))
+  return response
+})

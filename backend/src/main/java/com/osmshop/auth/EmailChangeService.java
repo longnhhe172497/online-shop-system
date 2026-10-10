@@ -93,6 +93,8 @@ public class EmailChangeService {
                     change.userId());
             jdbc.update("UPDATE user_sessions SET revoked_at=now() WHERE user_id=? AND revoked_at IS NULL",
                     change.userId());
+            jdbc.update("UPDATE email_mfa_challenges SET used_at=now() WHERE user_id=? AND used_at IS NULL",
+                    change.userId());
             jdbc.update("""
                     INSERT INTO audit_logs(actor_id,action,entity_type,entity_id,details)
                     VALUES (?,'EMAIL_CHANGED','USER',?, '{}'::jsonb)
