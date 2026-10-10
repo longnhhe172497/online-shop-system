@@ -1,4 +1,4 @@
-import { api, clearAccessToken, setAccessToken } from './client'
+import { api } from './client'
 
 export interface AuthUser {
   id: number
@@ -7,6 +7,8 @@ export interface AuthUser {
   role: string
 }
 
+export interface LoginResult { user: AuthUser | null; mfaRequired: boolean; challengeToken: string | null }
+
 export async function registerAccount(input: {
   fullName: string
   email: string
@@ -14,7 +16,7 @@ export async function registerAccount(input: {
   confirmPassword: string
   phone?: string
 }) {
-  const { data } = await api.post<{ userId: number; verificationRequired: boolean }>('/auth/register', input)
+  const { data } = await api.post<{ userId: number; verificationRequired: boolean; emailSent: boolean }>('/auth/register', input)
   return data
 }
 
@@ -37,17 +39,21 @@ export async function confirmPasswordReset(input: {
 }
 
 export async function login(input: { email: string; password: string }) {
-  const { data } = await api.post<{ accessToken: string; expiresAt: string; user: AuthUser }>('/auth/login', input)
-  setAccessToken(data.accessToken)
+  const { data } = await api.post<LoginResult>('/auth/browser-login', input)
   return data
 }
 
+export async function verifyMfa(challengeToken: string, code: string) {
+  const { data } = await api.post<LoginResult>('/auth/browser-mfa/verify', { challengeToken, code })
+  return data
+}
+
+export async function resendVerification(email: string) {
+  await api.post('/auth/verification/resend', { email })
+}
+
 export async function logout() {
-  try {
-    await api.post('/auth/logout')
-  } finally {
-    clearAccessToken()
-  }
+  await api.post('/auth/logout')
 }
 
 export async function getMe() {

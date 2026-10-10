@@ -1,23 +1,25 @@
 import { useState, type FormEvent } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { login, registerAccount } from './api/auth'
 import { getUiError } from './uiError'
+import { isInternalRole } from './internalAccess'
+import FormeLayout from './FormeLayout'
 
 export default function AuthPage() {
-  const [mode, setMode] = useState<'login' | 'register'>('login')
+  const location = useLocation()
+  const mode = location.pathname === '/register' ? 'register' : 'login'
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
-  const [notice, setNotice] = useState('')
   const [busy, setBusy] = useState(false)
   const navigate = useNavigate()
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setError('')
-    setNotice('')
     if (mode === 'register' && password !== confirmPassword) {
       setError('Mật khẩu nhập lại không khớp.')
       return
@@ -25,14 +27,17 @@ export default function AuthPage() {
     setBusy(true)
     try {
       if (mode === 'register') {
-        await registerAccount({ fullName, email, password, confirmPassword })
-        setNotice('Tài khoản đã được tạo. Hãy kiểm tra email và mở liên kết xác minh trước khi đăng nhập.')
-        setMode('login')
-        setPassword('')
-        setConfirmPassword('')
+        const result = await registerAccount({ fullName, email, password, confirmPassword })
+        setPassword(''); setConfirmPassword('')
+        navigate(`/registration-sent?email=${encodeURIComponent(email)}${result.emailSent ? '' : '&delivery=failed'}`)
       } else {
-        await login({ email, password })
-        navigate('/')
+        const session = await login({ email, password })
+        setPassword('')
+        if (session.mfaRequired && session.challengeToken) {
+          navigate('/auth/mfa', { state: { challengeToken: session.challengeToken, email } })
+        } else if (session.user) {
+          navigate(isInternalRole(session.user.role) ? '/internal' : '/')
+        }
       }
     } catch (failure) {
       setError(getUiError(failure))
@@ -41,36 +46,41 @@ export default function AuthPage() {
     }
   }
 
-  return (
-    <div className="forme-page">
-      <div className="announcement">CỬA HÀNG TRỰC TUYẾN · BẢN CHẠY TRÊN MÁY CÁ NHÂN</div>
-      <header className="forme-header">
-        <Link to="/" className="brand">FORME</Link>
-        <nav aria-label="Điều hướng chính"><Link to="/">CỬA HÀNG</Link><Link to="/auth">ĐĂNG NHẬP</Link></nav>
-      </header>
-      <main className="auth-main">
-        <section className="auth-card">
-          <p className="auth-kicker">{mode === 'login' ? 'CHÀO MỪNG BẠN' : 'THAM GIA CÙNG CHÚNG TÔI'}</p>
-          <h1>{mode === 'login' ? 'Đăng nhập' : 'Tạo tài khoản'}</h1>
-          <div className="auth-tabs" role="tablist" aria-label="Thao tác tài khoản">
-            <button role="tab" aria-selected={mode === 'login'} className={mode === 'login' ? 'active' : ''}
-              onClick={() => { setMode('login'); setError(''); setNotice('') }}>ĐĂNG NHẬP</button>
-            <button role="tab" aria-selected={mode === 'register'} className={mode === 'register' ? 'active' : ''}
-              onClick={() => { setMode('register'); setError(''); setNotice('') }}>ĐĂNG KÝ</button>
-          </div>
-          {notice && <p className="auth-notice" role="status">{notice}</p>}
-          {error && <p className="auth-error" role="alert">{error}</p>}
-          <form onSubmit={submit}>
-            {mode === 'register' && <label>HỌ VÀ TÊN<input value={fullName} onChange={(e) => setFullName(e.target.value)} required maxLength={150} autoComplete="name" /></label>}
-            <label>ĐỊA CHỈ EMAIL<input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="email" /></label>
-            <label>MẬT KHẨU<input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={mode === 'register' ? 8 : undefined} autoComplete={mode === 'login' ? 'current-password' : 'new-password'} /></label>
-            {mode === 'register' && <label>NHẬP LẠI MẬT KHẨU<input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required minLength={8} autoComplete="new-password" /></label>}
-            <button className="auth-submit" disabled={busy} type="submit">{busy ? 'VUI LÒNG ĐỢI…' : mode === 'login' ? 'ĐĂNG NHẬP' : 'TẠO TÀI KHOẢN'}</button>
-          </form>
-          {mode === 'login' && <p className="auth-help"><Link to="/forgot-password">Quên mật khẩu?</Link></p>}
-        </section>
-      </main>
-      <footer className="forme-footer"><strong>FORME</strong><span>Cửa hàng trực tuyến · Bản chạy thử trên máy cá nhân</span></footer>
+  return <FormeLayout showcase><section className="auth-card auth-card-wide">
+    <p className="auth-kicker">{mode === 'login' ? 'CHÀO MỪNG BẠN' : 'THAM GIA CÙNG CHÚNG TÔI'}</p>
+    <h1>{mode === 'login' ? 'Đăng nhập' : 'Tạo tài khoản'}</h1>
+    <p className="auth-lead">{mode === 'login' ? 'Tiếp tục hành trình mua sắm cùng FORME.' :
+      'Tạo tài khoản để lưu địa chỉ và theo dõi đơn hàng.'}</p>
+    <div className="auth-tabs" role="tablist" aria-label="Thao tác tài khoản">
+      <button role="tab" aria-selected={mode === 'login'} className={mode === 'login' ? 'active' : ''}
+        onClick={() => { setError(''); navigate('/auth') }}>ĐĂNG NHẬP</button>
+      <button role="tab" aria-selected={mode === 'register'} className={mode === 'register' ? 'active' : ''}
+        onClick={() => { setError(''); navigate('/register') }}>ĐĂNG KÝ</button>
     </div>
-  )
+    {error && <p className="auth-error" role="alert">{error}</p>}
+    {mode === 'login' && typeof location.state?.notice === 'string' &&
+      <p className="auth-notice" role="status">{location.state.notice}</p>}
+    <form onSubmit={submit}>
+      {mode === 'register' && <label>HỌ VÀ TÊN<input value={fullName}
+        onChange={(event) => setFullName(event.target.value)} required maxLength={150} autoComplete="name" /></label>}
+      <label>ĐỊA CHỈ EMAIL<input type="email" value={email} onChange={(event) => setEmail(event.target.value)}
+        required autoComplete="email" /></label>
+      <label htmlFor="auth-password">MẬT KHẨU</label>
+      <div className="password-input"><input id="auth-password" type={showPassword ? 'text' : 'password'}
+        value={password} onChange={(event) => setPassword(event.target.value)} required
+        minLength={mode === 'register' ? 8 : undefined}
+        autoComplete={mode === 'login' ? 'current-password' : 'new-password'} />
+        <button type="button" onClick={() => setShowPassword((value) => !value)}
+          aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}>{showPassword ? 'Ẩn' : 'Hiện'}</button></div>
+      {mode === 'register' && <><p className="password-hint">Sử dụng ít nhất 8 ký tự. Nên chọn một mật khẩu riêng cho FORME.</p>
+        <label>NHẬP LẠI MẬT KHẨU<input type={showPassword ? 'text' : 'password'} value={confirmPassword}
+          onChange={(event) => setConfirmPassword(event.target.value)} required minLength={8}
+          autoComplete="new-password" /></label></>}
+      <button className="auth-submit" disabled={busy} type="submit">{busy ? 'VUI LÒNG ĐỢI…' :
+        mode === 'login' ? 'ĐĂNG NHẬP' : 'TẠO TÀI KHOẢN'}</button>
+    </form>
+    <div className="auth-links">{mode === 'login' ? <><Link to="/forgot-password">Quên mật khẩu?</Link>
+      <Link to="/resend-verification">Gửi lại email xác minh</Link></> :
+      <Link to="/auth">Đã có tài khoản? Đăng nhập</Link>}</div>
+  </section></FormeLayout>
 }

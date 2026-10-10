@@ -75,9 +75,13 @@ INSERT INTO audit_logs(actor_id, action, entity_type, entity_id, details)
 SELECT NULL, 'INITIAL_ADMIN_BOOTSTRAP', 'USER', id::text, '{}'::jsonb FROM promoted;
 ```
 
-4. Sign out and sign in again, then open `http://localhost:5173/admin`.
+4. Sign out and sign in again, then open `http://localhost:5173/internal`.
 
-The command does not create a shared or hard-coded Admin password. It only promotes your already verified account in your local database. The Admin screen can then create staff accounts. Each teammate's local database needs its own initial Admin if they want to test Admin functions.
+The command does not create a shared or hard-coded Admin password. It only promotes your already verified account in your local database. The Admin screen can email invitations to staff; recipients set their own passwords. Each teammate's local database needs its own initial Admin if they want to test Admin functions.
+
+## Internal workspace
+
+After login, Admin, Manager, Support, Warehouse, and Delivery accounts enter `/internal`. Customer accounts enter the storefront. The internal sidebar shows only the sections currently authorized for that role: Admin sees account management, settings, and audit; other staff roles currently see a static overview until their business modules are implemented. The old `/admin` URL redirects to `/internal` for existing bookmarks. API access remains enforced by the backend, not only by the sidebar.
 
 ## Git workflow
 

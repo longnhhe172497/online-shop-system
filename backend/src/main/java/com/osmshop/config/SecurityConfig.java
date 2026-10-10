@@ -2,6 +2,8 @@ package com.osmshop.config;
 
 import com.osmshop.auth.BearerAuthenticationFilter;
 import jakarta.servlet.DispatcherType;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
@@ -15,6 +17,8 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
+import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter.ReferrerPolicy;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -30,8 +34,10 @@ public class SecurityConfig {
     SecurityFilterChain securityFilterChain(HttpSecurity http, BearerAuthenticationFilter bearer)
             throws Exception {
         return http
-                .csrf(csrf -> csrf.disable())
+                .csrf(csrf -> csrf.csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+                        .requireCsrfProtectionMatcher(SecurityConfig::needsCookieCsrf))
                 .cors(cors -> {})
+                .headers(headers -> headers.referrerPolicy(policy -> policy.policy(ReferrerPolicy.NO_REFERRER)))
                 .httpBasic(basic -> basic.disable())
                 .formLogin(form -> form.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -45,9 +51,12 @@ public class SecurityConfig {
                         .requestMatchers("/api/health", "/actuator/health", "/v3/api-docs/**", "/swagger-ui/**")
                         .permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/auth/register", "/api/auth/verify",
-                                "/api/auth/login", "/api/auth/password-reset/request",
-                                "/api/auth/password-reset/confirm")
+                                "/api/auth/login", "/api/auth/browser-login", "/api/auth/password-reset/request",
+                                "/api/auth/password-reset/confirm", "/api/auth/verification/resend",
+                                "/api/auth/mfa/verify", "/api/auth/browser-mfa/verify",
+                                "/api/auth/email-change/confirm", "/api/invitations/accept")
                         .permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/auth/csrf").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/products", "/api/products/**")
                         .permitAll()
                         .requestMatchers("/api/me/addresses", "/api/me/addresses/**").hasRole("CUSTOMER")
@@ -60,6 +69,17 @@ public class SecurityConfig {
                         .anyRequest().authenticated())
                 .addFilterBefore(bearer, UsernamePasswordAuthenticationFilter.class)
                 .build();
+    }
+
+    private static boolean needsCookieCsrf(HttpServletRequest request) {
+        String method = request.getMethod();
+        if ("GET".equals(method) || "HEAD".equals(method) || "OPTIONS".equals(method) || "TRACE".equals(method))
+            return false;
+        if (request.getCookies() == null) return false;
+        for (Cookie cookie : request.getCookies()) {
+            if ("FORME_SESSION".equals(cookie.getName())) return true;
+        }
+        return false;
     }
 
     private static void writeProblem(jakarta.servlet.http.HttpServletResponse response,
@@ -79,7 +99,8 @@ public class SecurityConfig {
         configuration.setAllowedOrigins(Arrays.stream(allowedOrigins.split(","))
                 .map(String::trim).filter(origin -> !origin.isEmpty()).toList());
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(List.of("Authorization", "Content-Type"));
+        configuration.setAllowCredentials(true);
+        configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-XSRF-TOKEN"));
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/api/**", configuration);
         return source;

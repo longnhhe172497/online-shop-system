@@ -43,6 +43,13 @@ public class ProfileService {
                         rs.getString("district"), rs.getString("province"), rs.getBoolean("is_default")), userId);
     }
 
+    public int maxSavedAddresses() {
+        Integer limit = jdbc.queryForObject("""
+                SELECT value_text::integer FROM system_settings WHERE setting_key='max_saved_addresses'
+                """, Integer.class);
+        return limit == null ? 10 : limit;
+    }
+
     @Transactional
     public AddressResponse createAddress(long userId, AddressRequest request) {
         lockUser(userId);

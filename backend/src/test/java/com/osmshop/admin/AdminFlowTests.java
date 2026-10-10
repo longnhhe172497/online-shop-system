@@ -10,14 +10,19 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.osmshop.auth.AuthService;
 import java.util.Map;
 import java.util.UUID;
+import org.mockito.ArgumentCaptor;
+import static org.mockito.Mockito.verify;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.mail.SimpleMailMessage;
+import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.transaction.annotation.Transactional;
 
 @SpringBootTest(properties = "management.health.mail.enabled=false")
@@ -27,6 +32,7 @@ class AdminFlowTests {
     @Autowired MockMvc mvc;
     @Autowired JdbcTemplate jdbc;
     @Autowired PasswordEncoder passwords;
+    @MockitoBean JavaMailSender mail;
     ObjectMapper json = new ObjectMapper();
 
     @Test
@@ -66,6 +72,32 @@ class AdminFlowTests {
         mvc.perform(patch("/api/admin/settings/max_saved_addresses").header("Authorization", admin)
                 .contentType(MediaType.APPLICATION_JSON).content("{\"value\":\"999\"}"))
                 .andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("INVALID_SETTING"));
+    }
+
+    @Test
+    void adminInvitesStaffAndInviteeSetsOwnPassword() throws Exception {
+        String admin = session("ADMIN");
+        String email = "invited-" + UUID.randomUUID() + "@example.com";
+        mvc.perform(post("/api/admin/invitations").header("Authorization", admin)
+                .contentType(MediaType.APPLICATION_JSON).content(json.writeValueAsString(Map.of(
+                        "email", email, "fullName", "New Staff", "phone", "0901234567", "role", "WAREHOUSE"))))
+                .andExpect(status().isCreated()).andExpect(jsonPath("$.role").value("WAREHOUSE"));
+        ArgumentCaptor<SimpleMailMessage> message = ArgumentCaptor.forClass(SimpleMailMessage.class);
+        verify(mail).send(message.capture());
+        String text = message.getValue().getText();
+        String token = text.substring(text.indexOf("?token=") + 7).split("\\s")[0];
+        mvc.perform(post("/api/invitations/accept").contentType(MediaType.APPLICATION_JSON)
+                .content(json.writeValueAsString(Map.of("token", token,
+                        "password", "OwnPassword123", "confirmPassword", "OwnPassword123"))))
+                .andExpect(status().isCreated());
+        mvc.perform(post("/api/invitations/accept").contentType(MediaType.APPLICATION_JSON)
+                .content(json.writeValueAsString(Map.of("token", token,
+                        "password", "OwnPassword123", "confirmPassword", "OwnPassword123"))))
+                .andExpect(status().isBadRequest());
+        mvc.perform(post("/api/auth/login").with(request -> { request.setRemoteAddr("invite-" + UUID.randomUUID()); return request; })
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json.writeValueAsString(Map.of("email", email, "password", "OwnPassword123"))))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.user.role").value("WAREHOUSE"));
     }
 
     private String session(String role) {

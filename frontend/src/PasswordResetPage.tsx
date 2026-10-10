@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { confirmPasswordReset, requestPasswordReset } from './api/auth'
 import { getUiError } from './uiError'
+import FormeLayout from './FormeLayout'
 
 export default function PasswordResetPage() {
   const [searchParams] = useSearchParams()
@@ -24,6 +25,7 @@ export default function PasswordResetPage() {
     try {
       if (token) {
         await confirmPasswordReset({ token, newPassword, confirmPassword })
+        window.history.replaceState(window.history.state, '', '/reset-password')
       } else {
         await requestPasswordReset(email)
       }
@@ -37,14 +39,11 @@ export default function PasswordResetPage() {
     }
   }
 
-  return <div className="forme-page">
-    <div className="announcement">CỬA HÀNG TRỰC TUYẾN · BẢN CHẠY TRÊN MÁY CÁ NHÂN</div>
-    <header className="forme-header"><Link to="/" className="brand">FORME</Link>
-      <nav aria-label="Điều hướng chính"><Link to="/">CỬA HÀNG</Link><Link to="/auth">ĐĂNG NHẬP</Link></nav>
-    </header>
-    <main className="auth-main"><section className="auth-card">
+  return <FormeLayout><section className="auth-card auth-card-wide auth-result-card">
       <p className="auth-kicker">KHÔI PHỤC TÀI KHOẢN</p>
       <h1>{token ? 'Đặt lại mật khẩu' : 'Quên mật khẩu'}</h1>
+      <p className="auth-lead">{token ? 'Chọn mật khẩu mới để tiếp tục sử dụng tài khoản.' :
+        'Chúng tôi sẽ gửi một liên kết bảo mật tới email của bạn.'}</p>
       {success ? <>
         <p className="auth-notice" role="status">{token
           ? 'Mật khẩu đã được cập nhật. Hãy đăng nhập bằng mật khẩu mới.'
@@ -67,7 +66,5 @@ export default function PasswordResetPage() {
         </form>
         <p className="auth-help"><Link to="/auth">Quay lại đăng nhập</Link></p>
       </>}
-    </section></main>
-    <footer className="forme-footer"><strong>FORME</strong><span>Cửa hàng trực tuyến · Bản chạy thử trên máy cá nhân</span></footer>
-  </div>
+    </section></FormeLayout>
 }

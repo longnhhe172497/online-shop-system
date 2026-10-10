@@ -4,13 +4,13 @@ This repository is the **new Online Shop System**, unrelated to the earlier OSM&
 
 ## What is ready now
 
-- PostgreSQL 18 via Docker Compose; Flyway V1/V2 creates the 26-table B2C schema and V3 adds login sessions.
+- PostgreSQL 18 via Docker Compose; Flyway migrations create the B2C schema, login sessions, Auth security tables and email-change requests.
 - Spring Boot backend with a running health endpoint, public paginated product endpoint, local CORS, validation errors, and Swagger UI.
 - React frontend with one real API client and a product-list page. The page is empty until an active product is created.
 - CI tests backend against PostgreSQL and runs frontend lint, build and tests on pull requests.
 - [`API_CONTRACT.md`](API_CONTRACT.md) reserves route names, roles and basic payload fields. [`openapi.yaml`](../openapi.yaml) describes **only implemented routes**. Planned routes must not be mistaken for working APIs.
 
-Authentication is **not yet implemented**. The existing SecurityConfig protects non-public routes, but its generated development password is not the project's login solution. Do not build feature code around that password.
+Identity & Admin is implemented on this branch: registration and email verification, login/logout, password reset, profile/addresses, role checks, Admin accounts/settings/audit, staff email invitations, optional email-code MFA, session management and email change. The React UI uses an HttpOnly session cookie and an XSRF token for writes; existing API clients may continue to use the bearer-token login contract. Staff enter `/internal`; customers use `/me`. The new migrations and integration tests must be run against PostgreSQL before merging this branch.
 
 ## First day on each machine
 

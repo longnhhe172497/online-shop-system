@@ -8,6 +8,22 @@ export interface ManagedUser {
 export interface Setting { key: string; value: string; description: string; updatedAt: string }
 export interface AuditLog { id: number; actorId: number | null; actorEmail: string | null;
   action: string; entityType: string; entityId: string | null; createdAt: string }
+export interface Invitation { id: number; email: string; fullName: string; role: string;
+  expiresAt: string; acceptedAt: string | null; createdAt: string }
+
+export async function listInvitations() {
+  const { data } = await api.get<Invitation[]>('/admin/invitations')
+  return data
+}
+
+export async function inviteStaff(input: { email: string; fullName: string; phone: string; role: string }) {
+  const { data } = await api.post<Invitation>('/admin/invitations', input)
+  return data
+}
+
+export async function acceptInvitation(input: { token: string; password: string; confirmPassword: string }) {
+  await api.post('/invitations/accept', input)
+}
 
 export async function listUsers(params: { search: string; role: string; status: string; page: number }) {
   const { data } = await api.get<Page<ManagedUser>>('/admin/users', { params })
