@@ -213,20 +213,15 @@ paths:
       responses:
         '200': { description: Paginated accounts without password hashes }
         '403': { description: Admin role required }
-    post:
-      summary: Create an active verified account (Admin only)
-      security: [{ bearerAuth: [] }]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: '#/components/schemas/AdminCreateUser' }
-      responses:
-        '201': { description: Created account }
-        '409': { description: Email already registered }
   /admin/users/{id}:
     parameters:
       - { in: path, name: id, required: true, schema: { type: integer, format: int64 } }
+    get:
+      summary: Read account details, active sessions and recent activity (Admin only)
+      security: [{ bearerAuth: [] }, { sessionCookie: [] }]
+      responses:
+        '200': { description: Account detail without credentials or session tokens }
+        '404': { description: Account not found }
     patch:
       summary: Update account name and phone (Admin only)
       security: [{ bearerAuth: [] }]
@@ -242,6 +237,14 @@ paths:
                 phone: { type: string, maxLength: 30 }
       responses:
         '200': { description: Updated account }
+  /admin/users/{id}/sessions/revoke:
+    parameters:
+      - { in: path, name: id, required: true, schema: { type: integer, format: int64 } }
+    post:
+      summary: Revoke all active sessions for a managed account (Admin only)
+      security: [{ bearerAuth: [] }, { sessionCookie: [] }]
+      responses:
+        '200': { description: Sessions revoked and action audited }
   /admin/users/{id}/role:
     parameters:
       - { in: path, name: id, required: true, schema: { type: integer, format: int64 } }
@@ -309,8 +312,13 @@ paths:
       parameters:
         - { in: query, name: page, schema: { type: integer, default: 0 } }
         - { in: query, name: size, schema: { type: integer, default: 20, maximum: 100 } }
+        - { in: query, name: actor, schema: { type: string }, description: Partial actor email }
+        - { in: query, name: action, schema: { type: string }, description: Exact action code }
+        - { in: query, name: from, schema: { type: string, format: date } }
+        - { in: query, name: to, schema: { type: string, format: date } }
       responses:
         '200': { description: Paginated audit entries }
+        '400': { description: Invalid date range }
   /auth/csrf:
     get:
       summary: Set the readable XSRF-TOKEN cookie before browser write requests
@@ -330,7 +338,7 @@ paths:
         '429': { description: Too many attempts }
   /auth/mfa/verify:
     post:
-      summary: Complete email MFA and obtain a bearer token
+      summary: Complete MFA with an email, TOTP or single-use recovery code and obtain a bearer token
       requestBody:
         required: true
         content:
@@ -341,7 +349,7 @@ paths:
         '400': { description: Wrong, expired or used code }
   /auth/browser-mfa/verify:
     post:
-      summary: Complete email MFA and obtain a browser cookie
+      summary: Complete MFA with an email, TOTP or single-use recovery code and obtain a browser cookie
       requestBody:
         required: true
         content:
@@ -380,10 +388,10 @@ paths:
         '200': { description: '{maxSavedAddresses} from system settings' }
   /me/security:
     get:
-      summary: Read email MFA enrollment status
+      summary: Read MFA method, enrollment status and unused recovery-code count
       security: [{ bearerAuth: [] }, { sessionCookie: [] }]
       responses:
-        '200': { description: '{mfaEnabled}' }
+        '200': { description: '{mfaEnabled,mfaMethod,recoveryCodesRemaining}; never returns stored recovery codes' }
   /me/password:
     post:
       summary: Change password and revoke all sessions
@@ -401,7 +409,7 @@ paths:
       summary: List the current user's active login sessions
       security: [{ bearerAuth: [] }, { sessionCookie: [] }]
       responses:
-        '200': { description: Active sessions, including device metadata and current flag }
+        '200': { description: Active sessions, including lastSeenAt, device metadata and current flag }
   /me/sessions/{id}:
     delete:
       summary: Revoke an owned session
@@ -424,7 +432,7 @@ paths:
         '200': { description: '{challengeToken}; code expires in 10 minutes' }
   /me/mfa/confirm:
     post:
-      summary: Confirm enrollment and enable email MFA
+      summary: Confirm enrollment and enable email MFA; show eight recovery codes once
       security: [{ bearerAuth: [] }, { sessionCookie: [] }]
       requestBody:
         required: true
@@ -432,16 +440,64 @@ paths:
           application/json:
             schema: { $ref: '#/components/schemas/MfaVerifyRequest' }
       responses:
-        '204': { description: MFA enabled }
-  /me/mfa/disable:
+        '200': { description: '{recoveryCodes}; codes are shown once and stored only as hashes' }
+  /me/mfa/totp/start:
     post:
-      summary: Disable email MFA after checking the current password
+      summary: Begin authenticator-app enrollment after checking the current password
       security: [{ bearerAuth: [] }, { sessionCookie: [] }]
       requestBody:
         required: true
         content:
           application/json:
             schema: { $ref: '#/components/schemas/CurrentPasswordRequest' }
+      responses:
+        '200': { description: '{secret,otpauthUri}; display once during enrollment' }
+        '409': { description: Another MFA method is already enabled }
+  /me/mfa/totp/confirm:
+    post:
+      summary: Confirm a fresh TOTP code and show recovery codes once
+      security: [{ bearerAuth: [] }, { sessionCookie: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/TotpConfirmRequest' }
+      responses:
+        '200': { description: '{recoveryCodes}; TOTP enabled' }
+        '400': { description: Code invalid or enrollment expired }
+  /me/mfa/step-up/start:
+    post:
+      summary: Require current password and start factor verification for a sensitive MFA change
+      security: [{ bearerAuth: [] }, { sessionCookie: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CurrentPasswordRequest' }
+      responses:
+        '200': { description: '{challengeToken,mfaMethod}; email code sent for EMAIL method' }
+  /me/mfa/recovery/regenerate:
+    post:
+      summary: Replace all unused MFA recovery codes after checking password and existing factor
+      security: [{ bearerAuth: [] }, { sessionCookie: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/MfaSensitiveRequest' }
+      responses:
+        '200': { description: '{recoveryCodes}; previous recovery codes are invalidated' }
+        '400': { description: Current password is wrong }
+        '409': { description: MFA is not enabled }
+  /me/mfa/disable:
+    post:
+      summary: Disable MFA after checking password and existing factor
+      security: [{ bearerAuth: [] }, { sessionCookie: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/MfaSensitiveRequest' }
       responses:
         '204': { description: MFA disabled }
   /me/email-change:
@@ -461,7 +517,7 @@ paths:
       summary: List the 100 most recent staff invitations (Admin only)
       security: [{ bearerAuth: [] }, { sessionCookie: [] }]
       responses:
-        '200': { description: Invitation list }
+        '200': { description: Invitation list with PENDING, STALLED, SENT, FAILED, REVOKED, EXPIRED or ACCEPTED status }
     post:
       summary: Send a 48-hour staff invitation (Admin only)
       security: [{ bearerAuth: [] }, { sessionCookie: [] }]
@@ -473,6 +529,25 @@ paths:
       responses:
         '201': { description: Invitation sent }
         '409': { description: Email already registered }
+        '503': { description: SMTP delivery failed; invitation marked FAILED and cannot be accepted }
+  /admin/invitations/{id}/resend:
+    parameters:
+      - { in: path, name: id, required: true, schema: { type: integer, format: int64 } }
+    post:
+      summary: Issue a new link for a failed, expired or stalled invitation (Admin only)
+      security: [{ bearerAuth: [] }, { sessionCookie: [] }]
+      responses:
+        '201': { description: New invitation sent; old link invalidated }
+        '409': { description: Invitation cannot be resent }
+  /admin/invitations/{id}/revoke:
+    parameters:
+      - { in: path, name: id, required: true, schema: { type: integer, format: int64 } }
+    post:
+      summary: Revoke an unaccepted invitation (Admin only)
+      security: [{ bearerAuth: [] }, { sessionCookie: [] }]
+      responses:
+        '200': { description: Invitation revoked and action audited }
+        '409': { description: Invitation is no longer revocable }
   /invitations/accept:
     post:
       summary: Accept a staff invitation and set a personal password
@@ -489,12 +564,12 @@ components:
     bearerAuth:
       type: http
       scheme: bearer
-      description: Opaque 24-hour token issued by /auth/login
+      description: Opaque token issued by /auth/login; expires after 24 hours total or 30 idle minutes
     sessionCookie:
       type: apiKey
       in: cookie
       name: FORME_SESSION
-      description: Browser writes also require X-XSRF-TOKEN from /auth/csrf
+      description: Expires after 24 hours total or 30 idle minutes; browser writes also require X-XSRF-TOKEN from /auth/csrf
   schemas:
     TokenRequest:
       type: object
@@ -506,7 +581,7 @@ components:
       required: [challengeToken, code]
       properties:
         challengeToken: { type: string }
-        code: { type: string, pattern: '^[0-9]{6}$' }
+        code: { type: string, description: Six-digit email or TOTP code, or a single-use MFA recovery code at login }
     ChangePasswordRequest:
       type: object
       required: [currentPassword, newPassword, confirmPassword]
@@ -519,6 +594,18 @@ components:
       required: [password]
       properties:
         password: { type: string, format: password }
+    MfaSensitiveRequest:
+      type: object
+      required: [password, challengeToken, code]
+      properties:
+        password: { type: string, format: password }
+        challengeToken: { type: string }
+        code: { type: string, description: Current email/TOTP code or an unused recovery code }
+    TotpConfirmRequest:
+      type: object
+      required: [code]
+      properties:
+        code: { type: string, pattern: '^[0-9]{6}$' }
     EmailChangeRequest:
       type: object
       required: [newEmail, currentPassword]
@@ -540,15 +627,6 @@ components:
         token: { type: string }
         password: { type: string, format: password, minLength: 8, maxLength: 72 }
         confirmPassword: { type: string, format: password }
-    AdminCreateUser:
-      type: object
-      required: [email, fullName, password, role]
-      properties:
-        email: { type: string, format: email }
-        fullName: { type: string, maxLength: 150 }
-        phone: { type: string, maxLength: 30 }
-        password: { type: string, format: password, minLength: 8, maxLength: 72 }
-        role: { type: string, enum: [CUSTOMER, ADMIN, MANAGER, SUPPORT, WAREHOUSE, DELIVERY] }
     RegisterRequest:
       type: object
       required: [fullName, email, password, confirmPassword]

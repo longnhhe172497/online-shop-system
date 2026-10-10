@@ -10,7 +10,7 @@ This is the **agreed route inventory for implementation**, not a claim that ever
 - DTOs are separate from persistence entities. Order items carry name/SKU/price snapshots. Any resource with a customer ID must be checked for ownership server-side.
 - `401` means not logged in; `403` means logged in without permission; `404` means absent or not visible to the caller; `409` means state conflict (stock, duplicate review, illegal transition); `422` means a business rule failed after syntactically valid input.
 - Admin is a separate role, not a superclass of Manager, Support, Warehouse or Delivery.
-- Authentication supports `Authorization: Bearer <opaque-token>` for API clients and an HttpOnly `FORME_SESSION` cookie for the browser. Only the SHA-256 token hash is stored in `user_sessions`; sessions expire after 24 hours and there is no refresh token. Browser writes require the `X-XSRF-TOKEN` header obtained from `GET /auth/csrf`. Sessions are rechecked against user status on every request. MFA-enabled accounts must complete the email-code challenge before receiving a session.
+- Authentication supports `Authorization: Bearer <opaque-token>` for API clients and an HttpOnly `FORME_SESSION` cookie for the browser. Only the SHA-256 token hash is stored in `user_sessions`; sessions have a 24-hour absolute lifetime and expire after 30 minutes without an authenticated request (server-enforced). There is no refresh token. Browser writes require the `X-XSRF-TOKEN` header obtained from `GET /auth/csrf`. Sessions are rechecked against user status on every request. MFA-enabled accounts complete an email-code or TOTP challenge, selected by `mfaMethod`; a previously issued, unused recovery code may replace the factor at login. The browser warns after about 25 idle minutes, but the server decides whether a session is valid.
 - QR and refunds are local simulations. They must say so in API and UI; never imply real money has moved.
 
 ## Endpoint ownership and minimum request/response fields
@@ -28,16 +28,20 @@ This is the **agreed route inventory for implementation**, not a claim that ever
 | `POST /auth/login` | P | `{email,password}` → `{accessToken,expiresAt,user:{id,fullName,role}}`; opaque 24-hour bearer token |
 | `GET /auth/csrf` | P | obtain the browser's XSRF token cookie before a write |
 | `POST /auth/browser-login` | P | `{email,password}` → HttpOnly session cookie and user, or MFA challenge; no bearer token in the browser response |
-| `POST /auth/mfa/verify`, `POST /auth/browser-mfa/verify` | P | `{challengeToken,code}` → bearer session or browser cookie, respectively |
+| `POST /auth/mfa/verify`, `POST /auth/browser-mfa/verify` | P | `{challengeToken,code}` where `code` is a six-digit email/TOTP code or a single-use recovery code → bearer session or browser cookie, respectively |
 | `POST /auth/verification/resend` | P | `{email}` → `202`; response does not disclose whether a pending account exists |
 | `POST /auth/logout` | C/M/S/W/D/A | authenticated request → `204` |
 | `POST /auth/password-reset/request` | P | `{email}` → `202` regardless of whether account exists; active accounts receive a 30-minute single-use link, at most one email per five minutes |
 | `POST /auth/password-reset/confirm` | P | `{token,newPassword,confirmPassword}` → `{reset:true}`; consumes link and revokes existing sessions |
 | `GET /me`, `PATCH /me` | authenticated | read profile / `{fullName,phone}` → profile without password hash; email and role stay read-only |
-| `GET /me/limits`, `GET /me/security` | authenticated | saved-address limit / MFA status |
+| `GET /me/limits`, `GET /me/security` | authenticated | saved-address limit / `{mfaEnabled,mfaMethod,recoveryCodesRemaining}`; raw recovery codes are never returned again |
 | `POST /me/password` | authenticated | `{currentPassword,newPassword,confirmPassword}` → `204`; revokes all sessions |
 | `GET /me/sessions`, `DELETE /me/sessions/{id}`, `POST /me/sessions/revoke-other` | authenticated | list/revoke owned sessions |
-| `POST /me/mfa/start`, `POST /me/mfa/confirm`, `POST /me/mfa/disable` | authenticated | email-code enrollment and password-confirmed disable |
+| `POST /me/mfa/start`, `POST /me/mfa/confirm` | authenticated | email-code enrollment; confirm returns `{recoveryCodes:[...]}` once |
+| `POST /me/mfa/totp/start`, `POST /me/mfa/totp/confirm` | authenticated | `{password}` → `{secret,otpauthUri}` (one-time setup display), then `{code}` → `{recoveryCodes:[...]}`. TOTP uses six digits every 30 seconds; the active secret is encrypted locally. Only one MFA method may be active. |
+| `POST /me/mfa/step-up/start` | authenticated | `{password}` → `{challengeToken,mfaMethod}`; email MFA sends a code, TOTP uses the authenticator app. Required before disabling MFA or regenerating recovery codes. |
+| `POST /me/mfa/disable` | authenticated | `{password,challengeToken,code}` → `204`; current MFA factor or unused recovery code required; all remaining codes invalidated and user notified by email |
+| `POST /me/mfa/recovery/regenerate` | authenticated | `{password,challengeToken,code}` → `{recoveryCodes:[...]}`; current factor or unused recovery code required, all old codes invalidated and user notified |
 | `POST /me/email-change`, `POST /auth/email-change/confirm` | authenticated / P | current password + new email sends a 30-minute link; confirmation changes login email and revokes sessions |
 | `GET/POST /me/addresses` | C | none / `{recipientName,phone,addressLine,ward,district,province,isDefault}` → own addresses / created address; first address becomes default, max from `max_saved_addresses` setting |
 | `PATCH/DELETE /me/addresses/{id}` | C | complete address fields / none → updated address / `204`; owner check uses bearer user ID, deleting default promotes oldest remaining address |
@@ -69,9 +73,9 @@ This is the **agreed route inventory for implementation**, not a claim that ever
 | `GET /manager/dashboard`, `GET /manager/reports` | M | date/filter → aggregate metrics/exportable data |
 | `POST /staff/daily-reports` | S/W/D | `{reportDate,content}` → report |
 | `GET /manager/daily-reports` | M | paging/date/staff → report page |
-| `GET/POST/PATCH /admin/users`, `PATCH /admin/users/{id}/role`, `PATCH /admin/users/{id}/status` | A | user/filter/role/status DTO → managed account; protect final active Admin |
-| `GET/POST /admin/invitations`, `POST /invitations/accept` | A / P | Admin emails a staff invite; recipient sets their own password using the single-use link |
-| `GET /admin/audit-logs`, `GET/PATCH /admin/settings` | A | paging / setting key/value → immutable audit page / validated settings |
+| `GET /admin/users`, `GET/PATCH /admin/users/{id}`, `PATCH /admin/users/{id}/role`, `PATCH /admin/users/{id}/status`, `POST /admin/users/{id}/sessions/revoke` | A | search/update managed accounts; detail includes active sessions and recent history; Admin may revoke sessions. Protect final active Admin. Staff accounts are created only through invitations. |
+| `GET/POST /admin/invitations`, `POST /admin/invitations/{id}/resend`, `POST /admin/invitations/{id}/revoke`, `POST /invitations/accept` | A / P | Admin emails a staff invite; recipient sets their own password using the single-use link. List/creation response includes `status`: `PENDING`, `STALLED`, `SENT`, `FAILED`, `REVOKED`, `EXPIRED`, or `ACCEPTED`. A `PENDING` send older than five minutes is displayed as `STALLED`; Admin may replace failed, expired or stalled invitations with a new link. The old link is invalidated. An unaccepted invitation may be revoked. |
+| `GET /admin/audit-logs`, `GET/PATCH /admin/settings` | A | audit supports `actor`, `action`, `from`, `to` filters and paging; login success/failure is logged without secrets. Settings remain validated. |
 
 ## State rules that all modules share
 

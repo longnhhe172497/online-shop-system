@@ -45,7 +45,8 @@ export async function getAccountLimits() {
 }
 
 export async function getSecurity() {
-  const { data } = await api.get<{ mfaEnabled: boolean }>('/me/security')
+  const { data } = await api.get<{ mfaEnabled: boolean; mfaMethod: 'EMAIL' | 'TOTP';
+    recoveryCodesRemaining: number }>('/me/security')
   return data
 }
 
@@ -55,7 +56,7 @@ export async function changePassword(input: { currentPassword: string; newPasswo
 }
 
 export interface Session { id: number; ipAddress: string | null; userAgent: string | null;
-  createdAt: string; expiresAt: string; current: boolean }
+  createdAt: string; lastSeenAt: string | null; expiresAt: string; current: boolean }
 
 export async function listSessions() {
   const { data } = await api.get<Session[]>('/me/sessions')
@@ -76,11 +77,34 @@ export async function startMfa() {
 }
 
 export async function confirmMfa(challengeToken: string, code: string) {
-  await api.post('/me/mfa/confirm', { challengeToken, code })
+  const { data } = await api.post<{ recoveryCodes: string[] }>('/me/mfa/confirm', { challengeToken, code })
+  return data
 }
 
-export async function disableMfa(password: string) {
-  await api.post('/me/mfa/disable', { password })
+export async function startMfaStepUp(password: string) {
+  const { data } = await api.post<{ challengeToken: string; mfaMethod: 'EMAIL' | 'TOTP' }>(
+    '/me/mfa/step-up/start', { password })
+  return data
+}
+
+export async function startTotp(password: string) {
+  const { data } = await api.post<{ secret: string; otpauthUri: string }>('/me/mfa/totp/start', { password })
+  return data
+}
+
+export async function confirmTotp(code: string) {
+  const { data } = await api.post<{ recoveryCodes: string[] }>('/me/mfa/totp/confirm', { code })
+  return data
+}
+
+export async function regenerateRecoveryCodes(password: string, challengeToken: string, code: string) {
+  const { data } = await api.post<{ recoveryCodes: string[] }>('/me/mfa/recovery/regenerate',
+    { password, challengeToken, code })
+  return data
+}
+
+export async function disableMfa(password: string, challengeToken: string, code: string) {
+  await api.post('/me/mfa/disable', { password, challengeToken, code })
 }
 
 export async function requestEmailChange(newEmail: string, currentPassword: string) {

@@ -63,7 +63,8 @@ export function ResendVerificationPage() {
 export function MfaLoginPage() {
   const navigate = useNavigate()
   const location = useLocation()
-  const state = location.state as { challengeToken?: string; email?: string } | null
+  const state = location.state as { challengeToken?: string; email?: string;
+    mfaMethod?: 'EMAIL' | 'TOTP' } | null
   const [code, setCode] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -77,9 +78,11 @@ export function MfaLoginPage() {
     finally { setBusy(false) }
   }
   return <AuthCard kicker="BẢO MẬT HAI BƯỚC" title="Xác minh đăng nhập">
-    <p className="auth-lead">Nhập mã sáu chữ số vừa được gửi tới {state?.email ?? 'email của bạn'}.</p>
+    <p className="auth-lead">{state?.mfaMethod === 'TOTP'
+      ? 'Nhập mã sáu chữ số từ ứng dụng xác thực, hoặc dùng một mã khôi phục đã lưu.'
+      : `Nhập mã sáu chữ số gửi tới ${state?.email ?? 'email của bạn'}, hoặc dùng một mã khôi phục đã lưu.`}</p>
     {!state?.challengeToken ? <p className="auth-error">Phiên xác minh đã mất. Hãy đăng nhập lại.</p> :
-      <form onSubmit={submit}><label>MÃ XÁC MINH<input inputMode="numeric" pattern="[0-9]{6}" maxLength={6}
+      <form onSubmit={submit}><label>MÃ XÁC MINH HOẶC MÃ KHÔI PHỤC<input maxLength={35}
         autoComplete="one-time-code" required value={code} onChange={(event) => setCode(event.target.value)} /></label>
         <button className="auth-submit" disabled={busy}>XÁC MINH</button></form>}
     {error && <p className="auth-error" role="alert">{error}</p>}

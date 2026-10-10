@@ -7,7 +7,8 @@ export interface AuthUser {
   role: string
 }
 
-export interface LoginResult { user: AuthUser | null; mfaRequired: boolean; challengeToken: string | null }
+export interface LoginResult { user: AuthUser | null; mfaRequired: boolean;
+  challengeToken: string | null; mfaMethod?: 'EMAIL' | 'TOTP' | null }
 
 export async function registerAccount(input: {
   fullName: string

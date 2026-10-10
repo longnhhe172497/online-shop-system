@@ -2,18 +2,18 @@ package com.osmshop.admin;
 
 import com.osmshop.api.PageResponse;
 import com.osmshop.auth.AuthApiException;
-import com.osmshop.admin.AdminController.CreateUser;
 import com.osmshop.admin.AdminController.UpdateUser;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Date;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,11 +22,8 @@ public class AdminService {
     private static final Set<String> ROLES = Set.of("CUSTOMER", "ADMIN", "MANAGER", "SUPPORT", "WAREHOUSE", "DELIVERY");
     private static final Set<String> STATUSES = Set.of("ACTIVE", "INACTIVE", "LOCKED");
     private final JdbcTemplate jdbc;
-    private final PasswordEncoder passwords;
-
-    public AdminService(JdbcTemplate jdbc, PasswordEncoder passwords) {
+    public AdminService(JdbcTemplate jdbc) {
         this.jdbc = jdbc;
-        this.passwords = passwords;
     }
 
     public PageResponse<UserView> users(String search, String role, String status, int page, int size) {
@@ -41,21 +38,30 @@ public class AdminService {
         return new PageResponse<>(items, page, size, count == null ? 0 : count);
     }
 
+    public UserDetailView userDetail(long id) {
+        UserView account = user(id);
+        List<SessionSummary> sessions = jdbc.query("""
+                SELECT id,ip_address,user_agent,created_at,last_seen_at,expires_at
+                FROM user_sessions WHERE user_id=? AND revoked_at IS NULL AND expires_at>now()
+                  AND coalesce(last_seen_at,created_at)>now()-interval '30 minutes'
+                ORDER BY created_at DESC
+                """, (rs, row) -> new SessionSummary(rs.getLong(1), rs.getString(2), rs.getString(3),
+                rs.getObject(4, OffsetDateTime.class), rs.getObject(5, OffsetDateTime.class),
+                rs.getObject(6, OffsetDateTime.class)), id);
+        List<AuditView> history = jdbc.query("""
+                SELECT a.id,a.actor_id,u.email,a.action,a.entity_type,a.entity_id,a.created_at
+                FROM audit_logs a LEFT JOIN users u ON u.id=a.actor_id
+                WHERE a.entity_type='USER' AND a.entity_id=?
+                ORDER BY a.id DESC LIMIT 20
+                """, AdminService::mapAudit, Long.toString(id));
+        return new UserDetailView(account, sessions, history);
+    }
+
     @Transactional
-    public UserView create(long actorId, CreateUser request) {
-        String role = checkedRole(request.role());
-        String email = request.email().trim().toLowerCase(Locale.ROOT);
-        try {
-            Long id = jdbc.queryForObject("""
-                    INSERT INTO users(email,password_hash,full_name,phone,role,status,verified_at)
-                    VALUES (?,?,?,?,?,'ACTIVE',now()) RETURNING id
-                    """, Long.class, email, passwords.encode(request.password()), request.fullName().trim(),
-                    request.phone(), role);
-            audit(actorId, "USER_CREATED", "USER", id.toString(), "role", role);
-            return user(id);
-        } catch (DataIntegrityViolationException exception) {
-            throw error(HttpStatus.CONFLICT, "EMAIL_ALREADY_REGISTERED", "Email already registered");
-        }
+    public void revokeSessions(long actorId, long id) {
+        user(id);
+        jdbc.update("UPDATE user_sessions SET revoked_at=now() WHERE user_id=? AND revoked_at IS NULL", id);
+        audit(actorId, "USER_SESSIONS_REVOKED", "USER", Long.toString(id), "reason", "admin");
     }
 
     @Transactional
@@ -113,17 +119,38 @@ public class AdminService {
                         rs.getObject(4, OffsetDateTime.class)), key);
     }
 
-    public PageResponse<AuditView> audit(int page, int size) {
+    public PageResponse<AuditView> audit(int page, int size, String actor, String action,
+                                         LocalDate from, LocalDate to) {
         validatePage(page, size);
-        Long count = jdbc.queryForObject("SELECT count(*) FROM audit_logs", Long.class);
+        if (from != null && to != null && from.isAfter(to))
+            throw error(HttpStatus.BAD_REQUEST, "INVALID_DATE_RANGE", "Invalid date range");
+        StringBuilder filter = new StringBuilder(" WHERE 1=1");
+        List<Object> arguments = new ArrayList<>();
+        if (actor != null && !actor.isBlank()) {
+            filter.append(" AND lower(coalesce(u.email,target.email)) LIKE ?");
+            arguments.add("%" + actor.trim().toLowerCase(Locale.ROOT) + "%");
+        }
+        if (action != null && !action.isBlank()) {
+            filter.append(" AND a.action=?");
+            arguments.add(action.trim().toUpperCase(Locale.ROOT));
+        }
+        if (from != null) { filter.append(" AND a.created_at>=?"); arguments.add(Date.valueOf(from)); }
+        if (to != null) { filter.append(" AND a.created_at<?"); arguments.add(Date.valueOf(to.plusDays(1))); }
+        String base = " FROM audit_logs a LEFT JOIN users u ON u.id=a.actor_id"
+                + " LEFT JOIN users target ON a.entity_type='USER' AND a.entity_id=target.id::text" + filter;
+        Long count = jdbc.queryForObject("SELECT count(*)" + base, Long.class, arguments.toArray());
+        arguments.add(size);
+        arguments.add(page * size);
         List<AuditView> items = jdbc.query("""
                 SELECT a.id,a.actor_id,u.email,a.action,a.entity_type,a.entity_id,a.created_at
-                FROM audit_logs a LEFT JOIN users u ON u.id=a.actor_id
-                ORDER BY a.id DESC LIMIT ? OFFSET ?
-                """, (rs, row) -> new AuditView(rs.getLong(1), (Long) rs.getObject(2), rs.getString(3),
-                rs.getString(4), rs.getString(5), rs.getString(6), rs.getObject(7, OffsetDateTime.class)),
-                size, page * size);
+                """ + base + " ORDER BY a.id DESC LIMIT ? OFFSET ?", AdminService::mapAudit,
+                arguments.toArray());
         return new PageResponse<>(items, page, size, count == null ? 0 : count);
+    }
+
+    private static AuditView mapAudit(ResultSet rs, int row) throws SQLException {
+        return new AuditView(rs.getLong(1), (Long) rs.getObject(2), rs.getString(3),
+                rs.getString(4), rs.getString(5), rs.getString(6), rs.getObject(7, OffsetDateTime.class));
     }
 
     private UserView user(long id) {
@@ -197,4 +224,7 @@ public class AdminService {
     public record SettingView(String key, String value, String description, OffsetDateTime updatedAt) {}
     public record AuditView(long id, Long actorId, String actorEmail, String action, String entityType,
             String entityId, OffsetDateTime createdAt) {}
+    public record SessionSummary(long id, String ipAddress, String userAgent, OffsetDateTime createdAt,
+                                 OffsetDateTime lastSeenAt, OffsetDateTime expiresAt) {}
+    public record UserDetailView(UserView user, List<SessionSummary> sessions, List<AuditView> history) {}
 }

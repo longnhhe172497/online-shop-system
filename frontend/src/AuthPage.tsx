@@ -34,7 +34,8 @@ export default function AuthPage() {
         const session = await login({ email, password })
         setPassword('')
         if (session.mfaRequired && session.challengeToken) {
-          navigate('/auth/mfa', { state: { challengeToken: session.challengeToken, email } })
+          navigate('/auth/mfa', { state: { challengeToken: session.challengeToken, email,
+            mfaMethod: session.mfaMethod } })
         } else if (session.user) {
           navigate(isInternalRole(session.user.role) ? '/internal' : '/')
         }
