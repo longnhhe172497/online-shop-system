@@ -72,6 +72,9 @@ public class AdminService {
         UserView previous = lockUser(id);
         if ("ADMIN".equals(previous.role()) && !"ADMIN".equals(next)) protectLastAdmin();
         jdbc.update("UPDATE users SET role=?,updated_at=now() WHERE id=?", next, id);
+        if (!previous.role().equals(next)) jdbc.update("""
+                UPDATE user_sessions SET revoked_at=now() WHERE user_id=? AND revoked_at IS NULL
+                """, id);
         audit(actorId, "USER_ROLE_CHANGED", "USER", Long.toString(id), "role", next);
         return user(id);
     }
@@ -86,6 +89,9 @@ public class AdminService {
         if ("ACTIVE".equals(next) && previous.verifiedAt() == null)
             throw error(HttpStatus.CONFLICT, "EMAIL_NOT_VERIFIED", "Email not verified");
         jdbc.update("UPDATE users SET status=?,updated_at=now() WHERE id=?", next, id);
+        if (!previous.status().equals(next)) jdbc.update("""
+                UPDATE user_sessions SET revoked_at=now() WHERE user_id=? AND revoked_at IS NULL
+                """, id);
         audit(actorId, "USER_STATUS_CHANGED", "USER", Long.toString(id), "status", next);
         return user(id);
     }

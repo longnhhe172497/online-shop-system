@@ -3,27 +3,33 @@ import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
 import { listProducts } from './api/products'
-import { confirmPasswordReset, login, registerAccount, requestPasswordReset } from './api/auth'
-import { createAddress, getProfile, listAddresses, updateProfile } from './api/profile'
-import { listAudit, listSettings, listUsers } from './api/admin'
+import { confirmPasswordReset, getMe, login, registerAccount, requestPasswordReset,
+  resendVerification, verifyMfa } from './api/auth'
+import { changePassword, createAddress, getAccountLimits, getProfile, getSecurity,
+  listAddresses, listSessions, revokeSession, updateProfile } from './api/profile'
+import { inviteStaff, listAudit, listInvitations, listSettings, listUsers } from './api/admin'
 
 vi.mock('./api/products', () => ({ listProducts: vi.fn() }))
 vi.mock('./api/auth', () => ({
   login: vi.fn(), registerAccount: vi.fn(), getMe: vi.fn(), logout: vi.fn(), verifyAccount: vi.fn(),
-  requestPasswordReset: vi.fn(), confirmPasswordReset: vi.fn(),
+  requestPasswordReset: vi.fn(), confirmPasswordReset: vi.fn(), resendVerification: vi.fn(), verifyMfa: vi.fn(),
 }))
-vi.mock('./api/client', () => ({ hasAccessToken: () => false }))
 vi.mock('./api/profile', () => ({ getProfile: vi.fn(), updateProfile: vi.fn(), listAddresses: vi.fn(),
-  createAddress: vi.fn(), updateAddress: vi.fn(), deleteAddress: vi.fn() }))
+  createAddress: vi.fn(), updateAddress: vi.fn(), deleteAddress: vi.fn(), getAccountLimits: vi.fn(),
+  getSecurity: vi.fn(), changePassword: vi.fn(), listSessions: vi.fn(), revokeSession: vi.fn(),
+  revokeOtherSessions: vi.fn(), startMfa: vi.fn(), confirmMfa: vi.fn(), disableMfa: vi.fn() }))
 vi.mock('./api/admin', () => ({ listUsers: vi.fn(), createUser: vi.fn(), updateUser: vi.fn(),
-  changeRole: vi.fn(), changeStatus: vi.fn(), listSettings: vi.fn(), changeSetting: vi.fn(), listAudit: vi.fn() }))
+  changeRole: vi.fn(), changeStatus: vi.fn(), listSettings: vi.fn(), changeSetting: vi.fn(), listAudit: vi.fn(),
+  listInvitations: vi.fn(), inviteStaff: vi.fn(), acceptInvitation: vi.fn() }))
 
 function renderAt(path: string) {
   return render(<MemoryRouter initialEntries={[path]}><App /></MemoryRouter>)
 }
 
 describe('App', () => {
-  beforeEach(() => vi.resetAllMocks())
+  beforeEach(() => { vi.resetAllMocks()
+    vi.mocked(getMe).mockRejectedValue(new Error('Không có phiên'))
+    vi.mocked(getAccountLimits).mockResolvedValue({ maxSavedAddresses: 10 }) })
   afterEach(() => cleanup())
 
   it('renders products returned by the API client', async () => {
@@ -45,7 +51,7 @@ describe('App', () => {
   })
 
   it('registers then directs the user to verify email', async () => {
-    vi.mocked(registerAccount).mockResolvedValue({ userId: 1, verificationRequired: true })
+    vi.mocked(registerAccount).mockResolvedValue({ userId: 1, verificationRequired: true, emailSent: true })
     renderAt('/auth')
     fireEvent.click(screen.getByRole('tab', { name: 'ĐĂNG KÝ' }))
     fireEvent.change(screen.getByLabelText('HỌ VÀ TÊN'), { target: { value: 'Test User' } })
@@ -53,7 +59,7 @@ describe('App', () => {
     fireEvent.change(screen.getByLabelText('MẬT KHẨU'), { target: { value: 'password123' } })
     fireEvent.change(screen.getByLabelText('NHẬP LẠI MẬT KHẨU'), { target: { value: 'password123' } })
     fireEvent.click(screen.getByRole('button', { name: 'TẠO TÀI KHOẢN' }))
-    expect(await screen.findByText(/Tài khoản đã được tạo/)).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Kiểm tra email' })).toBeInTheDocument()
     expect(registerAccount).toHaveBeenCalledWith({ fullName: 'Test User', email: 'test@example.com',
       password: 'password123', confirmPassword: 'password123' })
     expect(login).not.toHaveBeenCalled()
@@ -120,7 +126,7 @@ describe('App', () => {
       district: null, province: 'Hanoi', isDefault: true }])
     vi.mocked(createAddress).mockResolvedValue({ id: 2, recipientName: 'Test User', phone: '0901234567',
       addressLine: '123 Main Street', ward: null, district: null, province: 'Hanoi', isDefault: true })
-    renderAt('/me')
+    renderAt('/me/addresses')
     expect(await screen.findByText('Chưa có địa chỉ giao hàng')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Thêm địa chỉ' }))
     const dialog = screen.getByRole('dialog', { name: 'Thêm địa chỉ mới' })
@@ -175,7 +181,7 @@ describe('App', () => {
   })
 
   it('sends internal staff to the internal workspace after login', async () => {
-    vi.mocked(login).mockResolvedValue({ accessToken: 'token', expiresAt: '2026-10-10T00:00:00Z',
+    vi.mocked(login).mockResolvedValue({ mfaRequired: false, challengeToken: null,
       user: { id: 4, email: 'support@example.com', fullName: 'Nhân viên hỗ trợ', role: 'SUPPORT' } })
     vi.mocked(getProfile).mockResolvedValue({ id: 4, email: 'support@example.com',
       fullName: 'Nhân viên hỗ trợ', phone: null, role: 'SUPPORT' })
@@ -184,5 +190,78 @@ describe('App', () => {
     fireEvent.change(screen.getByLabelText('MẬT KHẨU'), { target: { value: 'Password123' } })
     fireEvent.click(screen.getByRole('button', { name: 'ĐĂNG NHẬP' }))
     expect(await screen.findByRole('heading', { name: 'Tổng quan' })).toBeInTheDocument()
+  })
+
+  it('offers a resend action on the registration confirmation screen', async () => {
+    vi.mocked(resendVerification).mockResolvedValue(undefined)
+    renderAt('/registration-sent?email=customer@example.com')
+    expect(screen.getByRole('heading', { name: 'Kiểm tra email' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'GỬI LẠI EMAIL XÁC MINH' }))
+    expect(await screen.findByText(/email sẽ được gửi theo giới hạn/)).toBeInTheDocument()
+    expect(resendVerification).toHaveBeenCalledWith('customer@example.com')
+  })
+
+  it('requires the second factor before opening the internal workspace', async () => {
+    vi.mocked(login).mockResolvedValue({ user: null, mfaRequired: true, challengeToken: 'challenge-1' })
+    vi.mocked(verifyMfa).mockResolvedValue({ user: { id: 7, email: 'admin@example.com',
+      fullName: 'Admin', role: 'ADMIN' }, mfaRequired: false, challengeToken: null })
+    vi.mocked(getProfile).mockResolvedValue({ id: 7, email: 'admin@example.com',
+      fullName: 'Admin', phone: null, role: 'ADMIN' })
+    renderAt('/auth')
+    fireEvent.change(screen.getByLabelText('ĐỊA CHỈ EMAIL'), { target: { value: 'admin@example.com' } })
+    fireEvent.change(screen.getByLabelText('MẬT KHẨU'), { target: { value: 'StrongPass123' } })
+    fireEvent.click(screen.getByRole('button', { name: 'ĐĂNG NHẬP' }))
+    expect(await screen.findByRole('heading', { name: 'Xác minh đăng nhập' })).toBeInTheDocument()
+    fireEvent.change(screen.getByLabelText('MÃ XÁC MINH'), { target: { value: '123456' } })
+    fireEvent.click(screen.getByRole('button', { name: 'XÁC MINH' }))
+    expect(await screen.findByRole('heading', { name: 'Tổng quan' })).toBeInTheDocument()
+    expect(verifyMfa).toHaveBeenCalledWith('challenge-1', '123456')
+  })
+
+  it('lets a signed-in user change password and returns to login', async () => {
+    vi.mocked(getSecurity).mockResolvedValue({ mfaEnabled: false })
+    vi.mocked(changePassword).mockResolvedValue(undefined)
+    renderAt('/me/security')
+    fireEvent.change(screen.getByLabelText('MẬT KHẨU HIỆN TẠI'), { target: { value: 'OldPassword123' } })
+    fireEvent.change(screen.getByLabelText('MẬT KHẨU MỚI'), { target: { value: 'NewPassword123' } })
+    fireEvent.change(screen.getByLabelText('NHẬP LẠI MẬT KHẨU'), { target: { value: 'NewPassword123' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Cập nhật mật khẩu' }))
+    expect(await screen.findByRole('heading', { name: 'Đăng nhập' })).toBeInTheDocument()
+    expect(changePassword).toHaveBeenCalledWith({ currentPassword: 'OldPassword123',
+      newPassword: 'NewPassword123', confirmPassword: 'NewPassword123' })
+  })
+
+  it('lists active sessions and revokes one other device', async () => {
+    vi.mocked(listSessions).mockResolvedValue([{ id: 1, ipAddress: '127.0.0.1', userAgent: 'Thiết bị này',
+      createdAt: '2026-10-10T00:00:00Z', expiresAt: '2026-10-11T00:00:00Z', current: true },
+      { id: 2, ipAddress: '192.168.1.4', userAgent: 'Thiết bị khác',
+        createdAt: '2026-10-10T00:00:00Z', expiresAt: '2026-10-11T00:00:00Z', current: false }])
+    vi.mocked(revokeSession).mockResolvedValue(undefined)
+    renderAt('/me/sessions')
+    expect(await screen.findByText('Thiết bị khác')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Đăng xuất' }))
+    expect(await screen.findByText('Đã kết thúc phiên đăng nhập.')).toBeInTheDocument()
+    expect(revokeSession).toHaveBeenCalledWith(2)
+  })
+
+  it('lets Admin invite staff without entering their password', async () => {
+    vi.mocked(getProfile).mockResolvedValue({ id: 9, email: 'admin@example.com',
+      fullName: 'Admin', phone: null, role: 'ADMIN' })
+    vi.mocked(listInvitations).mockResolvedValue([])
+    vi.mocked(inviteStaff).mockResolvedValue({ id: 1, email: 'staff@example.com', fullName: 'Staff',
+      role: 'WAREHOUSE', createdAt: '2026-10-10T00:00:00Z', expiresAt: '2026-10-12T00:00:00Z',
+      acceptedAt: null })
+    renderAt('/internal/invitations')
+    expect(await screen.findByRole('heading', { name: 'Lời mời nhân viên', level: 1 })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '＋ Gửi lời mời' }))
+    const dialog = screen.getByRole('dialog', { name: 'Gửi lời mời' })
+    expect(within(dialog).queryByLabelText(/mật khẩu/i)).not.toBeInTheDocument()
+    fireEvent.change(within(dialog).getByLabelText('HỌ VÀ TÊN'), { target: { value: 'Staff' } })
+    fireEvent.change(within(dialog).getByLabelText('ĐỊA CHỈ EMAIL'), { target: { value: 'staff@example.com' } })
+    fireEvent.change(within(dialog).getByLabelText('VAI TRÒ'), { target: { value: 'WAREHOUSE' } })
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Gửi lời mời' }))
+    expect(await screen.findByText(/Đã gửi lời mời qua email/)).toBeInTheDocument()
+    expect(inviteStaff).toHaveBeenCalledWith({ email: 'staff@example.com', fullName: 'Staff',
+      phone: '', role: 'WAREHOUSE' })
   })
 })

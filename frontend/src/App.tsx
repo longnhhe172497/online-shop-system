@@ -2,12 +2,16 @@ import { useEffect, useState } from 'react'
 import { Link, Navigate, Route, Routes } from 'react-router-dom'
 import { listProducts, type Product } from './api/products'
 import { getMe, logout, type AuthUser } from './api/auth'
-import { hasAccessToken } from './api/client'
 import AuthPage from './AuthPage'
 import VerifyPage from './VerifyPage'
 import PasswordResetPage from './PasswordResetPage'
 import ProfilePage from './ProfilePage'
 import AdminPage from './AdminPage'
+import { AcceptInvitationPage, MfaLoginPage, RegistrationSentPage,
+  ResendVerificationPage } from './AuthExtraPages'
+import AccountSecurityPage from './AccountSecurityPage'
+import AccountSessionsPage from './AccountSessionsPage'
+import { EmailChangePage, EmailChangeConfirmPage } from './EmailChangePages'
 import { isInternalRole } from './internalAccess'
 import './App.css'
 
@@ -20,7 +24,7 @@ function ProductsPage() {
     let active = true
     listProducts().then((page) => { if (active) { setProducts(page.items); setStatus('ready') } })
       .catch(() => { if (active) setStatus('error') })
-    if (hasAccessToken()) getMe().then((me) => { if (active) setUser(me) }).catch(() => {})
+    getMe().then((me) => { if (active) setUser(me) }).catch(() => {})
     return () => { active = false }
   }, [])
 
@@ -50,11 +54,21 @@ export default function App() {
   return <Routes>
     <Route path="/" element={<ProductsPage />} />
     <Route path="/auth" element={<AuthPage />} />
+    <Route path="/register" element={<AuthPage />} />
+    <Route path="/registration-sent" element={<RegistrationSentPage />} />
+    <Route path="/resend-verification" element={<ResendVerificationPage />} />
+    <Route path="/auth/mfa" element={<MfaLoginPage />} />
+    <Route path="/accept-invitation" element={<AcceptInvitationPage />} />
     <Route path="/verify-email" element={<VerifyPage />} />
     <Route path="/forgot-password" element={<PasswordResetPage />} />
     <Route path="/reset-password" element={<PasswordResetPage />} />
     <Route path="/me" element={<ProfilePage />} />
-    <Route path="/internal" element={<AdminPage />} />
+    <Route path="/me/addresses" element={<ProfilePage />} />
+    <Route path="/me/security" element={<AccountSecurityPage />} />
+    <Route path="/me/sessions" element={<AccountSessionsPage />} />
+    <Route path="/me/email" element={<EmailChangePage />} />
+    <Route path="/email-change/confirm" element={<EmailChangeConfirmPage />} />
+    <Route path="/internal/*" element={<AdminPage />} />
     <Route path="/admin" element={<Navigate to="/internal" replace />} />
   </Routes>
 }

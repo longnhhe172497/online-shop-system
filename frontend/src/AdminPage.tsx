@@ -1,8 +1,8 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { getProfile } from './api/profile'
-import { changeRole, changeSetting, changeStatus, createUser, listAudit, listSettings, listUsers,
-  updateUser, type AuditLog, type ManagedUser, type Setting } from './api/admin'
+import { changeRole, changeSetting, changeStatus, inviteStaff, listAudit, listInvitations,
+  listSettings, listUsers, updateUser, type AuditLog, type Invitation, type ManagedUser, type Setting } from './api/admin'
 import { getUiError } from './uiError'
 import InternalLayout, { type InternalNavItem } from './InternalLayout'
 import { internalRoleNames, isInternalRole } from './internalAccess'
@@ -16,42 +16,63 @@ const settingNames: Record<string, string> = { qr_expiry_minutes: 'Thời hạn 
   max_saved_addresses: 'Số địa chỉ lưu tối đa', max_delivery_attempts: 'Số lần giao tối đa',
   reporting_time_zone: 'Múi giờ báo cáo' }
 const actionNames: Record<string, string> = { USER_CREATED: 'Tạo tài khoản', USER_UPDATED: 'Sửa tài khoản',
-  USER_ROLE_CHANGED: 'Đổi vai trò', USER_STATUS_CHANGED: 'Đổi trạng thái', SETTING_CHANGED: 'Đổi thiết lập' }
+  USER_ROLE_CHANGED: 'Đổi vai trò', USER_STATUS_CHANGED: 'Đổi trạng thái', SETTING_CHANGED: 'Đổi thiết lập',
+  USER_INVITED: 'Mời nhân viên', INVITATION_ACCEPTED: 'Nhận lời mời', PASSWORD_CHANGED: 'Đổi mật khẩu',
+  EMAIL_CHANGED: 'Đổi email' }
 const entityNames: Record<string, string> = { USER: 'Tài khoản', SYSTEM_SETTING: 'Thiết lập' }
 
-type Tab = 'dashboard' | 'users' | 'settings' | 'audit'
+type Tab = 'dashboard' | 'users' | 'invitations' | 'settings' | 'audit'
 const navigation: InternalNavItem<Tab>[] = [
   { id: 'dashboard', label: 'Tổng quan', icon: 'dashboard' },
   { id: 'users', label: 'Tài khoản', icon: 'users' },
+  { id: 'invitations', label: 'Lời mời', icon: 'users' },
   { id: 'settings', label: 'Thiết lập', icon: 'settings' },
   { id: 'audit', label: 'Nhật ký', icon: 'audit' },
 ]
 const pageTitles: Record<Tab, string> = { dashboard: 'Tổng quan', users: 'Quản lý tài khoản',
+  invitations: 'Lời mời nhân viên',
   settings: 'Thiết lập hệ thống', audit: 'Nhật ký thao tác' }
 const pageDescriptions: Record<Tab, string> = {
   dashboard: 'Một nơi theo dõi hoạt động của hệ thống khi các tính năng được hoàn thiện.',
   users: 'Quản lý tài khoản, vai trò và trạng thái truy cập.',
+  invitations: 'Mời thành viên mới và theo dõi lời mời đã gửi.',
   settings: 'Điều chỉnh các giới hạn vận hành của cửa hàng.',
   audit: 'Theo dõi các thao tác quản trị đã được ghi nhận.',
 }
-type Editor = { id?: number; email: string; fullName: string; phone: string; password: string; role: string }
-const emptyEditor: Editor = { email: '', fullName: '', phone: '', password: '', role: 'SUPPORT' }
+type Editor = { id: number; email: string; fullName: string; phone: string; role: string }
+type InviteEditor = { email: string; fullName: string; phone: string; role: string }
+const emptyInvite: InviteEditor = { email: '', fullName: '', phone: '', role: 'SUPPORT' }
+type PendingChange = { user: ManagedUser; kind: 'role' | 'status'; value: string }
+
+function tabFromPath(path: string): Tab {
+  const segment = path.split('/')[2]
+  return segment === 'users' || segment === 'invitations' || segment === 'settings' || segment === 'audit'
+    ? segment : 'dashboard'
+}
+
+function routeFor(tab: Tab) { return tab === 'dashboard' ? '/internal' : `/internal/${tab}` }
 
 export default function AdminPage() {
+  const navigate = useNavigate()
+  const tab = tabFromPath(useLocation().pathname)
   const [role, setRole] = useState<string | null>(null)
   const [accessChecked, setAccessChecked] = useState(false)
-  const [tab, setTab] = useState<Tab>('dashboard')
   const [users, setUsers] = useState<ManagedUser[]>([])
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(0)
   const [search, setSearch] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
   const [roleFilter, setRoleFilter] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
   const [settings, setSettings] = useState<Setting[]>([])
   const [audit, setAudit] = useState<AuditLog[]>([])
   const [auditPage, setAuditPage] = useState(0)
   const [auditTotal, setAuditTotal] = useState(0)
+  const [invitations, setInvitations] = useState<Invitation[]>([])
   const [editor, setEditor] = useState<Editor | null>(null)
+  const [inviteEditor, setInviteEditor] = useState<InviteEditor | null>(null)
+  const [pendingChange, setPendingChange] = useState<PendingChange | null>(null)
+  const [tabLoading, setTabLoading] = useState(false)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
   const [busy, setBusy] = useState(false)
@@ -60,38 +81,57 @@ export default function AdminPage() {
     if (active) { setRole(isInternalRole(me.role) ? me.role : null); setAccessChecked(true) }
   }).catch(() => { if (active) setAccessChecked(true) }); return () => { active = false } }, [])
   useEffect(() => {
+    if (accessChecked && role && role !== 'ADMIN' && tab !== 'dashboard') {
+      navigate('/internal', { replace: true })
+    }
+  }, [accessChecked, role, tab, navigate])
+  useEffect(() => { const timer = window.setTimeout(() => setDebouncedSearch(search), 300)
+    return () => window.clearTimeout(timer) }, [search])
+  useEffect(() => {
     if (role !== 'ADMIN') return
     let active = true
-    if (tab === 'users') listUsers({ search, role: roleFilter, status: statusFilter, page })
-      .then((data) => { if (active) { setUsers(data.items); setTotal(data.totalItems) } })
-      .catch((failure) => { if (active) setError(getUiError(failure)) })
-    if (tab === 'settings') listSettings().then((data) => { if (active) setSettings(data) })
-      .catch((failure) => { if (active) setError(getUiError(failure)) })
-    if (tab === 'audit') listAudit(auditPage).then((data) => {
-      if (active) { setAudit(data.items); setAuditTotal(data.totalItems) }
-    }).catch((failure) => { if (active) setError(getUiError(failure)) })
+    const load = async () => {
+      if (!active) return
+      setTabLoading(true); setError('')
+      try {
+        if (tab === 'users') { const data = await listUsers({ search: debouncedSearch, role: roleFilter,
+          status: statusFilter, page }); if (active) { setUsers(data.items); setTotal(data.totalItems) } }
+        if (tab === 'settings') { const data = await listSettings(); if (active) setSettings(data) }
+        if (tab === 'audit') { const data = await listAudit(auditPage)
+          if (active) { setAudit(data.items); setAuditTotal(data.totalItems) } }
+        if (tab === 'invitations') { const data = await listInvitations(); if (active) setInvitations(data) }
+      } catch (failure) { if (active) setError(getUiError(failure)) }
+      finally { if (active) setTabLoading(false) }
+    }
+    void Promise.resolve().then(load)
     return () => { active = false }
-  }, [role, tab, search, roleFilter, statusFilter, page, auditPage])
+  }, [role, tab, debouncedSearch, roleFilter, statusFilter, page, auditPage])
 
   async function reloadUsers() {
-    const data = await listUsers({ search, role: roleFilter, status: statusFilter, page })
+    const data = await listUsers({ search: debouncedSearch, role: roleFilter, status: statusFilter, page })
     setUsers(data.items); setTotal(data.totalItems)
   }
   async function perform(operation: () => Promise<unknown>, message: string) {
     setBusy(true); setError(''); setNotice('')
-    try { await operation(); await reloadUsers(); setNotice(message) }
+    try { await operation(); setNotice(message)
+      try { await reloadUsers() } catch { setError('Thao tác đã lưu nhưng chưa tải lại được danh sách. Hãy tải lại trang.') } }
     catch (failure) { setError(getUiError(failure)) }
     finally { setBusy(false) }
   }
   async function saveUser(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (!editor) return
-    await perform(async () => {
-      if (editor.id) await updateUser(editor.id, { fullName: editor.fullName, phone: editor.phone })
-      else await createUser({ email: editor.email, fullName: editor.fullName, phone: editor.phone,
-        password: editor.password, role: editor.role })
-      setEditor(null)
-    }, editor.id ? 'Đã cập nhật tài khoản.' : 'Đã tạo tài khoản.')
+    await perform(async () => { await updateUser(editor.id, { fullName: editor.fullName, phone: editor.phone })
+      setEditor(null) }, 'Đã cập nhật tài khoản.')
+  }
+  async function sendInvite(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (!inviteEditor) return
+    setBusy(true); setError(''); setNotice('')
+    try { await inviteStaff(inviteEditor); setInvitations(await listInvitations())
+      setInviteEditor(null); setNotice('Đã gửi lời mời qua email. Người nhận sẽ tự đặt mật khẩu.') }
+    catch (failure) { setError(getUiError(failure)) }
+    finally { setBusy(false) }
   }
   async function saveSetting(setting: Setting, value: string) {
     setBusy(true); setError(''); setNotice('')
@@ -109,13 +149,16 @@ export default function AdminPage() {
         <Link to="/">Về cửa hàng</Link></div></div>}
       {role && <InternalLayout items={role === 'ADMIN' ? navigation : navigation.slice(0, 1)}
         active={tab} roleName={internalRoleNames[role] ?? 'Nhân viên'} onNavigate={(next) => {
-        setTab(next); setError(''); setNotice('') }} title={pageTitles[tab]} subtitle={pageDescriptions[tab]}>
+        navigate(routeFor(next)); setError(''); setNotice('') }} title={pageTitles[tab]} subtitle={pageDescriptions[tab]}>
       {error && <p className="auth-error" role="alert">{error}</p>}
       {notice && <p className="auth-notice" role="status">{notice}</p>}
-      {tab === 'dashboard' && <Dashboard isAdmin={role === 'ADMIN'} roleName={internalRoleNames[role] ?? 'Nhân viên'} onNavigate={setTab} />}
+      {tabLoading && <p className="admin-loading" role="status">Đang tải dữ liệu…</p>}
+      {tab === 'dashboard' && <Dashboard isAdmin={role === 'ADMIN'} roleName={internalRoleNames[role] ?? 'Nhân viên'}
+        onNavigate={(next) => navigate(routeFor(next))} />}
       {role === 'ADMIN' && tab === 'users' && <section className="admin-panel"><div className="admin-section-head"><div>
         <h2>Danh sách tài khoản</h2><p>{total} tài khoản</p></div>
-        <button className="account-primary" onClick={() => setEditor(emptyEditor)}>＋ Tạo tài khoản</button></div>
+        <button className="account-primary" onClick={() => { setInviteEditor(emptyInvite)
+          navigate('/internal/invitations') }}>＋ Mời nhân viên</button></div>
         <div className="admin-filters"><input aria-label="Tìm tài khoản" placeholder="Tìm tên hoặc email…"
           value={search} onChange={(e) => { setSearch(e.target.value); setPage(0) }} />
           <select aria-label="Lọc vai trò" value={roleFilter} onChange={(e) => { setRoleFilter(e.target.value); setPage(0) }}>
@@ -128,19 +171,29 @@ export default function AdminPage() {
           <th>TÀI KHOẢN</th><th>VAI TRÒ</th><th>TRẠNG THÁI</th><th>THAO TÁC</th></tr></thead><tbody>
           {users.map((user) => <tr key={user.id}><td><strong>{user.fullName}</strong><span>{user.email}</span></td>
             <td><select aria-label={`Vai trò của ${user.fullName}`} value={user.role} disabled={busy}
-              onChange={(e) => { const role = e.target.value
-                void perform(() => changeRole(user.id, role), 'Đã cập nhật vai trò.') }}>
+              onChange={(e) => setPendingChange({ user, kind: 'role', value: e.target.value })}>
               {Object.entries(roles).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></td>
             <td><select aria-label={`Trạng thái của ${user.fullName}`} value={user.status} disabled={busy}
-              onChange={(e) => { const status = e.target.value
-                void perform(() => changeStatus(user.id, status), 'Đã cập nhật trạng thái.') }}>
+              onChange={(e) => setPendingChange({ user, kind: 'status', value: e.target.value })}>
               {Object.entries(statuses).map(([key, label]) => <option key={key} value={key} disabled={key === 'PENDING_VERIFICATION'}>{label}</option>)}</select></td>
             <td><button className="admin-link" onClick={() => setEditor({ id: user.id, email: user.email,
-              fullName: user.fullName, phone: user.phone ?? '', password: '', role: user.role })}>Chỉnh sửa</button></td>
-          </tr>)}</tbody></table>{users.length === 0 && <p className="admin-empty">Không tìm thấy tài khoản.</p>}</div>
+              fullName: user.fullName, phone: user.phone ?? '', role: user.role })}>Chỉnh sửa</button></td>
+          </tr>)}</tbody></table>{!tabLoading && !error && users.length === 0 &&
+            <p className="admin-empty">Không tìm thấy tài khoản.</p>}</div>
         <div className="admin-pagination"><button disabled={page === 0} onClick={() => setPage(page - 1)}>← Trước</button>
           <span>Trang {page + 1} / {Math.max(1, Math.ceil(total / 20))}</span>
           <button disabled={(page + 1) * 20 >= total} onClick={() => setPage(page + 1)}>Sau →</button></div></section>}
+      {role === 'ADMIN' && tab === 'invitations' && <section className="admin-panel"><div className="admin-section-head">
+        <div><h2>Lời mời nhân viên</h2><p>Người nhận tự đặt mật khẩu qua email. Link có hiệu lực 48 giờ.</p></div>
+        <button className="account-primary" onClick={() => setInviteEditor(emptyInvite)}>＋ Gửi lời mời</button></div>
+        <div className="admin-table-wrap"><table className="address-table admin-table"><thead><tr>
+          <th>NGƯỜI ĐƯỢC MỜI</th><th>VAI TRÒ</th><th>GỬI LÚC</th><th>TRẠNG THÁI</th></tr></thead><tbody>
+          {invitations.map((item) => <tr key={item.id}><td><strong>{item.fullName}</strong><span>{item.email}</span></td>
+            <td>{roles[item.role] ?? item.role}</td><td>{new Date(item.createdAt).toLocaleString('vi-VN')}</td>
+            <td>{item.acceptedAt ? 'Đã chấp nhận' :
+              `Chưa chấp nhận · Hết hạn ${new Date(item.expiresAt).toLocaleString('vi-VN')}`}</td></tr>)}</tbody></table>
+          {!tabLoading && !error && invitations.length === 0 &&
+            <p className="admin-empty">Chưa có lời mời nào.</p>}</div></section>}
       {role === 'ADMIN' && tab === 'settings' && <section className="admin-panel"><h2>Thiết lập hệ thống</h2>
         <p>Giá trị được kiểm tra giới hạn trước khi lưu.</p><div className="settings-list">
           {settings.map((setting) => <SettingRow key={`${setting.key}:${setting.value}`} setting={setting} busy={busy}
@@ -151,29 +204,56 @@ export default function AdminPage() {
           {audit.map((item) => <tr key={item.id}><td>{new Date(item.createdAt).toLocaleString('vi-VN')}</td>
             <td>{item.actorEmail ?? 'Hệ thống'}</td><td>{actionNames[item.action] ?? 'Thao tác khác'}</td>
             <td>{entityNames[item.entityType] ?? 'Dữ liệu'} {item.entityId}</td></tr>)}</tbody></table>
-          {audit.length === 0 && <p className="admin-empty">Chưa có nhật ký.</p>}</div>
+          {!tabLoading && !error && audit.length === 0 && <p className="admin-empty">Chưa có nhật ký.</p>}</div>
         <div className="admin-pagination"><button disabled={auditPage === 0} onClick={() => setAuditPage(auditPage - 1)}>← Trước</button>
           <span>Trang {auditPage + 1} / {Math.max(1, Math.ceil(auditTotal / 20))}</span>
           <button disabled={(auditPage + 1) * 20 >= auditTotal} onClick={() => setAuditPage(auditPage + 1)}>Sau →</button></div></section>}
       </InternalLayout>}
     {editor && <div className="address-modal-backdrop"><section className="address-modal admin-editor" role="dialog"
       aria-modal="true" aria-labelledby="admin-editor-title"><div className="address-modal-head"><div>
-        <p className="card-eyebrow">TÀI KHOẢN</p><h2 id="admin-editor-title">{editor.id ? 'Chỉnh sửa tài khoản' : 'Tạo tài khoản mới'}</h2></div>
+        <p className="card-eyebrow">TÀI KHOẢN</p><h2 id="admin-editor-title">Chỉnh sửa tài khoản</h2></div>
         <button className="modal-close" aria-label="Đóng" onClick={() => setEditor(null)}>×</button></div>
         <form onSubmit={saveUser}><div className="address-form-grid">
           <label>HỌ VÀ TÊN<input required maxLength={150} value={editor.fullName}
             onChange={(e) => setEditor({ ...editor, fullName: e.target.value })} /></label>
           <label>SỐ ĐIỆN THOẠI<input maxLength={30} value={editor.phone}
             onChange={(e) => setEditor({ ...editor, phone: e.target.value })} /></label>
-          <label>ĐỊA CHỈ EMAIL<input type="email" required disabled={Boolean(editor.id)} value={editor.email}
-            onChange={(e) => setEditor({ ...editor, email: e.target.value })} /></label>
-          {!editor.id && <><label>MẬT KHẨU TẠM<input type="password" required minLength={8} maxLength={72}
-            value={editor.password} onChange={(e) => setEditor({ ...editor, password: e.target.value })} /></label>
-            <label>VAI TRÒ<select value={editor.role} onChange={(e) => setEditor({ ...editor, role: e.target.value })}>
-              {Object.entries(roles).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></label></>}
+          <label>ĐỊA CHỈ EMAIL<input type="email" disabled value={editor.email} /></label>
         </div><div className="address-modal-actions"><button type="button" className="account-secondary"
           onClick={() => setEditor(null)}>Hủy</button><button className="account-primary" disabled={busy} type="submit">
-            {editor.id ? 'Lưu thay đổi' : 'Tạo tài khoản'}</button></div></form></section></div>}
+            Lưu thay đổi</button></div></form></section></div>}
+    {inviteEditor && <div className="address-modal-backdrop"><section className="address-modal admin-editor" role="dialog"
+      aria-modal="true" aria-labelledby="invite-editor-title"><div className="address-modal-head"><div>
+        <p className="card-eyebrow">THÀNH VIÊN MỚI</p><h2 id="invite-editor-title">Gửi lời mời</h2>
+        <p>Người nhận sẽ tự chọn mật khẩu từ liên kết trong email.</p></div>
+        <button className="modal-close" aria-label="Đóng" onClick={() => setInviteEditor(null)}>×</button></div>
+        <form onSubmit={sendInvite}><div className="address-form-grid">
+          <label>HỌ VÀ TÊN<input required maxLength={150} value={inviteEditor.fullName}
+            onChange={(e) => setInviteEditor({ ...inviteEditor, fullName: e.target.value })} /></label>
+          <label>ĐỊA CHỈ EMAIL<input type="email" required value={inviteEditor.email}
+            onChange={(e) => setInviteEditor({ ...inviteEditor, email: e.target.value })} /></label>
+          <label>SỐ ĐIỆN THOẠI<input maxLength={30} value={inviteEditor.phone}
+            onChange={(e) => setInviteEditor({ ...inviteEditor, phone: e.target.value })} /></label>
+          <label>VAI TRÒ<select value={inviteEditor.role} onChange={(e) => setInviteEditor({ ...inviteEditor,
+            role: e.target.value })}>{Object.entries(roles).filter(([key]) => key !== 'CUSTOMER')
+              .map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></label>
+        </div><div className="address-modal-actions"><button type="button" className="account-secondary"
+          onClick={() => setInviteEditor(null)}>Hủy</button><button className="account-primary" disabled={busy}>
+            {busy ? 'ĐANG GỬI…' : 'Gửi lời mời'}</button></div></form></section></div>}
+    {pendingChange && <div className="address-modal-backdrop"><section className="address-modal confirm-modal"
+      role="dialog" aria-modal="true" aria-labelledby="confirm-change-title">
+      <p className="card-eyebrow">XÁC NHẬN THAY ĐỔI</p><h2 id="confirm-change-title">Cập nhật quyền truy cập?</h2>
+      <p>Bạn sắp đổi {pendingChange.kind === 'role' ? 'vai trò' : 'trạng thái'} của
+        <strong> {pendingChange.user.fullName}</strong> thành <strong>{pendingChange.kind === 'role'
+          ? roles[pendingChange.value] : statuses[pendingChange.value]}</strong>.
+        Các phiên hiện tại của tài khoản này sẽ bị đăng xuất.</p>
+      <div className="address-modal-actions"><button className="account-secondary" onClick={() => setPendingChange(null)}>
+        Hủy</button><button className="account-primary" disabled={busy} onClick={() => {
+          const change = pendingChange
+          setPendingChange(null)
+          void perform(() => change.kind === 'role' ? changeRole(change.user.id, change.value) :
+            changeStatus(change.user.id, change.value), 'Đã cập nhật quyền truy cập.')
+        }}>Xác nhận</button></div></section></div>}
   </>
 }
 

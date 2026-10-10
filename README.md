@@ -77,7 +77,7 @@ SELECT NULL, 'INITIAL_ADMIN_BOOTSTRAP', 'USER', id::text, '{}'::jsonb FROM promo
 
 4. Sign out and sign in again, then open `http://localhost:5173/internal`.
 
-The command does not create a shared or hard-coded Admin password. It only promotes your already verified account in your local database. The Admin screen can then create staff accounts. Each teammate's local database needs its own initial Admin if they want to test Admin functions.
+The command does not create a shared or hard-coded Admin password. It only promotes your already verified account in your local database. The Admin screen can email invitations to staff; recipients set their own passwords. Each teammate's local database needs its own initial Admin if they want to test Admin functions.
 
 ## Internal workspace
 

@@ -1,8 +1,9 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { Link } from 'react-router-dom'
-import { createAddress, deleteAddress, getProfile, listAddresses, updateAddress, updateProfile,
+import { Link, useLocation } from 'react-router-dom'
+import { createAddress, deleteAddress, getAccountLimits, getProfile, listAddresses, updateAddress, updateProfile,
   type Address, type AddressInput, type Profile } from './api/profile'
 import { getUiError } from './uiError'
+import AccountLayout from './AccountLayout'
 
 const emptyAddress: AddressInput = {
   recipientName: '', phone: '', addressLine: '', ward: '', district: '', province: '', isDefault: false,
@@ -14,10 +15,12 @@ function formatAddress(address: Address) {
 }
 
 export default function ProfilePage() {
+  const showAddresses = useLocation().pathname.endsWith('/addresses')
   const [profile, setProfile] = useState<Profile | null>(null)
   const [fullName, setFullName] = useState('')
   const [phone, setPhone] = useState('')
   const [addresses, setAddresses] = useState<Address[]>([])
+  const [maxSavedAddresses, setMaxSavedAddresses] = useState<number | null>(null)
   const [addressForm, setAddressForm] = useState<AddressInput>(emptyAddress)
   const [editingId, setEditingId] = useState<number | null>(null)
   const [editorOpen, setEditorOpen] = useState(false)
@@ -36,9 +39,9 @@ export default function ProfilePage() {
         setProfile(me)
         setFullName(me.fullName)
         setPhone(me.phone ?? '')
-        if (me.role === 'CUSTOMER') {
-          const saved = await listAddresses()
-          if (active) setAddresses(saved)
+        if (me.role === 'CUSTOMER' && showAddresses) {
+          const [saved, limits] = await Promise.all([listAddresses(), getAccountLimits()])
+          if (active) { setAddresses(saved); setMaxSavedAddresses(limits.maxSavedAddresses) }
         }
       } catch (failure) {
         if (active) setError(getUiError(failure))
@@ -48,7 +51,7 @@ export default function ProfilePage() {
     }
     void load()
     return () => { active = false }
-  }, [])
+  }, [showAddresses])
 
   useEffect(() => {
     if (!editorOpen) return
@@ -130,23 +133,14 @@ export default function ProfilePage() {
     setAddressForm((current) => ({ ...current, [field]: value }))
   }
 
-  return <div className="forme-page">
-    <div className="announcement">CỬA HÀNG TRỰC TUYẾN · BẢN CHẠY TRÊN MÁY CÁ NHÂN</div>
-    <header className="forme-header"><Link to="/" className="brand">FORME</Link>
-      <nav aria-label="Điều hướng chính"><Link to="/">CỬA HÀNG</Link><Link to="/me">TÀI KHOẢN</Link></nav>
-    </header>
-    <main className="account-main">
-      <div className="account-heading">
-        <div><p className="auth-kicker">TÀI KHOẢN CỦA TÔI</p><h1>Hồ sơ & địa chỉ giao hàng</h1>
-          <p>Quản lý thông tin cá nhân và địa chỉ nhận hàng của bạn tại một nơi.</p></div>
-        <Link to="/" className="account-back">← Tiếp tục mua sắm</Link>
-      </div>
+  return <AccountLayout title={showAddresses ? 'Địa chỉ giao hàng' : 'Hồ sơ cá nhân'}
+    intro={showAddresses ? 'Lưu và chỉnh sửa địa chỉ nhận hàng của bạn.' : 'Quản lý thông tin cá nhân tại FORME.'}>
       {loading && <p className="account-message">Đang tải thông tin tài khoản…</p>}
       {error && <p className="auth-error account-message" role="alert">{error}</p>}
       {notice && <p className="auth-notice account-message" role="status">{notice}</p>}
       {!loading && !profile && <p className="account-message"><Link to="/auth">Đăng nhập để xem tài khoản</Link></p>}
       {profile && <div className="account-grid">
-        <section className="account-card personal-card" aria-labelledby="personal-title">
+        {!showAddresses && <section className="account-card personal-card" aria-labelledby="personal-title">
           <div className="personal-intro"><div className="account-avatar" aria-hidden="true">
             {profile.fullName.trim().charAt(0).toLocaleUpperCase('vi')}</div>
             <div><p className="card-eyebrow">THÔNG TIN CÁ NHÂN</p><h2 id="personal-title">{profile.fullName}</h2>
@@ -160,12 +154,15 @@ export default function ProfilePage() {
               maxLength={30} autoComplete="tel" placeholder="Thêm số điện thoại" /></label>
             <button className="account-primary" type="submit" disabled={busy}>Lưu thay đổi</button>
           </form>
-        </section>
+        </section>}
 
-        {profile.role === 'CUSTOMER' && <section className="account-card addresses-card" aria-labelledby="address-title">
+        {showAddresses && profile.role !== 'CUSTOMER' && <section className="account-card addresses-card">
+          <h2>Địa chỉ giao hàng</h2><p>Chỉ tài khoản khách hàng sử dụng sổ địa chỉ giao hàng.</p></section>}
+        {showAddresses && profile.role === 'CUSTOMER' && <section className="account-card addresses-card" aria-labelledby="address-title">
           <div className="address-section-head"><div><p className="card-eyebrow">SỔ ĐỊA CHỈ</p>
             <h2 id="address-title">Địa chỉ của bạn</h2>
-            <p>{addresses.length} địa chỉ đã lưu · Tối đa 10 địa chỉ</p></div>
+            <p>{addresses.length} địa chỉ đã lưu{maxSavedAddresses === null ? '' :
+              ` · Tối đa ${maxSavedAddresses} địa chỉ`}</p></div>
             <button className="account-primary add-address" type="button" onClick={addAddress}>
               <span aria-hidden="true">＋</span> Thêm địa chỉ</button></div>
           {addresses.length === 0 ? <div className="address-empty"><div aria-hidden="true">⌂</div>
@@ -187,7 +184,7 @@ export default function ProfilePage() {
             </table></div>}
         </section>}
       </div>}
-    </main>
+
 
     {editorOpen && <div className="address-modal-backdrop"><section className="address-modal"
       role="dialog" aria-modal="true" aria-labelledby="address-modal-title">
@@ -225,6 +222,5 @@ export default function ProfilePage() {
             {busy ? 'Đang lưu…' : editingId === null ? 'Thêm địa chỉ' : 'Lưu thay đổi'}</button></div>
       </form>
     </section></div>}
-    <footer className="forme-footer"><strong>FORME</strong><span>Cửa hàng trực tuyến · Bản chạy thử trên máy cá nhân</span></footer>
-  </div>
+  </AccountLayout>
 }

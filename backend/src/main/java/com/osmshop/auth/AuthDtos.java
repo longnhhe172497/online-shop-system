@@ -15,7 +15,7 @@ public final class AuthDtos {
             @NotBlank @Size(min = 8, max = 72) String confirmPassword,
             @Size(max = 30) String phone) {}
 
-    public record RegisterResponse(long userId, boolean verificationRequired) {}
+    public record RegisterResponse(long userId, boolean verificationRequired, boolean emailSent) {}
     public record VerifyRequest(@NotBlank String token) {}
     public record VerifyResponse(boolean verified) {}
     public record LoginRequest(@NotBlank @Email String email, @NotBlank String password) {}
@@ -26,5 +26,14 @@ public final class AuthDtos {
             @NotBlank @Size(min = 8, max = 72) String confirmPassword) {}
     public record PasswordResetConfirmResponse(boolean reset) {}
     public record UserResponse(long id, String email, String fullName, String role) {}
-    public record LoginResponse(String accessToken, Instant expiresAt, UserResponse user) {}
+    public record LoginResponse(String accessToken, Instant expiresAt, UserResponse user,
+                                boolean mfaRequired, String challengeToken) {}
+    public record BrowserLoginResponse(UserResponse user, boolean mfaRequired, String challengeToken) {}
+    public record MfaVerifyRequest(@NotBlank String challengeToken, @NotBlank String code) {}
+    public record MfaDisableRequest(@NotBlank String password) {}
+    public record ChangePasswordRequest(@NotBlank String currentPassword,
+            @NotBlank @Size(min = 8, max = 72) String newPassword,
+            @NotBlank String confirmPassword) {}
+    public record SessionView(long id, String ipAddress, String userAgent, Instant createdAt,
+                              Instant expiresAt, boolean current) {}
 }
