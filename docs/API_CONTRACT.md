@@ -11,6 +11,7 @@ This is the **agreed route inventory for implementation**, not a claim that ever
 - `401` means not logged in; `403` means logged in without permission; `404` means absent or not visible to the caller; `409` means state conflict (stock, duplicate review, illegal transition); `422` means a business rule failed after syntactically valid input.
 - Admin is a separate role, not a superclass of Manager, Support, Warehouse or Delivery.
 - Authentication supports `Authorization: Bearer <opaque-token>` for API clients and an HttpOnly `FORME_SESSION` cookie for the browser. Only the SHA-256 token hash is stored in `user_sessions`; sessions have a 24-hour absolute lifetime and expire after 30 minutes without an authenticated request (server-enforced). There is no refresh token. Browser writes require the `X-XSRF-TOKEN` header obtained from `GET /auth/csrf`. Sessions are rechecked against user status on every request. MFA-enabled accounts complete an email-code or TOTP challenge, selected by `mfaMethod`; a previously issued, unused recovery code may replace the factor at login. The browser warns after about 25 idle minutes, but the server decides whether a session is valid.
+- Optional Google Identity Services sign-in exchanges a signed Google ID token for the existing browser session/MFA flow. New users are `CUSTOMER` only. Existing emails require explicit linking after password login; Google email alone never grants an existing account or staff role. `GOOGLE_CLIENT_ID` is a public OAuth Web client ID, not a client secret.
 - QR and refunds are local simulations. They must say so in API and UI; never imply real money has moved.
 
 ## Endpoint ownership and minimum request/response fields
@@ -28,6 +29,7 @@ This is the **agreed route inventory for implementation**, not a claim that ever
 | `POST /auth/login` | P | `{email,password}` → `{accessToken,expiresAt,user:{id,fullName,role}}`; opaque 24-hour bearer token |
 | `GET /auth/csrf` | P | obtain the browser's XSRF token cookie before a write |
 | `POST /auth/browser-login` | P | `{email,password}` → HttpOnly session cookie and user, or MFA challenge; no bearer token in the browser response |
+| `GET /auth/google/config`, `POST /auth/browser-google-login` | P | `{enabled,clientId}` / `{credential}` → browser cookie and user, or MFA challenge; existing email without link → `409` |
 | `POST /auth/mfa/verify`, `POST /auth/browser-mfa/verify` | P | `{challengeToken,code}` where `code` is a six-digit email/TOTP code or a single-use recovery code → bearer session or browser cookie, respectively |
 | `POST /auth/verification/resend` | P | `{email}` → `202`; response does not disclose whether a pending account exists |
 | `POST /auth/logout` | C/M/S/W/D/A | authenticated request → `204` |
@@ -35,6 +37,7 @@ This is the **agreed route inventory for implementation**, not a claim that ever
 | `POST /auth/password-reset/confirm` | P | `{token,newPassword,confirmPassword}` → `{reset:true}`; consumes link and revokes existing sessions |
 | `GET /me`, `PATCH /me` | authenticated | read profile / `{fullName,phone}` → profile without password hash; email and role stay read-only |
 | `GET /me/limits`, `GET /me/security` | authenticated | saved-address limit / `{mfaEnabled,mfaMethod,recoveryCodesRemaining}`; raw recovery codes are never returned again |
+| `GET /me/google`, `POST /me/google/link` | authenticated | `{linked}` / `{password,credential}` → `204`; password and matching verified Google email required |
 | `POST /me/password` | authenticated | `{currentPassword,newPassword,confirmPassword}` → `204`; revokes all sessions |
 | `GET /me/sessions`, `DELETE /me/sessions/{id}`, `POST /me/sessions/revoke-other` | authenticated | list/revoke owned sessions |
 | `POST /me/mfa/start`, `POST /me/mfa/confirm` | authenticated | email-code enrollment; confirm returns `{recoveryCodes:[...]}` once |

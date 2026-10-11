@@ -152,12 +152,30 @@ public class AuthService {
             throw new AuthApiException(HttpStatus.UNAUTHORIZED, "INVALID_CREDENTIALS",
                     "Email hoặc mật khẩu không đúng, hoặc tài khoản chưa thể đăng nhập.");
         }
-        StoredUser user = matches.getFirst();
+        return beginLogin(matches.getFirst(), ipAddress, userAgent);
+    }
+
+    @Transactional
+    public LoginResponse loginGoogleUser(long userId, String ipAddress, String userAgent) {
+        List<StoredUser> matches = jdbc.query("""
+                SELECT id,email,password_hash,full_name,role,status,verified_at
+                FROM users WHERE id=?
+                """, (rs, row) -> new StoredUser(rs.getLong("id"), rs.getString("email"),
+                rs.getString("password_hash"), rs.getString("full_name"),
+                rs.getString("role"), rs.getString("status"),
+                rs.getTimestamp("verified_at") != null), userId);
+        if (matches.isEmpty() || !"ACTIVE".equals(matches.getFirst().status()) || !matches.getFirst().verified())
+            throw new AuthApiException(HttpStatus.FORBIDDEN, "ACCOUNT_UNAVAILABLE",
+                    "Tài khoản không thể đăng nhập.");
+        return beginLogin(matches.getFirst(), ipAddress, userAgent);
+    }
+
+    private LoginResponse beginLogin(StoredUser user, String ipAddress, String userAgent) {
         Boolean mfaEnabled = jdbc.queryForObject("SELECT mfa_enabled FROM users WHERE id=?", Boolean.class, user.id());
         if (Boolean.TRUE.equals(mfaEnabled)) {
             String method = mfaMethod(user.id());
             String challenge = "TOTP".equals(method) ? createTotpChallenge(user.id(), "LOGIN")
-                    : createMfaChallenge(user.id(), email, "LOGIN");
+                    : createMfaChallenge(user.id(), user.email(), "LOGIN");
             return new LoginResponse(null, null, null, true, challenge, method);
         }
         return createSession(user, ipAddress, userAgent);

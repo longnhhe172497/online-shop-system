@@ -34,10 +34,12 @@ import org.springframework.web.bind.annotation.RestController;
 public class ProfileController {
     private final ProfileService profiles;
     private final AuthService auth;
+    private final GoogleIdentityService google;
 
-    public ProfileController(ProfileService profiles, AuthService auth) {
+    public ProfileController(ProfileService profiles, AuthService auth, GoogleIdentityService google) {
         this.profiles = profiles;
         this.auth = auth;
+        this.google = google;
     }
 
     @GetMapping
@@ -86,6 +88,21 @@ public class ProfileController {
         return Map.of("mfaEnabled", auth.mfaEnabled(user.id()), "mfaMethod", auth.mfaMethod(user.id()),
                 "recoveryCodesRemaining", auth.recoveryCodesRemaining(user.id()));
     }
+
+    @GetMapping("/google")
+    public Map<String, Boolean> googleStatus(@AuthenticationPrincipal AuthPrincipal user) {
+        return Map.of("linked", google.isLinked(user.id()));
+    }
+
+    @PostMapping("/google/link")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void linkGoogle(@AuthenticationPrincipal AuthPrincipal user,
+                           @Valid @RequestBody GoogleLinkRequest request) {
+        google.link(user.id(), request.password(), request.credential());
+    }
+
+    public record GoogleLinkRequest(@jakarta.validation.constraints.NotBlank String password,
+                                    @jakarta.validation.constraints.NotBlank String credential) {}
 
     @PostMapping("/password")
     @ResponseStatus(HttpStatus.NO_CONTENT)

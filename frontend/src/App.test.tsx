@@ -1,9 +1,10 @@
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
 import { listProducts } from './api/products'
-import { confirmPasswordReset, getMe, login, registerAccount, requestPasswordReset,
+import { confirmPasswordReset, getGoogleConfig, getGoogleLinkStatus, getMe, login, loginWithGoogle,
+  registerAccount, requestPasswordReset,
   resendVerification, verifyMfa } from './api/auth'
 import { changePassword, createAddress, getAccountLimits, getProfile, getSecurity,
   confirmMfa, confirmTotp, disableMfa, listAddresses, listSessions, revokeSession, startMfa,
@@ -15,6 +16,9 @@ vi.mock('./api/products', () => ({ listProducts: vi.fn() }))
 vi.mock('./api/auth', () => ({
   login: vi.fn(), registerAccount: vi.fn(), getMe: vi.fn(), logout: vi.fn(), verifyAccount: vi.fn(),
   requestPasswordReset: vi.fn(), confirmPasswordReset: vi.fn(), resendVerification: vi.fn(), verifyMfa: vi.fn(),
+  getGoogleConfig: vi.fn().mockResolvedValue({ enabled: false, clientId: '' }),
+  getGoogleLinkStatus: vi.fn().mockResolvedValue({ linked: false }),
+  loginWithGoogle: vi.fn(), linkGoogle: vi.fn(),
 }))
 vi.mock('./api/profile', () => ({ getProfile: vi.fn(), updateProfile: vi.fn(), listAddresses: vi.fn(),
   createAddress: vi.fn(), updateAddress: vi.fn(), deleteAddress: vi.fn(), getAccountLimits: vi.fn(),
@@ -33,8 +37,33 @@ function renderAt(path: string) {
 describe('App', () => {
   beforeEach(() => { vi.resetAllMocks()
     vi.mocked(getMe).mockRejectedValue(new Error('Không có phiên'))
+    vi.mocked(getGoogleConfig).mockResolvedValue({ enabled: false, clientId: '' })
+    vi.mocked(getGoogleLinkStatus).mockResolvedValue({ linked: false })
     vi.mocked(getAccountLimits).mockResolvedValue({ maxSavedAddresses: 10 }) })
-  afterEach(() => cleanup())
+  afterEach(() => { cleanup(); delete window.google })
+
+  it('uses the Google credential to open a customer session', async () => {
+    let callback: (response: { credential: string }) => void = () => {}
+    window.google = { accounts: { id: {
+      initialize: (options) => { callback = options.callback },
+      renderButton: (host) => {
+        const button = document.createElement('button')
+        button.textContent = 'Đăng nhập bằng Google'
+        button.onclick = () => callback({ credential: 'signed-google-id-token' })
+        host.appendChild(button)
+      },
+    } } }
+    vi.mocked(getGoogleConfig).mockResolvedValue({ enabled: true,
+      clientId: 'test.apps.googleusercontent.com' })
+    vi.mocked(loginWithGoogle).mockResolvedValue({ user: { id: 12, email: 'test@gmail.com',
+      fullName: 'Khách Google', role: 'CUSTOMER' }, mfaRequired: false, challengeToken: null })
+    vi.mocked(listProducts).mockResolvedValue({ items: [], page: 0, size: 20, totalItems: 0, totalPages: 0 })
+    renderAt('/auth')
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Đăng nhập bằng Google' })).not.toBeDisabled())
+    fireEvent.click(screen.getByRole('button', { name: 'Đăng nhập bằng Google' }))
+    expect(loginWithGoogle).toHaveBeenCalledWith('signed-google-id-token')
+    expect(await screen.findByRole('heading', { name: 'Sản phẩm' })).toBeInTheDocument()
+  })
 
   it('renders products returned by the API client', async () => {
     vi.mocked(listProducts).mockResolvedValue({
@@ -216,11 +245,27 @@ describe('App', () => {
     fireEvent.change(screen.getByLabelText('MẬT KHẨU'), { target: { value: 'StrongPass123' } })
     fireEvent.click(screen.getByRole('button', { name: 'ĐĂNG NHẬP' }))
     expect(await screen.findByRole('heading', { name: 'Xác minh đăng nhập' })).toBeInTheDocument()
-    fireEvent.change(screen.getByLabelText('MÃ XÁC MINH HOẶC MÃ KHÔI PHỤC'),
+    fireEvent.change(screen.getByLabelText('MÃ 6 SỐ QUA EMAIL HOẶC MÃ KHÔI PHỤC'),
       { target: { value: '123456' } })
     fireEvent.click(screen.getByRole('button', { name: 'XÁC MINH' }))
     expect(await screen.findByRole('heading', { name: 'Tổng quan' })).toBeInTheDocument()
     expect(verifyMfa).toHaveBeenCalledWith('challenge-1', '123456')
+  })
+
+  it('clearly asks for the authenticator code during login', async () => {
+    vi.mocked(login).mockResolvedValue({ user: null, mfaRequired: true,
+      challengeToken: 'totp-login-token', mfaMethod: 'TOTP' })
+    renderAt('/auth')
+    fireEvent.change(screen.getByLabelText('ĐỊA CHỈ EMAIL'),
+      { target: { value: 'test@example.com' } })
+    fireEvent.change(screen.getByLabelText('MẬT KHẨU'),
+      { target: { value: 'StrongPass123' } })
+    fireEvent.click(screen.getByRole('button', { name: 'ĐĂNG NHẬP' }))
+    expect(await screen.findByText(/Mở Google Authenticator hoặc ứng dụng bạn đã thiết lập/))
+      .toBeInTheDocument()
+    expect(screen.getByLabelText('MÃ 6 SỐ TỪ ỨNG DỤNG HOẶC MÃ KHÔI PHỤC'))
+      .toBeInTheDocument()
+    expect(screen.getByText(/Mỗi mã khôi phục chỉ dùng được một lần/)).toBeInTheDocument()
   })
 
   it('lets a signed-in user change password and returns to login', async () => {
@@ -241,7 +286,7 @@ describe('App', () => {
     vi.mocked(startMfa).mockResolvedValue({ challengeToken: 'enroll-1' })
     vi.mocked(confirmMfa).mockResolvedValue({ recoveryCodes: ['ABCD1234-ABCD1234-ABCD1234-ABCD1234'] })
     renderAt('/me/security')
-    fireEvent.click(await screen.findByRole('button', { name: 'Bật xác minh hai bước' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Bật mã qua email' }))
     fireEvent.change(await screen.findByLabelText('MÃ SÁU CHỮ SỐ'), { target: { value: '123456' } })
     fireEvent.click(screen.getByRole('button', { name: 'Xác nhận và bật' }))
     expect(await screen.findByText('Mã khôi phục — chỉ hiển thị lần này')).toBeInTheDocument()
@@ -258,9 +303,11 @@ describe('App', () => {
       { target: { value: 'StrongPass123' } })
     fireEvent.click(screen.getByRole('button', { name: 'Thiết lập ứng dụng xác thực' }))
     expect(await screen.findByText('JBSWY3DPEHPK3PXP')).toBeInTheDocument()
-    fireEvent.change(screen.getByLabelText('MÃ TỪ ỨNG DỤNG'), { target: { value: '123456' } })
+    fireEvent.change(screen.getByLabelText('MÃ 6 SỐ TỪ ỨNG DỤNG'), { target: { value: '123456' } })
     fireEvent.click(screen.getByRole('button', { name: 'Xác nhận ứng dụng xác thực' }))
     expect(await screen.findByText('Mã khôi phục — chỉ hiển thị lần này')).toBeInTheDocument()
+    expect(screen.getByText(/Từ lần đăng nhập sau, hãy lấy mã 6 số mới trong ứng dụng/))
+      .toBeInTheDocument()
     expect(confirmTotp).toHaveBeenCalledWith('123456')
   })
 
@@ -272,12 +319,12 @@ describe('App', () => {
     fireEvent.change(await screen.findByLabelText('MẬT KHẨU ĐỂ TẮT'),
       { target: { value: 'StrongPass123' } })
     fireEvent.click(screen.getByRole('button', { name: 'Tắt xác minh hai bước' }))
-    expect(await screen.findByLabelText('MÃ MFA HIỆN TẠI HOẶC MÃ KHÔI PHỤC')).toBeInTheDocument()
+    expect(await screen.findByLabelText('MÃ 6 SỐ QUA EMAIL HOẶC MÃ KHÔI PHỤC')).toBeInTheDocument()
     expect(disableMfa).not.toHaveBeenCalled()
-    fireEvent.change(screen.getByLabelText('MÃ MFA HIỆN TẠI HOẶC MÃ KHÔI PHỤC'),
+    fireEvent.change(screen.getByLabelText('MÃ 6 SỐ QUA EMAIL HOẶC MÃ KHÔI PHỤC'),
       { target: { value: '123456' } })
     fireEvent.click(screen.getByRole('button', { name: 'Xác nhận tắt MFA' }))
-    expect(await screen.findByText('Đã tắt xác minh hai bước.')).toBeInTheDocument()
+    expect(await screen.findByText(/Đã tắt xác minh hai bước/)).toBeInTheDocument()
     expect(disableMfa).toHaveBeenCalledWith('StrongPass123', 'step-up-1', '123456')
   })
 

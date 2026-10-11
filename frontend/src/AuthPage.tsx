@@ -1,9 +1,10 @@
 import { useState, type FormEvent } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { login, registerAccount } from './api/auth'
+import { login, loginWithGoogle, registerAccount } from './api/auth'
 import { getUiError } from './uiError'
 import { isInternalRole } from './internalAccess'
 import FormeLayout from './FormeLayout'
+import GoogleButton from './GoogleButton'
 
 export default function AuthPage() {
   const location = useLocation()
@@ -47,6 +48,20 @@ export default function AuthPage() {
     }
   }
 
+  async function googleLogin(credential: string) {
+    setError(''); setBusy(true)
+    try {
+      const session = await loginWithGoogle(credential)
+      if (session.mfaRequired && session.challengeToken) {
+        navigate('/auth/mfa', { state: { challengeToken: session.challengeToken,
+          mfaMethod: session.mfaMethod } })
+      } else if (session.user) {
+        navigate(isInternalRole(session.user.role) ? '/internal' : '/')
+      }
+    } catch (failure) { setError(getUiError(failure)) }
+    finally { setBusy(false) }
+  }
+
   return <FormeLayout showcase><section className="auth-card auth-card-wide">
     <p className="auth-kicker">{mode === 'login' ? 'CHÀO MỪNG BẠN' : 'THAM GIA CÙNG CHÚNG TÔI'}</p>
     <h1>{mode === 'login' ? 'Đăng nhập' : 'Tạo tài khoản'}</h1>
@@ -80,6 +95,11 @@ export default function AuthPage() {
       <button className="auth-submit" disabled={busy} type="submit">{busy ? 'VUI LÒNG ĐỢI…' :
         mode === 'login' ? 'ĐĂNG NHẬP' : 'TẠO TÀI KHOẢN'}</button>
     </form>
+    {mode === 'login' && <div className="google-login-area">
+      <div className="auth-divider"><span>hoặc</span></div>
+      <GoogleButton onCredential={(credential) => void googleLogin(credential)} disabled={busy} />
+      <p className="google-login-note">Tài khoản mới sẽ được tạo với vai trò khách hàng.</p>
+    </div>}
     <div className="auth-links">{mode === 'login' ? <><Link to="/forgot-password">Quên mật khẩu?</Link>
       <Link to="/resend-verification">Gửi lại email xác minh</Link></> :
       <Link to="/auth">Đã có tài khoản? Đăng nhập</Link>}</div>

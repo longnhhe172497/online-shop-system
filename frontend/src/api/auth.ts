@@ -44,6 +44,25 @@ export async function login(input: { email: string; password: string }) {
   return data
 }
 
+export async function getGoogleConfig() {
+  const { data } = await api.get<{ enabled: boolean; clientId: string }>('/auth/google/config')
+  return data
+}
+
+export async function loginWithGoogle(credential: string) {
+  const { data } = await api.post<LoginResult>('/auth/browser-google-login', { credential })
+  return data
+}
+
+export async function getGoogleLinkStatus() {
+  const { data } = await api.get<{ linked: boolean }>('/me/google')
+  return data
+}
+
+export async function linkGoogle(password: string, credential: string) {
+  await api.post('/me/google/link', { password, credential })
+}
+
 export async function verifyMfa(challengeToken: string, code: string) {
   const { data } = await api.post<LoginResult>('/auth/browser-mfa/verify', { challengeToken, code })
   return data
