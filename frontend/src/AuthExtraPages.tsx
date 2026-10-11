@@ -65,6 +65,7 @@ export function MfaLoginPage() {
   const location = useLocation()
   const state = location.state as { challengeToken?: string; email?: string;
     mfaMethod?: 'EMAIL' | 'TOTP' } | null
+  const useAuthenticator = state?.mfaMethod === 'TOTP'
   const [code, setCode] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -78,11 +79,14 @@ export function MfaLoginPage() {
     finally { setBusy(false) }
   }
   return <AuthCard kicker="BẢO MẬT HAI BƯỚC" title="Xác minh đăng nhập">
-    <p className="auth-lead">{state?.mfaMethod === 'TOTP'
-      ? 'Nhập mã sáu chữ số từ ứng dụng xác thực, hoặc dùng một mã khôi phục đã lưu.'
-      : `Nhập mã sáu chữ số gửi tới ${state?.email ?? 'email của bạn'}, hoặc dùng một mã khôi phục đã lưu.`}</p>
+    <p className="auth-lead">{useAuthenticator
+      ? 'Tài khoản này đang dùng ứng dụng xác thực. Mở Google Authenticator hoặc ứng dụng bạn đã thiết lập, tìm FORME và lấy mã 6 số đang hiển thị.'
+      : `Tài khoản này đang dùng mã qua email. Lấy mã 6 số đã gửi tới ${state?.email ?? 'email của bạn'}.`}</p>
+    <p className="auth-notice">Nếu không lấy được mã {useAuthenticator ? 'từ ứng dụng' : 'từ email'},
+      bạn có thể nhập một mã khôi phục đã lưu. Mỗi mã khôi phục chỉ dùng được một lần.</p>
     {!state?.challengeToken ? <p className="auth-error">Phiên xác minh đã mất. Hãy đăng nhập lại.</p> :
-      <form onSubmit={submit}><label>MÃ XÁC MINH HOẶC MÃ KHÔI PHỤC<input maxLength={35}
+      <form onSubmit={submit}><label>{useAuthenticator ? 'MÃ 6 SỐ TỪ ỨNG DỤNG HOẶC MÃ KHÔI PHỤC' :
+        'MÃ 6 SỐ QUA EMAIL HOẶC MÃ KHÔI PHỤC'}<input maxLength={35}
         autoComplete="one-time-code" required value={code} onChange={(event) => setCode(event.target.value)} /></label>
         <button className="auth-submit" disabled={busy}>XÁC MINH</button></form>}
     {error && <p className="auth-error" role="alert">{error}</p>}

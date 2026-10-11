@@ -35,10 +35,13 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/auth")
 public class AuthController {
     private final AuthService auth;
+    private final GoogleIdentityService google;
     private final boolean cookieSecure;
 
-    public AuthController(AuthService auth, @Value("${app.cookie-secure:false}") boolean cookieSecure) {
+    public AuthController(AuthService auth, GoogleIdentityService google,
+                          @Value("${app.cookie-secure:false}") boolean cookieSecure) {
         this.auth = auth;
+        this.google = google;
         this.cookieSecure = cookieSecure;
     }
 
@@ -76,6 +79,22 @@ public class AuthController {
         if (result.mfaRequired()) return ResponseEntity.ok(browserResult(result));
         return withBrowserCookie(result);
     }
+
+    @GetMapping("/google/config")
+    public Map<String, Object> googleConfig() {
+        return Map.of("enabled", google.enabled(), "clientId", google.clientId());
+    }
+
+    @PostMapping("/browser-google-login")
+    public ResponseEntity<BrowserLoginResponse> browserGoogleLogin(
+            @Valid @RequestBody GoogleCredentialRequest request, HttpServletRequest servletRequest) {
+        LoginResponse result = google.login(request.credential(), servletRequest.getRemoteAddr(),
+                servletRequest.getHeader("User-Agent"));
+        if (result.mfaRequired()) return ResponseEntity.ok(browserResult(result));
+        return withBrowserCookie(result);
+    }
+
+    public record GoogleCredentialRequest(@jakarta.validation.constraints.NotBlank String credential) {}
 
     @PostMapping("/mfa/verify")
     public ResponseEntity<LoginResponse> verifyMfa(@Valid @RequestBody MfaVerifyRequest request,

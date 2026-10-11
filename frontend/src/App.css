@@ -1120,6 +1120,16 @@
 .auth-links { display: flex; flex-wrap: wrap; gap: 11px 22px; justify-content: space-between; margin-top: 20px; }
 .auth-links a, .auth-help a, .auth-card a { color: #2438c5; font-size: 13px; font-weight: 650; text-decoration: none; }
 .auth-links a:hover, .auth-help a:hover, .auth-card a:hover { text-decoration: underline; }
+.google-login-area { margin-top: 20px; }
+.auth-divider { align-items: center; color: #77736e; display: flex; font-size: 12px; gap: 14px; margin: 18px 0; }
+.auth-divider::before, .auth-divider::after { background: #dedbd5; content: ''; flex: 1; height: 1px; }
+.google-button-host { display: flex; justify-content: center; min-height: 42px; overflow: hidden; width: 100%; }
+.google-button-placeholder { background: #f5f4f1; border: 1px solid #dedbd5; color: #77736e;
+    cursor: not-allowed; font-size: 14px; min-height: 42px; width: 100%; }
+.google-login-note { color: #77736e; font-size: 12px; line-height: 1.5; margin: 10px 0 0; }
+.google-link-password { display: block; font-size: 12px; font-weight: 700; margin: 20px 0 14px; }
+.google-link-password input { border: 1px solid #d9d6d0; display: block; margin-top: 8px; padding: 12px;
+    width: min(100%, 400px); }
 .password-input { position: relative; margin: 0 0 16px; }
 .password-input input { box-sizing: border-box; height: 46px; margin: 0; padding-right: 68px; width: 100%; }
 .password-input button { background: none; border: 0; color: #2438c5; cursor: pointer; font-size: 12px;

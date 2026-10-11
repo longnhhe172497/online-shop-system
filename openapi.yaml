@@ -336,6 +336,37 @@ paths:
         '200': { description: Session cookie or email MFA challenge }
         '401': { description: Invalid credentials or inactive account }
         '429': { description: Too many attempts }
+  /auth/google/config:
+    get:
+      summary: Read optional Google Identity Services Web client ID
+      responses:
+        '200':
+          description: Public client ID and enabled flag; never contains a client secret
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [enabled, clientId]
+                properties:
+                  enabled: { type: boolean }
+                  clientId: { type: string }
+  /auth/browser-google-login:
+    post:
+      summary: Verify a Google ID token and sign in with the existing browser cookie/MFA flow
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [credential]
+              properties:
+                credential: { type: string, description: Signed Google ID token }
+      responses:
+        '200': { description: Session cookie and user or MFA challenge }
+        '401': { description: Invalid Google ID token }
+        '409': { description: Existing email must be linked from the authenticated account }
+        '503': { description: Google sign-in is not configured }
   /auth/mfa/verify:
     post:
       summary: Complete MFA with an email, TOTP or single-use recovery code and obtain a bearer token
@@ -392,6 +423,30 @@ paths:
       security: [{ bearerAuth: [] }, { sessionCookie: [] }]
       responses:
         '200': { description: '{mfaEnabled,mfaMethod,recoveryCodesRemaining}; never returns stored recovery codes' }
+  /me/google:
+    get:
+      summary: Check whether this account has a linked Google identity
+      security: [{ bearerAuth: [] }, { sessionCookie: [] }]
+      responses:
+        '200': { description: '{linked}' }
+  /me/google/link:
+    post:
+      summary: Link a matching verified Google identity after checking the current password
+      security: [{ bearerAuth: [] }, { sessionCookie: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [password, credential]
+              properties:
+                password: { type: string, format: password }
+                credential: { type: string, description: Signed Google ID token }
+      responses:
+        '204': { description: Linked }
+        '401': { description: Password or session invalid }
+        '409': { description: Email mismatch or Google identity already linked }
   /me/password:
     post:
       summary: Change password and revoke all sessions

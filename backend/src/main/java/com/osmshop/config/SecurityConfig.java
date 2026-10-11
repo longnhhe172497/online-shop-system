@@ -51,12 +51,13 @@ public class SecurityConfig {
                         .requestMatchers("/api/health", "/actuator/health", "/v3/api-docs/**", "/swagger-ui/**")
                         .permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/auth/register", "/api/auth/verify",
-                                "/api/auth/login", "/api/auth/browser-login", "/api/auth/password-reset/request",
+                                "/api/auth/login", "/api/auth/browser-login", "/api/auth/browser-google-login",
+                                "/api/auth/password-reset/request",
                                 "/api/auth/password-reset/confirm", "/api/auth/verification/resend",
                                 "/api/auth/mfa/verify", "/api/auth/browser-mfa/verify",
                                 "/api/auth/email-change/confirm", "/api/invitations/accept")
                         .permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/auth/csrf").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/auth/csrf", "/api/auth/google/config").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/products", "/api/products/**")
                         .permitAll()
                         .requestMatchers("/api/me/addresses", "/api/me/addresses/**").hasRole("CUSTOMER")
