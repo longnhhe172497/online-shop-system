@@ -65,7 +65,7 @@ test('register, verify email, sign in with MFA, and invite internal staff', asyn
   await page.getByRole('button', { name: 'ĐĂNG NHẬP', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Tổng quan', exact: true })).toBeVisible()
   await page.goto('/me/security')
-  await page.getByRole('button', { name: 'Bật xác minh hai bước' }).click()
+  await page.getByRole('button', { name: 'Bật mã qua email' }).click()
   const enrollment = await latestMail(request, adminEmail, 'Mã xác minh FORME của bạn:')
   const enrollmentCode = enrollment.match(/Mã xác minh FORME của bạn: (\d{6})/)?.[1]
   expect(enrollmentCode).toBeTruthy()
@@ -81,7 +81,7 @@ test('register, verify email, sign in with MFA, and invite internal staff', asyn
   const loginMail = await latestMail(request, adminEmail, 'Mã xác minh FORME của bạn:', enrollment)
   const loginCode = loginMail.match(/Mã xác minh FORME của bạn: (\d{6})/)?.[1]
   expect(loginCode).toBeTruthy()
-  await page.getByLabel('MÃ XÁC MINH HOẶC MÃ KHÔI PHỤC').fill(loginCode!)
+  await page.getByLabel('MÃ 6 SỐ QUA EMAIL HOẶC MÃ KHÔI PHỤC').fill(loginCode!)
   await page.getByRole('button', { name: 'XÁC MINH' }).click()
   await expect(page.getByRole('heading', { name: 'Tổng quan', exact: true })).toBeVisible()
 
