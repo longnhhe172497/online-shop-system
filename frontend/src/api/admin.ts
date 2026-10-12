@@ -14,6 +14,18 @@ export interface Invitation { id: number; email: string; fullName: string; role:
 export interface AdminSession { id: number; ipAddress: string | null; userAgent: string | null;
   createdAt: string; lastSeenAt: string | null; expiresAt: string }
 export interface UserDetail { user: ManagedUser; sessions: AdminSession[]; history: AuditLog[] }
+export interface PermissionDefinition { code: string; label: string; group: string; endpoint: string }
+export interface RoleGrant { role: string; version: number; permissions: string[] }
+export interface RolePermissionMatrix { catalog: PermissionDefinition[]; roles: RoleGrant[] }
+
+export async function getRolePermissions() {
+  const { data } = await api.get<RolePermissionMatrix>('/admin/role-permissions')
+  return data
+}
+export async function updateRolePermissions(role: string, version: number, permissions: string[]) {
+  const { data } = await api.put<RoleGrant>(`/admin/role-permissions/${role}`, { version, permissions })
+  return data
+}
 
 export async function listInvitations() {
   const { data } = await api.get<Invitation[]>('/admin/invitations')

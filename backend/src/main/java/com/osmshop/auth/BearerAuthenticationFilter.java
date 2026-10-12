@@ -52,9 +52,14 @@ public class BearerAuthenticationFilter extends OncePerRequestFilter {
             if (!sessions.isEmpty()) {
                 AuthenticatedSession session = sessions.getFirst();
                 AuthPrincipal user = session.user();
+                List<SimpleGrantedAuthority> authorities = new java.util.ArrayList<>();
+                authorities.add(new SimpleGrantedAuthority("ROLE_" + user.role()));
+                if (List.of("MANAGER", "SUPPORT", "WAREHOUSE", "DELIVERY").contains(user.role())) {
+                    jdbc.queryForList("SELECT permission_code FROM role_permissions WHERE role=?", String.class,
+                            user.role()).forEach(code -> authorities.add(new SimpleGrantedAuthority("PERM_" + code)));
+                }
                 SecurityContextHolder.getContext().setAuthentication(
-                        new UsernamePasswordAuthenticationToken(user, null,
-                                List.of(new SimpleGrantedAuthority("ROLE_" + user.role()))));
+                        new UsernamePasswordAuthenticationToken(user, null, authorities));
                 jdbc.update("UPDATE user_sessions SET last_seen_at=now() WHERE id=?", session.id());
             }
         }

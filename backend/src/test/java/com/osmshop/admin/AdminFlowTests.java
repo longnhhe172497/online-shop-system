@@ -3,6 +3,7 @@ package com.osmshop.admin;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -47,6 +48,62 @@ class AdminFlowTests {
         mvc.perform(get("/api/admin/users").header("Authorization", admin)).andExpect(status().isOk());
         mvc.perform(get("/api/admin/settings").header("Authorization", admin)).andExpect(status().isOk());
         mvc.perform(get("/api/admin/audit-logs").header("Authorization", admin)).andExpect(status().isOk());
+    }
+
+    @Test
+    void adminCanChangeBusinessRolePermissionsWithoutEditingAdminOrCustomer() throws Exception {
+        String admin = session("ADMIN");
+        String warehouse = session("WAREHOUSE");
+        String support = session("SUPPORT");
+        String customer = session("CUSTOMER");
+        mvc.perform(get("/api/admin/role-permissions").header("Authorization", customer))
+                .andExpect(status().isForbidden());
+        mvc.perform(get("/api/warehouse/inventory").header("Authorization", support))
+                .andExpect(status().isForbidden());
+        mvc.perform(get("/api/warehouse/inventory").header("Authorization", warehouse))
+                .andExpect(status().isNotFound()); // Policy allows it; module is not implemented yet.
+        mvc.perform(get("/api/warehouse/unlisted").header("Authorization", warehouse))
+                .andExpect(status().isForbidden()); // Unregistered business routes fail closed.
+        String matrix = mvc.perform(get("/api/admin/role-permissions").header("Authorization", admin))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.roles.length()").value(4))
+                .andReturn().getResponse().getContentAsString();
+        int version = json.readTree(matrix).get("roles").get(2).get("version").asInt();
+        mvc.perform(put("/api/admin/role-permissions/WAREHOUSE").header("Authorization", customer)
+                .contentType(MediaType.APPLICATION_JSON).content("{\"version\":0,\"permissions\":[]}"))
+                .andExpect(status().isForbidden());
+        mvc.perform(put("/api/admin/role-permissions/ADMIN").header("Authorization", admin)
+                .contentType(MediaType.APPLICATION_JSON).content("{\"version\":0,\"permissions\":[]}"))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("ROLE_NOT_EDITABLE"));
+        mvc.perform(put("/api/admin/role-permissions/WAREHOUSE").header("Authorization", admin)
+                .contentType(MediaType.APPLICATION_JSON).content("{\"permissions\":[]}"))
+                .andExpect(status().isBadRequest());
+        mvc.perform(put("/api/admin/role-permissions/WAREHOUSE").header("Authorization", admin)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json.writeValueAsString(Map.of("version", version,
+                        "permissions", java.util.List.of("WAREHOUSE_PACK_VIEW")))))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.version").value(version + 1));
+        mvc.perform(get("/api/warehouse/inventory").header("Authorization", warehouse))
+                .andExpect(status().isForbidden()); // Existing session loses the permission immediately.
+        mvc.perform(put("/api/admin/role-permissions/SUPPORT").header("Authorization", admin)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json.writeValueAsString(Map.of("version", 0,
+                        "permissions", java.util.List.of("SUPPORT_ORDER_VIEW", "SUPPORT_ORDER_CONFIRM",
+                                "WAREHOUSE_INVENTORY_VIEW")))))
+                .andExpect(status().isOk());
+        mvc.perform(get("/api/warehouse/inventory").header("Authorization", support))
+                .andExpect(status().isNotFound()); // Existing session gains the permission immediately.
+        mvc.perform(put("/api/admin/role-permissions/WAREHOUSE").header("Authorization", admin)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json.writeValueAsString(Map.of("version", version,
+                        "permissions", java.util.List.of("WAREHOUSE_INVENTORY_VIEW")))))
+                .andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("PERMISSION_VERSION_CONFLICT"));
+        mvc.perform(put("/api/admin/role-permissions/WAREHOUSE").header("Authorization", admin)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json.writeValueAsString(Map.of("version", version + 1,
+                        "permissions", java.util.List.of("UNKNOWN_PERMISSION")))))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("INVALID_PERMISSION"));
+        mvc.perform(get("/api/admin/audit-logs?action=ROLE_PERMISSIONS_CHANGED").header("Authorization", admin))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.items[0].entityId").value("SUPPORT"));
     }
 
     @Test
