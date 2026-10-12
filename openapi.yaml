@@ -213,6 +213,57 @@ paths:
       responses:
         '200': { description: Paginated accounts without password hashes }
         '403': { description: Admin role required }
+  /admin/role-permissions:
+    get:
+      summary: List editable staff roles, permission catalog and current grants (Admin only)
+      security: [{ bearerAuth: [] }, { sessionCookie: [] }]
+      responses:
+        '200':
+          description: Permission matrix; Admin and Customer are deliberately not editable
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  catalog:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        code: { type: string }
+                        label: { type: string }
+                        group: { type: string }
+                        endpoint: { type: string }
+                  roles:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        role: { type: string, enum: [MANAGER, SUPPORT, WAREHOUSE, DELIVERY] }
+                        version: { type: integer }
+                        permissions: { type: array, items: { type: string } }
+        '403': { description: Admin role required }
+  /admin/role-permissions/{role}:
+    parameters:
+      - { in: path, name: role, required: true, schema: { type: string, enum: [MANAGER, SUPPORT, WAREHOUSE, DELIVERY] } }
+    put:
+      summary: Replace a staff role's grants with optimistic version check; audited and effective on next request
+      security: [{ bearerAuth: [] }, { sessionCookie: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [version, permissions]
+              properties:
+                version: { type: integer, minimum: 0 }
+                permissions: { type: array, uniqueItems: true, items: { type: string } }
+      responses:
+        '200': { description: Updated role, version and grants }
+        '400': { description: Uneditable role or unknown/duplicate permission }
+        '403': { description: Admin role required }
+        '409': { description: Another Admin changed the role; reload before retrying }
   /admin/users/{id}:
     parameters:
       - { in: path, name: id, required: true, schema: { type: integer, format: int64 } }

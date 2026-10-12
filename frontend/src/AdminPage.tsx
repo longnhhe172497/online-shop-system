@@ -7,6 +7,7 @@ import { changeRole, changeSetting, changeStatus, getUserDetail, inviteStaff, li
 import { getUiError } from './uiError'
 import InternalLayout, { type InternalNavItem } from './InternalLayout'
 import { internalRoleNames, isInternalRole } from './internalAccess'
+import RolePermissionsPage from './RolePermissionsPage'
 
 const roles: Record<string, string> = { CUSTOMER: 'Khách hàng', ADMIN: 'Quản trị viên',
   MANAGER: 'Quản lý', SUPPORT: 'Hỗ trợ', WAREHOUSE: 'Nhân viên kho', DELIVERY: 'Giao hàng' }
@@ -18,33 +19,37 @@ const settingNames: Record<string, string> = { qr_expiry_minutes: 'Thời hạn 
   reporting_time_zone: 'Múi giờ báo cáo' }
 const actionNames: Record<string, string> = { USER_CREATED: 'Tạo tài khoản', USER_UPDATED: 'Sửa tài khoản',
   USER_ROLE_CHANGED: 'Đổi vai trò', USER_STATUS_CHANGED: 'Đổi trạng thái', SETTING_CHANGED: 'Đổi thiết lập',
+  ROLE_PERMISSIONS_CHANGED: 'Đổi quyền vai trò',
   USER_INVITED: 'Mời nhân viên', INVITATION_ACCEPTED: 'Nhận lời mời', PASSWORD_CHANGED: 'Đổi mật khẩu',
   EMAIL_CHANGED: 'Đổi email', INVITATION_REVOKED: 'Thu hồi lời mời',
   USER_SESSIONS_REVOKED: 'Đăng xuất toàn bộ phiên', AUTH_LOGIN_SUCCESS: 'Đăng nhập thành công',
   AUTH_LOGIN_FAILED: 'Đăng nhập thất bại', MFA_EMAIL_ENABLED: 'Bật MFA qua email',
   MFA_TOTP_ENABLED: 'Bật ứng dụng xác thực', MFA_DISABLED: 'Tắt MFA',
   MFA_RECOVERY_REGENERATED: 'Tạo lại mã khôi phục' }
-const entityNames: Record<string, string> = { USER: 'Tài khoản', SYSTEM_SETTING: 'Thiết lập' }
+const entityNames: Record<string, string> = { USER: 'Tài khoản', SYSTEM_SETTING: 'Thiết lập', ROLE: 'Vai trò' }
 const invitationStatuses: Record<Invitation['status'], string> = {
   PENDING: 'Đang gửi', STALLED: 'Chưa rõ kết quả gửi', SENT: 'Đã gửi', FAILED: 'Gửi thất bại',
   REVOKED: 'Đã thu hồi', EXPIRED: 'Đã hết hạn', ACCEPTED: 'Đã chấp nhận',
 }
 
-type Tab = 'dashboard' | 'users' | 'invitations' | 'settings' | 'audit'
+type Tab = 'dashboard' | 'users' | 'invitations' | 'permissions' | 'settings' | 'audit'
 const navigation: InternalNavItem<Tab>[] = [
   { id: 'dashboard', label: 'Tổng quan', icon: 'dashboard' },
   { id: 'users', label: 'Tài khoản', icon: 'users' },
   { id: 'invitations', label: 'Lời mời', icon: 'users' },
+  { id: 'permissions', label: 'Phân quyền', icon: 'settings' },
   { id: 'settings', label: 'Thiết lập', icon: 'settings' },
   { id: 'audit', label: 'Nhật ký', icon: 'audit' },
 ]
 const pageTitles: Record<Tab, string> = { dashboard: 'Tổng quan', users: 'Quản lý tài khoản',
   invitations: 'Lời mời nhân viên',
+  permissions: 'Phân quyền vai trò',
   settings: 'Thiết lập hệ thống', audit: 'Nhật ký thao tác' }
 const pageDescriptions: Record<Tab, string> = {
   dashboard: 'Một nơi theo dõi hoạt động của hệ thống khi các tính năng được hoàn thiện.',
   users: 'Quản lý tài khoản, vai trò và trạng thái truy cập.',
   invitations: 'Mời thành viên mới và theo dõi lời mời đã gửi.',
+  permissions: 'Kiểm soát các thao tác mà mỗi vai trò nội bộ được phép thực hiện.',
   settings: 'Điều chỉnh các giới hạn vận hành của cửa hàng.',
   audit: 'Theo dõi các thao tác quản trị đã được ghi nhận.',
 }
@@ -56,7 +61,7 @@ type PendingChange = { user: ManagedUser; kind: 'role' | 'status'; value: string
 
 function tabFromPath(path: string): Tab {
   const segment = path.split('/')[2]
-  return segment === 'users' || segment === 'invitations' || segment === 'settings' || segment === 'audit'
+  return segment === 'users' || segment === 'invitations' || segment === 'permissions' || segment === 'settings' || segment === 'audit'
     ? segment : 'dashboard'
 }
 
@@ -279,6 +284,7 @@ export default function AdminPage() {
         <p>Giá trị được kiểm tra giới hạn trước khi lưu.</p><div className="settings-list">
           {settings.map((setting) => <SettingRow key={`${setting.key}:${setting.value}`} setting={setting} busy={busy}
             onSave={(value) => void saveSetting(setting, value)} />)}</div></section>}
+      {role === 'ADMIN' && tab === 'permissions' && <RolePermissionsPage />}
       {role === 'ADMIN' && tab === 'audit' && <section className="admin-panel"><h2>Nhật ký thao tác</h2>
         <form className="admin-filters audit-filters" onSubmit={(event) => { event.preventDefault(); setAuditPage(0)
           setAuditFilters({ ...auditDraft }) }}>

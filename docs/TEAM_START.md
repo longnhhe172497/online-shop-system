@@ -4,13 +4,15 @@ This repository is the **new Online Shop System**, unrelated to the earlier OSM&
 
 ## What is ready now
 
-- PostgreSQL 18 via Docker Compose; Flyway migrations V1–V9 create the B2C schema, login sessions, Auth security tables, email-change requests, invitation-delivery tracking, hashed MFA recovery codes, encrypted TOTP credentials and Google account links.
+- PostgreSQL 18 via Docker Compose; Flyway migrations V1–V10 create the B2C schema, login sessions, Auth security tables, email-change requests, invitation-delivery tracking, hashed MFA recovery codes, encrypted TOTP credentials, Google account links and configurable staff-role permissions.
 - Spring Boot backend with a running health endpoint, public paginated product endpoint, local CORS, validation errors, and Swagger UI.
 - React frontend with one real API client and a product-list page. The page is empty until an active product is created.
 - CI tests backend against PostgreSQL and runs frontend lint, build and tests on pull requests.
 - [`API_CONTRACT.md`](API_CONTRACT.md) reserves route names, roles and basic payload fields. [`openapi.yaml`](../openapi.yaml) describes **only implemented routes**. Planned routes must not be mistaken for working APIs.
 
 Identity & Admin is implemented on this branch: registration and email verification, login/logout, password reset, profile/addresses, role checks, Admin accounts/settings/audit, staff email invitations, email-code or authenticator-app TOTP MFA with one-time recovery codes, session management and email change. MFA disable/recovery-code replacement requires the password plus an existing MFA factor; factor changes send a security notification. Admin creates staff accounts only through email invitations; there is no direct active-account creation endpoint. Password changes/resets invalidate pending email-change links and MFA challenges. Admin can revoke or resend invitations, including `PENDING` deliveries stalled for over five minutes, inspect account details and active sessions, revoke a user's sessions, and filter audit events. Login success/failure events are audited without credentials or tokens. Every authenticated request refreshes session activity; the server expires sessions after 30 idle minutes or 24 hours total. The React UI warns at roughly 25 idle minutes. The UI uses an HttpOnly session cookie and an XSRF token for writes; existing API clients may continue to use the bearer-token login contract. Staff enter `/internal`; customers use `/me`. The new migrations and integration tests must be run against PostgreSQL before merging this branch.
+
+Admin can edit business-role grants at `/internal/permissions`. The role matrix uses optimistic versions and records before/after values in the audit log. Admin and Customer remain fixed; Admin does not automatically inherit business-role grants. The policy covers the planned Manager, Support, Warehouse and Delivery operations listed in `docs/API_CONTRACT.md`, and denies unregistered routes in those namespaces. Business modules are not implemented by the permission UI; when adding one, register each method/path in `SecurityConfig`, add its catalog permission and enforce ownership/state rules in the service. Never rely on hiding a sidebar entry as authorization.
 
 ### Optional Google sign-in (local development)
 
