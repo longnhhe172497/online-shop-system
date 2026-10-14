@@ -14,6 +14,9 @@ import AccountSessionsPage from './AccountSessionsPage'
 import { EmailChangePage, EmailChangeConfirmPage } from './EmailChangePages'
 import { isInternalRole } from './internalAccess'
 import SessionIdleNotice from './SessionIdleNotice'
+import CheckoutPage from './CheckoutPage'
+import OrdersPage from './OrdersPage'
+import OrderDetailPage from './OrderDetailPage'
 import './App.css'
 
 function ProductsPage() {
@@ -37,6 +40,8 @@ function ProductsPage() {
   return <main className="app-shell"><section className="status-card">
     <div className="shop-topline"><p className="eyebrow">FORME</p>
       {user ? <div className="shop-account">{isInternalRole(user.role) && <Link to="/internal">Quản lý nội bộ</Link>}
+        {user.role === 'CUSTOMER' && <><Link to="/checkout">Giỏ hàng &amp; thanh toán</Link>
+          <Link to="/me/orders">Đơn hàng</Link></>}
         <Link to="/me">Hồ sơ của tôi</Link>
         <button onClick={signOut}>Đăng xuất · {user.fullName}</button></div> : <Link to="/auth">Đăng nhập</Link>}
     </div>
@@ -68,6 +73,9 @@ export default function App() {
     <Route path="/me/security" element={<AccountSecurityPage />} />
     <Route path="/me/sessions" element={<AccountSessionsPage />} />
     <Route path="/me/email" element={<EmailChangePage />} />
+    <Route path="/me/orders" element={<OrdersPage />} />
+    <Route path="/me/orders/:id" element={<OrderDetailPage />} />
+    <Route path="/checkout" element={<CheckoutPage />} />
     <Route path="/email-change/confirm" element={<EmailChangeConfirmPage />} />
     <Route path="/internal/*" element={<AdminPage />} />
     <Route path="/admin" element={<Navigate to="/internal" replace />} />

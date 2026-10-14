@@ -17,6 +17,9 @@ export default function AuthPage() {
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const navigate = useNavigate()
+  // Customers return to the page that sent them here (e.g. /auth?next=/checkout); only same-site paths are accepted.
+  const next = new URLSearchParams(location.search).get('next')
+  const customerHome = next && next.startsWith('/') && !next.startsWith('//') ? next : '/'
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -38,7 +41,7 @@ export default function AuthPage() {
           navigate('/auth/mfa', { state: { challengeToken: session.challengeToken, email,
             mfaMethod: session.mfaMethod } })
         } else if (session.user) {
-          navigate(isInternalRole(session.user.role) ? '/internal' : '/')
+          navigate(isInternalRole(session.user.role) ? '/internal' : customerHome)
         }
       }
     } catch (failure) {
@@ -56,7 +59,7 @@ export default function AuthPage() {
         navigate('/auth/mfa', { state: { challengeToken: session.challengeToken,
           mfaMethod: session.mfaMethod } })
       } else if (session.user) {
-        navigate(isInternalRole(session.user.role) ? '/internal' : '/')
+        navigate(isInternalRole(session.user.role) ? '/internal' : customerHome)
       }
     } catch (failure) { setError(getUiError(failure)) }
     finally { setBusy(false) }
