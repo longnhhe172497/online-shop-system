@@ -51,20 +51,31 @@ public class SecurityConfig {
                         .requestMatchers("/api/health", "/actuator/health", "/v3/api-docs/**", "/swagger-ui/**")
                         .permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/auth/register", "/api/auth/verify",
-                                "/api/auth/login", "/api/auth/browser-login", "/api/auth/password-reset/request",
+                                "/api/auth/login", "/api/auth/browser-login", "/api/auth/browser-google-login",
+                                "/api/auth/password-reset/request",
                                 "/api/auth/password-reset/confirm", "/api/auth/verification/resend",
                                 "/api/auth/mfa/verify", "/api/auth/browser-mfa/verify",
                                 "/api/auth/email-change/confirm", "/api/invitations/accept")
                         .permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/auth/csrf").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/auth/csrf", "/api/auth/google/config").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/products", "/api/products/**")
                         .permitAll()
                         .requestMatchers("/api/me/addresses", "/api/me/addresses/**").hasRole("CUSTOMER")
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
-                        .requestMatchers("/api/manager/**").hasRole("MANAGER")
-                        .requestMatchers("/api/support/**").hasRole("SUPPORT")
-                        .requestMatchers("/api/warehouse/**").hasRole("WAREHOUSE")
-                        .requestMatchers("/api/delivery/**").hasRole("DELIVERY")
+                        .requestMatchers(HttpMethod.GET, "/api/manager/orders").hasAuthority("PERM_MANAGER_ORDER_VIEW")
+                        .requestMatchers(HttpMethod.POST, "/api/manager/orders/*/assign").hasAuthority("PERM_MANAGER_ORDER_ASSIGN")
+                        .requestMatchers(HttpMethod.POST, "/api/manager/returns/*/decision").hasAuthority("PERM_MANAGER_RETURN_DECIDE")
+                        .requestMatchers(HttpMethod.GET, "/api/support/orders/pending").hasAuthority("PERM_SUPPORT_ORDER_VIEW")
+                        .requestMatchers(HttpMethod.POST, "/api/support/orders/*/confirm").hasAuthority("PERM_SUPPORT_ORDER_CONFIRM")
+                        .requestMatchers(HttpMethod.GET, "/api/warehouse/packing-queue").hasAuthority("PERM_WAREHOUSE_PACK_VIEW")
+                        .requestMatchers(HttpMethod.POST, "/api/warehouse/orders/*/pack").hasAuthority("PERM_WAREHOUSE_PACK")
+                        .requestMatchers(HttpMethod.GET, "/api/warehouse/inventory").hasAuthority("PERM_WAREHOUSE_INVENTORY_VIEW")
+                        .requestMatchers(HttpMethod.POST, "/api/warehouse/inventory/adjustments").hasAuthority("PERM_WAREHOUSE_INVENTORY_ADJUST")
+                        .requestMatchers(HttpMethod.POST, "/api/warehouse/returns/*/inspection").hasAuthority("PERM_WAREHOUSE_RETURN_INSPECT")
+                        .requestMatchers(HttpMethod.GET, "/api/delivery/assignments").hasAuthority("PERM_DELIVERY_ASSIGNMENT_VIEW")
+                        .requestMatchers(HttpMethod.PATCH, "/api/delivery/attempts/*").hasAuthority("PERM_DELIVERY_ATTEMPT_UPDATE")
+                        .requestMatchers("/api/manager/**", "/api/support/**", "/api/warehouse/**", "/api/delivery/**")
+                        .denyAll()
                         .requestMatchers("/api/orders/**").hasRole("CUSTOMER")
                         .anyRequest().authenticated())
                 .addFilterBefore(bearer, UsernamePasswordAuthenticationFilter.class)

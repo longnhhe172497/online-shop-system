@@ -42,7 +42,8 @@ export default function AccountSessionsPage() {
         <div className="session-list">{sessions.map((item) => <article className="session-row" key={item.id}>
           <div className="session-icon" aria-hidden="true">⌁</div><div><strong>{item.userAgent?.slice(0, 80) || 'Trình duyệt không xác định'}</strong>
             <p>{item.ipAddress || 'Không rõ IP'} · Đăng nhập {new Date(item.createdAt).toLocaleString('vi-VN')}</p>
-            <small>Hết hạn {new Date(item.expiresAt).toLocaleString('vi-VN')}</small></div>
+            <small>Hoạt động gần nhất {new Date(item.lastSeenAt ?? item.createdAt).toLocaleString('vi-VN')}
+              {' · '}Hết hạn {new Date(item.expiresAt).toLocaleString('vi-VN')}</small></div>
           {item.current ? <span className="security-state on">Thiết bị này</span> :
             <button className="admin-link" disabled={busy} onClick={() => void remove(item.id)}>Đăng xuất</button>}
         </article>)}</div>}

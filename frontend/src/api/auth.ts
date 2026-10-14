@@ -7,7 +7,8 @@ export interface AuthUser {
   role: string
 }
 
-export interface LoginResult { user: AuthUser | null; mfaRequired: boolean; challengeToken: string | null }
+export interface LoginResult { user: AuthUser | null; mfaRequired: boolean;
+  challengeToken: string | null; mfaMethod?: 'EMAIL' | 'TOTP' | null }
 
 export async function registerAccount(input: {
   fullName: string
@@ -41,6 +42,25 @@ export async function confirmPasswordReset(input: {
 export async function login(input: { email: string; password: string }) {
   const { data } = await api.post<LoginResult>('/auth/browser-login', input)
   return data
+}
+
+export async function getGoogleConfig() {
+  const { data } = await api.get<{ enabled: boolean; clientId: string }>('/auth/google/config')
+  return data
+}
+
+export async function loginWithGoogle(credential: string) {
+  const { data } = await api.post<LoginResult>('/auth/browser-google-login', { credential })
+  return data
+}
+
+export async function getGoogleLinkStatus() {
+  const { data } = await api.get<{ linked: boolean }>('/me/google')
+  return data
+}
+
+export async function linkGoogle(password: string, credential: string) {
+  await api.post('/me/google/link', { password, credential })
 }
 
 export async function verifyMfa(challengeToken: string, code: string) {

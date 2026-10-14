@@ -15,6 +15,7 @@ import AccountSecurityPage from './AccountSecurityPage'
 import AccountSessionsPage from './AccountSessionsPage'
 import { EmailChangePage, EmailChangeConfirmPage } from './EmailChangePages'
 import { isInternalRole } from './internalAccess'
+import SessionIdleNotice from './SessionIdleNotice'
 import './App.css'
 
 function ProductsPage() {
@@ -53,7 +54,7 @@ function ProductsPage() {
 }
 
 export default function App() {
-  return <Routes>
+  return <><SessionIdleNotice /><Routes>
     <Route path="/" element={<ProductsPage />} />
     <Route path="/auth" element={<AuthPage />} />
     <Route path="/register" element={<AuthPage />} />
@@ -74,5 +75,5 @@ export default function App() {
     <Route path="/internal/delivery" element={<DeliveryPage />} />
     <Route path="/internal/*" element={<AdminPage />} />
     <Route path="/admin" element={<Navigate to="/internal" replace />} />
-  </Routes>
+  </Routes></>
 }

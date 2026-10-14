@@ -4,6 +4,7 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import java.time.Instant;
+import java.util.List;
 
 public final class AuthDtos {
     private AuthDtos() {}
@@ -27,13 +28,20 @@ public final class AuthDtos {
     public record PasswordResetConfirmResponse(boolean reset) {}
     public record UserResponse(long id, String email, String fullName, String role) {}
     public record LoginResponse(String accessToken, Instant expiresAt, UserResponse user,
-                                boolean mfaRequired, String challengeToken) {}
-    public record BrowserLoginResponse(UserResponse user, boolean mfaRequired, String challengeToken) {}
+                                boolean mfaRequired, String challengeToken, String mfaMethod) {}
+    public record BrowserLoginResponse(UserResponse user, boolean mfaRequired, String challengeToken,
+                                       String mfaMethod) {}
     public record MfaVerifyRequest(@NotBlank String challengeToken, @NotBlank String code) {}
     public record MfaDisableRequest(@NotBlank String password) {}
+    public record MfaSensitiveRequest(@NotBlank String password, @NotBlank String challengeToken,
+                                      @NotBlank String code) {}
+    public record MfaStepUpResponse(String challengeToken, String mfaMethod) {}
+    public record TotpStartResponse(String secret, String otpauthUri) {}
+    public record TotpConfirmRequest(@NotBlank String code) {}
+    public record MfaRecoveryResponse(List<String> recoveryCodes) {}
     public record ChangePasswordRequest(@NotBlank String currentPassword,
             @NotBlank @Size(min = 8, max = 72) String newPassword,
             @NotBlank String confirmPassword) {}
     public record SessionView(long id, String ipAddress, String userAgent, Instant createdAt,
-                              Instant expiresAt, boolean current) {}
+                              Instant lastSeenAt, Instant expiresAt, boolean current) {}
 }
