@@ -1,0 +1,108 @@
+/* Lấy nguyên token và kiểu từ css/site.css của mockup Forme / Staff (đặt tiền tố lg- để không đụng CSS khác). */
+@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Manrope:wght@400;500;600;700;800&display=swap');
+:root {
+  --lg-paper: #fff; --lg-ink: #332d29; --lg-muted: #766f69; --lg-line: #ddd7cf;
+  --lg-blue: #344bc5; --lg-orange: #d75227; --lg-green: #267c5b; --lg-red: #ba3341;
+  --lg-serif: 'DM Serif Display', serif; --lg-sans: Manrope, Arial, sans-serif;
+}
+.lg-toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 22px; font-family: var(--lg-sans); font-size: 14px; color: var(--lg-ink); }
+.lg-toolbar input[type='search'], .lg-toolbar select, .lg-field input, .lg-field textarea {
+  min-height: 45px; padding: 11px 13px; background: #fff; border: 1px solid var(--lg-line); border-radius: 3px; font: inherit; color: var(--lg-ink); }
+.lg-field textarea { width: 100%; }
+.lg-tablewrap { overflow: auto; max-width: 100%; font-family: var(--lg-sans); }
+.lg-table { width: 100%; border-collapse: collapse; background: #fff; font-size: 14px; color: var(--lg-ink); }
+.lg-table th, .lg-table td { text-align: left; padding: 13px; border-bottom: 1px solid var(--lg-line); vertical-align: middle; }
+.lg-table th { font-size: 10px; text-transform: uppercase; letter-spacing: .1em; color: var(--lg-muted); font-weight: 600; white-space: nowrap; }
+.lg-table th.num, .lg-table td.num { text-align: right; font-variant-numeric: tabular-nums; }
+.lg-table small { display: block; margin-top: 2px; color: var(--lg-muted); font-size: 12px; }
+.lg-btn { border: 1px solid var(--lg-ink); background: transparent; color: var(--lg-ink); padding: 13px 20px; border-radius: 3px;
+  font: 800 11px/1.2 var(--lg-sans); text-transform: uppercase; letter-spacing: .1em; cursor: pointer; }
+.lg-btn.primary { background: var(--lg-blue); border-color: var(--lg-blue); color: #fff; }
+.lg-btn.ghost { border-color: var(--lg-line); }
+.lg-btn.danger { border-color: var(--lg-line); color: var(--lg-red); }
+.lg-table .lg-btn { padding: 8px 11px; }
+.lg-btn:disabled { opacity: .45; cursor: not-allowed; }
+.lg-btn:focus-visible, .lg-field input:focus-visible, .lg-field textarea:focus-visible,
+.lg-toolbar input:focus-visible, .lg-toolbar select:focus-visible { outline: 2px solid var(--lg-blue); outline-offset: 2px; }
+.lg-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.lg-chip { display: inline-flex; align-items: center; gap: 5px; border: 1px solid var(--lg-line); padding: 5px 8px; border-radius: 99px;
+  font: 800 10px/1.2 var(--lg-sans); text-transform: uppercase; letter-spacing: .06em; white-space: nowrap; }
+.lg-info { background: #e9edff; color: #263aa6; border-color: #ced5ff; }
+.lg-ok { background: #e5f4ed; color: #176949; border-color: #c5e6d7; }
+.lg-warn { background: #fff0e8; color: #ad411c; border-color: #f4cfbd; }
+.lg-bad { background: #fdebed; color: #9d2935; border-color: #efcbd0; }
+.lg-muted { background: #f2f0e9; color: var(--lg-muted); }
+.lg-panel { background: var(--lg-paper); border: 1px solid var(--lg-line); padding: 20px; border-radius: 5px; margin-bottom: 22px; font-family: var(--lg-sans); color: var(--lg-ink); }
+.lg-panel h3 { font: 400 22px/1.1 var(--lg-serif); margin: 0 0 12px; }
+.lg-field { display: grid; gap: 7px; margin-bottom: 12px; max-width: 460px; }
+.lg-field label { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .09em; }
+.lg-msg { padding: 12px 15px; border-left: 4px solid var(--lg-orange); background: #fff5ed; margin-bottom: 22px; font: 500 13px var(--lg-sans); }
+.lg-msg.ok { border-left-color: var(--lg-green); background: #e5f4ed; }
+.lg-msg.err { border-left-color: var(--lg-red); background: #fdebed; }
+.lg-empty { padding: 55px; text-align: center; border: 1px dashed var(--lg-line); color: var(--lg-muted); font-family: var(--lg-sans); }
+.lg-pager { display: flex; justify-content: space-between; align-items: center; margin-top: 18px; font: 500 12px var(--lg-sans); color: var(--lg-muted); }
+.lg-pager > div { display: flex; gap: 8px; }
+.lg-low { color: var(--lg-orange); font-weight: 700; }
+@media (max-width: 560px) { .lg-table { min-width: 700px; } }
+
+/* ---- StaffLayout (header ngang + tab ngang theo mockup) ---- */
+.staff-root { min-height: 100vh; background: #faf8f3; color: var(--lg-ink); font-family: var(--lg-sans); font-size: 14px; }
+.staff-root *, .staff-root *::before, .staff-root *::after { box-sizing: border-box; }
+.staff-header { background: #fff; border-bottom: 1px solid var(--lg-line); }
+.staff-nav { height: 72px; max-width: 1500px; margin: auto; padding: 0 32px; display: flex; align-items: center; gap: 30px; }
+.staff-brand { font: 34px 'DM Serif Display', serif; color: inherit; text-decoration: none; }
+.staff-navicons { margin-left: auto; display: flex; gap: 10px; align-items: center; }
+.staff-iconbtn { width: 40px; height: 40px; border: 1px solid var(--lg-line); background: #fff; display: grid; place-items: center; border-radius: 4px; color: inherit; }
+.staff-icon { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 1.8; }
+.staff-shell { max-width: 1450px; margin: auto; padding: 46px 32px; }
+.staff-pagehead { display: flex; justify-content: space-between; align-items: end; border-bottom: 1px solid var(--lg-line); padding-bottom: 23px; margin-bottom: 30px; }
+.staff-eyebrow { font-size: 11px; text-transform: uppercase; font-weight: 800; letter-spacing: .15em; color: var(--lg-muted); }
+.staff-title { font: 400 clamp(38px, 5vw, 70px)/1 'DM Serif Display', serif; margin: 0; }
+.staff-date { color: var(--lg-muted); }
+.staff-tabs { display: flex; gap: 3px; overflow: auto; border-bottom: 1px solid var(--lg-line); margin-bottom: 25px; }
+.staff-tab { border: 0; background: transparent; padding: 13px 15px; white-space: nowrap; font: 800 11px var(--lg-sans); text-transform: uppercase; letter-spacing: .09em; border-bottom: 3px solid transparent; cursor: pointer; color: inherit; }
+.staff-tab.active { color: var(--lg-blue); border-bottom-color: var(--lg-blue); }
+.staff-tab:focus-visible, .staff-brand:focus-visible, .staff-iconbtn:focus-visible { outline: 2px solid var(--lg-blue); outline-offset: 2px; }
+@media (max-width: 900px) { .staff-nav { padding: 0 18px; } .staff-shell { padding-left: 18px; padding-right: 18px; } }
+@media (max-width: 560px) { .staff-nav { height: 62px; } .staff-brand { font-size: 29px; } .staff-pagehead { align-items: start; gap: 15px; } }
+/* Bố cục 2 cột chuẩn Mockup cho Báo cáo ngày */
+.lg-split {
+  display: grid;
+  grid-template-columns: 1.25fr 1fr;
+  gap: 24px;
+  align-items: start;
+}
+
+.lg-textarea {
+   display: block;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 12px 14px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.5;
+  resize: vertical;
+  margin-top: 12px;
+  margin-bottom: 12px;
+}
+
+.lg-summary-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 12px 0;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.lg-summary-row:last-child {
+  border-bottom: none;
+}
+
+.lg-summary-row p {
+  margin: 4px 0 0;
+  color: #374151;
+  white-space: pre-wrap;
+}
