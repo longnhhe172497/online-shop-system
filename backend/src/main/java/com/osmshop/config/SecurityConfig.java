@@ -74,9 +74,11 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/warehouse/returns/*/inspection").hasAuthority("PERM_WAREHOUSE_RETURN_INSPECT")
                         .requestMatchers(HttpMethod.GET, "/api/delivery/assignments").hasAuthority("PERM_DELIVERY_ASSIGNMENT_VIEW")
                         .requestMatchers(HttpMethod.PATCH, "/api/delivery/attempts/*").hasAuthority("PERM_DELIVERY_ATTEMPT_UPDATE")
+                        .requestMatchers("/api/manager/vouchers", "/api/manager/vouchers/*")
+                        .hasAuthority("PERM_MANAGER_VOUCHER_MANAGE")
                         .requestMatchers("/api/manager/**", "/api/support/**", "/api/warehouse/**", "/api/delivery/**")
                         .denyAll()
-                        .requestMatchers("/api/orders/**").hasRole("CUSTOMER")
+                        .requestMatchers("/api/orders", "/api/orders/**", "/api/payment-attempts/**").hasRole("CUSTOMER")
                         .anyRequest().authenticated())
                 .addFilterBefore(bearer, UsernamePasswordAuthenticationFilter.class)
                 .build();

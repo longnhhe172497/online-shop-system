@@ -18,6 +18,7 @@ public class RolePermissionService {
             new PermissionDefinition("MANAGER_ORDER_VIEW", "Xem đơn hàng", "Đơn hàng", "GET /manager/orders"),
             new PermissionDefinition("MANAGER_ORDER_ASSIGN", "Phân công giao hàng", "Đơn hàng", "POST /manager/orders/{id}/assign"),
             new PermissionDefinition("MANAGER_RETURN_DECIDE", "Quyết định trả hàng", "Hậu mãi", "POST /manager/returns/{id}/decision"),
+            new PermissionDefinition("MANAGER_VOUCHER_MANAGE", "Quản lý mã giảm giá", "Khuyến mãi", "GET/POST/PATCH/DELETE /manager/vouchers"),
             new PermissionDefinition("SUPPORT_ORDER_VIEW", "Xem đơn chờ xác nhận", "Đơn hàng", "GET /support/orders/pending"),
             new PermissionDefinition("SUPPORT_ORDER_CONFIRM", "Xác nhận đơn COD", "Đơn hàng", "POST /support/orders/{id}/confirm"),
             new PermissionDefinition("WAREHOUSE_PACK_VIEW", "Xem hàng cần đóng gói", "Kho", "GET /warehouse/packing-queue"),

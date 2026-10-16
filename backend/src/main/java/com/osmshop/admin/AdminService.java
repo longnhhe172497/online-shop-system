@@ -198,11 +198,13 @@ public class AdminService {
             case "max_qr_attempts", "max_delivery_attempts" -> 10;
             case "return_window_days" -> 30;
             case "max_saved_addresses" -> 20;
+            case "shipping_fee" -> 1_000_000;
             default -> throw error(HttpStatus.NOT_FOUND, "NOT_FOUND", "Setting not found");
         };
+        int min = "shipping_fee".equals(key) ? 0 : 1;
         try {
             int parsed = Integer.parseInt(value);
-            if (parsed < 1 || parsed > max) throw new NumberFormatException();
+            if (parsed < min || parsed > max) throw new NumberFormatException();
             return Integer.toString(parsed);
         } catch (NumberFormatException exception) {
             throw error(HttpStatus.BAD_REQUEST, "INVALID_SETTING", "Setting out of allowed range");

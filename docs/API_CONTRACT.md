@@ -52,12 +52,12 @@ This is the **agreed route inventory for implementation**, not a claim that ever
 | `GET /cart` | C or guest session | none → cart items and current totals |
 | `POST /cart/items` | C or guest session | `{productId,quantity}` → cart; revalidate product and quantity |
 | `PATCH/DELETE /cart/items/{id}` | C or guest session | `{quantity}` / none → cart / `204` |
-| `POST /cart/voucher` | C | `{code}` → recalculated cart discount; final eligibility checked again at checkout |
-| `POST /orders` | C | `{addressId,paymentMethod,voucherCode?}` → order snapshot, status and total |
-| `GET /orders`, `GET /orders/{id}` | C | paging / ID → own order summaries/detail |
-| `POST /orders/{id}/cancel` | C | `{reason?}` → order status and refund-pending information if already paid |
-| `POST /orders/{id}/payment-attempts` | C | none → simulated QR attempt `{id,code,expiresAt,status}` after stock/voucher revalidation |
-| `POST /payment-attempts/{id}/simulate` | C (own) | `{outcome:SUCCESS\|FAILURE}` → new attempt/payment and order status; development simulation only |
+| `POST /orders/preview` (replaces `POST /cart/voucher`) | C | `{voucherCode?}` → read-only quote of the `ACTIVE` cart: lines with `problem` (`PRODUCT_UNAVAILABLE`/`INSUFFICIENT_STOCK`), subtotal, discount, shipping, total, `canPlaceOrder` **implemented**; voucher errors as for `POST /orders`; final eligibility is checked again at checkout |
+| `POST /orders` | C | `{addressId,paymentMethod,voucherCode?}` → `201` order detail **implemented**. Uses the caller's `ACTIVE` cart, locks product rows, re-checks product/category status and available stock, reserves stock (`stock_reserved`, never `stock_on_hand`), reserves the voucher and marks the cart `CONVERTED`. `SIMULATED_QR` → `AWAITING_PAYMENT` with a `PENDING` attempt expiring after `qr_expiry_minutes`; `COD` → `PENDING_CONFIRMATION` with an `UNPAID` attempt. Flat `shipping_fee` system setting. Errors: `422 CART_EMPTY`, `404 ADDRESS_NOT_FOUND`, `409 PRODUCT_UNAVAILABLE`, `409 INSUFFICIENT_STOCK`, `422 VOUCHER_INVALID`, `422 VOUCHER_NOT_ACTIVE`, `422 VOUCHER_MIN_ORDER_NOT_MET`, `409 VOUCHER_USAGE_LIMIT_REACHED` |
+| `GET /orders`, `GET /orders/{id}` | C | paging / ID → own order summaries (newest first) / detail with items and latest payment attempt **implemented**; another customer's order → `404 ORDER_NOT_FOUND` |
+| `POST /orders/{id}/cancel` | C | `{reason?}` → order detail **implemented**. Allowed in `AWAITING_PAYMENT`, `PENDING_CONFIRMATION`, `CONFIRMED`; releases stock and voucher, cancels unfinished attempts; a paid order gets a `PENDING` simulated refund (`CANCELLED_PAID_ORDER`). Otherwise `409 ORDER_NOT_CANCELLABLE` |
+| `POST /orders/{id}/payment-attempts` | C | none → `201` order detail with the new `PENDING` attempt **implemented**. Re-checks product status, unchanged price (`409 PRICE_CHANGED`), stock and voucher; at most `max_qr_attempts`. Errors: `409 PAYMENT_RETRY_NOT_ALLOWED`, `PAYMENT_ATTEMPT_ALREADY_PENDING`, `PAYMENT_ATTEMPTS_EXHAUSTED` |
+| `POST /payment-attempts/{id}/simulate` | C (own) | `{outcome:SUCCESS\|FAILURE}` → order detail **implemented**; development simulation only. SUCCESS: attempt `PAID`, order `CONFIRMED`, voucher `CONSUMED`. FAILURE: attempt `FAILED`, stock and voucher released; after the last allowed attempt the order is `CANCELLED`. Overdue → `409 PAYMENT_ATTEMPT_EXPIRED`. A background job expires overdue attempts every 30 s |
 | `GET /orders/{id}/shipment` | C | none → own delivery status/history |
 | `GET /support/orders/pending`, `POST /support/orders/{id}/confirm` | S | none / `{note?}` → COD queue / confirmed order |
 | `GET /warehouse/packing-queue`, `POST /warehouse/orders/{id}/pack` | W | none / `{note?}` → queue / order ready for delivery |
@@ -73,7 +73,8 @@ This is the **agreed route inventory for implementation**, not a claim that ever
 | `POST /order-items/{id}/review` | C (own delivered item) | `{rating,comment?}` → review |
 | `GET /products/{id}/reviews` | P | paging → visible reviews |
 | `PATCH /manager/reviews/{id}` | M | `{status}` → moderated review |
-| `GET/POST/PATCH/DELETE /manager/products`, `/manager/categories`, `/manager/vouchers` | M | feature DTO → catalog/promotion resource; exact ID routes in OpenAPI |
+| `GET/POST/PATCH/DELETE /manager/products`, `/manager/categories` | M | feature DTO → catalog resource; exact ID routes in OpenAPI |
+| `GET/POST /manager/vouchers`, `PATCH/DELETE /manager/vouchers/{id}` | M (`MANAGER_VOUCHER_MANAGE`) | `{code,discountType,discountValue,maxDiscount?,minOrderAmount,usageLimit,validFrom,validUntil,status}` → voucher with `usedCount` **implemented**. Codes are stored upper-case and unique (`409 VOUCHER_CODE_EXISTS`); a used voucher cannot be deleted (`409 VOUCHER_IN_USE`) and its `usageLimit` cannot drop below usage (`409 VOUCHER_LIMIT_BELOW_USAGE`) |
 | `GET /manager/dashboard`, `GET /manager/reports` | M | date/filter → aggregate metrics/exportable data |
 | `POST /staff/daily-reports` | S/W/D | `{reportDate,content}` → report |
 | `GET /manager/daily-reports` | M | paging/date/staff → report page |
