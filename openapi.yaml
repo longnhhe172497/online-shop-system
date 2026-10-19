@@ -179,27 +179,49 @@ paths:
         '404': { description: Address is not owned by current Customer }
   /products:
     get:
-      summary: List active products in active categories
+      summary: Search active products in active categories
       parameters:
-        - in: query
-          name: page
-          schema: { type: integer, minimum: 0, default: 0 }
-        - in: query
-          name: size
-          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+        - { in: query, name: page, schema: { type: integer, minimum: 0, default: 0 } }
+        - { in: query, name: size, schema: { type: integer, minimum: 1, maximum: 100, default: 20 } }
+        - { in: query, name: q, description: Matches name, description or category name (wildcards are literal), schema: { type: string, maxLength: 100 } }
+        - { in: query, name: categoryId, schema: { type: integer, format: int64, minimum: 1 } }
+        - { in: query, name: minPrice, schema: { type: number, minimum: 0 } }
+        - { in: query, name: maxPrice, schema: { type: number, minimum: 0 } }
+        - { in: query, name: sort, schema: { type: string, enum: [newest, price_asc, price_desc, name], default: newest } }
       responses:
         '200':
           description: Product page
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/ProductPage'
+              schema: { $ref: '#/components/schemas/ProductPage' }
         '400':
-          description: Invalid pagination parameters
+          description: Invalid parameters, or minPrice greater than maxPrice
           content:
             application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+  /products/{id}:
+    get:
+      summary: Product detail with rating from visible reviews
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: integer, format: int64, minimum: 1 } }
+      responses:
+        '200':
+          description: Product detail
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ProductDetail' }
+        '404': { description: Product missing, not ACTIVE, or its category is not ACTIVE }
+  /categories:
+    get:
+      summary: List active categories (flat list)
+      responses:
+        '200':
+          description: Categories ordered by name
+          content:
+            application/json:
               schema:
-                $ref: '#/components/schemas/Problem'
+                type: array
+                items: { $ref: '#/components/schemas/Category' }
   /admin/users:
     get:
       summary: Search managed accounts (Admin only)
@@ -1076,6 +1098,22 @@ components:
         size: { type: integer }
         totalItems: { type: integer, format: int64 }
         totalPages: { type: integer, format: int64 }
+    ProductDetail:
+      allOf:
+        - { $ref: '#/components/schemas/Product' }
+        - type: object
+          required: [categoryId, reviewCount]
+          properties:
+            categoryId: { type: integer, format: int64 }
+            avgRating: { type: number, nullable: true, description: Average of VISIBLE reviews, one decimal }
+            reviewCount: { type: integer, format: int64, minimum: 0 }
+    Category:
+      type: object
+      required: [id, name]
+      properties:
+        id: { type: integer, format: int64 }
+        name: { type: string }
+        description: { type: string, nullable: true }
     Problem:
       type: object
       properties:
