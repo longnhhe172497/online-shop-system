@@ -3,6 +3,7 @@ import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
 import { listProducts } from './api/products'
+import { listCategories } from './api/catalog'
 import { confirmPasswordReset, getGoogleConfig, getGoogleLinkStatus, getMe, login, loginWithGoogle,
   registerAccount, requestPasswordReset,
   resendVerification, verifyMfa } from './api/auth'
@@ -13,6 +14,7 @@ import { getUserDetail, inviteStaff, listAudit, listInvitations, listSettings, l
   resendInvitation, revokeUserSessions } from './api/admin'
 
 vi.mock('./api/products', () => ({ listProducts: vi.fn() }))
+vi.mock('./api/catalog', () => ({ listCategories: vi.fn(), getProduct: vi.fn() }))
 vi.mock('./api/auth', () => ({
   login: vi.fn(), registerAccount: vi.fn(), getMe: vi.fn(), logout: vi.fn(), verifyAccount: vi.fn(),
   requestPasswordReset: vi.fn(), confirmPasswordReset: vi.fn(), resendVerification: vi.fn(), verifyMfa: vi.fn(),
@@ -39,7 +41,8 @@ describe('App', () => {
     vi.mocked(getMe).mockRejectedValue(new Error('Không có phiên'))
     vi.mocked(getGoogleConfig).mockResolvedValue({ enabled: false, clientId: '' })
     vi.mocked(getGoogleLinkStatus).mockResolvedValue({ linked: false })
-    vi.mocked(getAccountLimits).mockResolvedValue({ maxSavedAddresses: 10 }) })
+    vi.mocked(getAccountLimits).mockResolvedValue({ maxSavedAddresses: 10 })
+    vi.mocked(listCategories).mockResolvedValue([]) })
   afterEach(() => { cleanup(); delete window.google })
 
   it('uses the Google credential to open a customer session', async () => {
