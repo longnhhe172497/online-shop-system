@@ -27,7 +27,10 @@ public class RolePermissionService {
             new PermissionDefinition("WAREHOUSE_INVENTORY_ADJUST", "Điều chỉnh tồn kho", "Kho", "POST /warehouse/inventory/adjustments"),
             new PermissionDefinition("WAREHOUSE_RETURN_INSPECT", "Kiểm tra hàng trả", "Hậu mãi", "POST /warehouse/returns/{id}/inspection"),
             new PermissionDefinition("DELIVERY_ASSIGNMENT_VIEW", "Xem chuyến giao được phân", "Giao hàng", "GET /delivery/assignments"),
-            new PermissionDefinition("DELIVERY_ATTEMPT_UPDATE", "Cập nhật lần giao", "Giao hàng", "PATCH /delivery/attempts/{id}"));
+            new PermissionDefinition("DELIVERY_ATTEMPT_UPDATE", "Cập nhật lần giao", "Giao hàng", "PATCH /delivery/attempts/{id}"),
+            new PermissionDefinition("MANAGER_PRODUCT_MANAGE", "Quản lý sản phẩm", "Danh mục", "GET/POST/PATCH /manager/products"),
+            new PermissionDefinition("MANAGER_CATEGORY_MANAGE", "Quản lý danh mục", "Danh mục", "GET/POST/PATCH /manager/categories"),
+            new PermissionDefinition("MANAGER_REVIEW_MODERATE", "Duyệt đánh giá", "Danh mục", "GET/PATCH /manager/reviews"));
     private static final List<String> EDITABLE_ROLES = List.of("MANAGER", "SUPPORT", "WAREHOUSE", "DELIVERY");
     private static final Set<String> CODES = CATALOG.stream().map(PermissionDefinition::code)
             .collect(java.util.stream.Collectors.toUnmodifiableSet());

@@ -14,7 +14,7 @@ This is the **agreed route inventory for implementation**, not a claim that ever
 - Authentication supports `Authorization: Bearer <opaque-token>` for API clients and an HttpOnly `FORME_SESSION` cookie for the browser. Only the SHA-256 token hash is stored in `user_sessions`; sessions have a 24-hour absolute lifetime and expire after 30 minutes without an authenticated request (server-enforced). There is no refresh token. Browser writes require the `X-XSRF-TOKEN` header obtained from `GET /auth/csrf`. Sessions are rechecked against user status on every request. MFA-enabled accounts complete an email-code or TOTP challenge, selected by `mfaMethod`; a previously issued, unused recovery code may replace the factor at login. The browser warns after about 25 idle minutes, but the server decides whether a session is valid.
 - Optional Google Identity Services sign-in exchanges a signed Google ID token for the existing browser session/MFA flow. New users are `CUSTOMER` only. Existing emails require explicit linking after password login; Google email alone never grants an existing account or staff role. `GOOGLE_CLIENT_ID` is a public OAuth Web client ID, not a client secret.
 - QR and refunds are local simulations. They must say so in API and UI; never imply real money has moved.
-
+- Guest carts use an HttpOnly `FORME_CART` cookie holding a random token; only its SHA-256 hash is stored. On login the guest cart merges into the customer cart (quantities summed, capped at available stock) and the guest cart expires. Carts never reserve stock; checkout revalidates price and stock. Categories are a flat list and product "combos" are out of scope; promotions are vouchers only (Stream C).
 ## Endpoint ownership and minimum request/response fields
 
 `P` = public, `C` = customer-owned resource, `M` = Manager, `S` = Support, `W` = Warehouse, `D` = Delivery, `A` = Admin. All mutating endpoints require an authenticated actor except registration, verification, login and password-reset routes. The feature owner must define precise validation and example values in OpenAPI.
@@ -22,9 +22,9 @@ This is the **agreed route inventory for implementation**, not a claim that ever
 | Method and path | Role | Minimum request → response |
 | --- | --- | --- |
 | `GET /health` | P | none → `{status, service, timestamp}` |
-| `GET /products` | P | `page,size` → page of `{id,sku,name,description,imageUrl,price,categoryName,availableQuantity}` **implemented** |
-| `GET /products/{id}` | P | none → product detail |
-| `GET /categories` | P | none → active categories |
+| `GET /products` | P | `page,size,q,categoryId,minPrice,maxPrice,sort` (`newest`, `price_asc`, `price_desc`, `name`) → page of products; only ACTIVE products in ACTIVE categories. `q` matches name, description and category name. |
+| `GET /products/{id}` | P | none → `{...product, avgRating, reviewCount}`; `404` if the product or its category is not ACTIVE |
+| `GET /categories` | P | none → ACTIVE categories `{id,name,description}` (flat list, no parent) |
 | `POST /auth/register` | P | `{email,password,confirmPassword,fullName,phone}` → `{userId,verificationRequired,emailSent}`; passwords must match |
 | `POST /auth/verify` | P | `{token}` → `{verified}` |
 | `POST /auth/login` | P | `{email,password}` → `{accessToken,expiresAt,user:{id,fullName,role}}`; opaque 24-hour bearer token |
@@ -49,9 +49,9 @@ This is the **agreed route inventory for implementation**, not a claim that ever
 | `POST /me/email-change`, `POST /auth/email-change/confirm` | authenticated / P | current password + new email sends a 30-minute link; confirmation changes login email and revokes sessions |
 | `GET/POST /me/addresses` | C | none / `{recipientName,phone,addressLine,ward,district,province,isDefault}` → own addresses / created address; first address becomes default, max from `max_saved_addresses` setting |
 | `PATCH/DELETE /me/addresses/{id}` | C | complete address fields / none → updated address / `204`; owner check uses bearer user ID, deleting default promotes oldest remaining address |
-| `GET /cart` | C or guest session | none → cart items and current totals |
-| `POST /cart/items` | C or guest session | `{productId,quantity}` → cart; revalidate product and quantity |
-| `PATCH/DELETE /cart/items/{id}` | C or guest session | `{quantity}` / none → cart / `204` |
+| `GET /cart` | C or guest | none → `{items:[{id,productId,name,unitPrice,quantity,availableQuantity,lineTotal,warning?}],subtotal}`; lines with a `warning` (`OUT_OF_STOCK`, `PRODUCT_UNAVAILABLE`) are excluded from `subtotal` |
+| `POST /cart/items` | C or guest | `{productId,quantity}` → cart; quantity added to an existing line; `409` if the total exceeds available stock |
+| `PATCH/DELETE /cart/items/{id}` | C or guest | `{quantity}` / none → cart; another cart's item ID returns `404` |
 | `POST /orders/preview` (replaces `POST /cart/voucher`) | C | `{voucherCode?}` → read-only quote of the `ACTIVE` cart: lines with `problem` (`PRODUCT_UNAVAILABLE`/`INSUFFICIENT_STOCK`), subtotal, discount, shipping, total, `canPlaceOrder` **implemented**; voucher errors as for `POST /orders`; final eligibility is checked again at checkout |
 | `POST /orders` | C | `{addressId,paymentMethod,voucherCode?}` → `201` order detail **implemented**. Uses the caller's `ACTIVE` cart, locks product rows, re-checks product/category status and available stock, reserves stock (`stock_reserved`, never `stock_on_hand`), reserves the voucher and marks the cart `CONVERTED`. `SIMULATED_QR` → `AWAITING_PAYMENT` with a `PENDING` attempt expiring after `qr_expiry_minutes`; `COD` → `PENDING_CONFIRMATION` with an `UNPAID` attempt. Flat `shipping_fee` system setting. Errors: `422 CART_EMPTY`, `404 ADDRESS_NOT_FOUND`, `409 PRODUCT_UNAVAILABLE`, `409 INSUFFICIENT_STOCK`, `422 VOUCHER_INVALID`, `422 VOUCHER_NOT_ACTIVE`, `422 VOUCHER_MIN_ORDER_NOT_MET`, `409 VOUCHER_USAGE_LIMIT_REACHED` |
 | `GET /orders`, `GET /orders/{id}` | C | paging / ID → own order summaries (newest first) / detail with items and latest payment attempt **implemented**; another customer's order → `404 ORDER_NOT_FOUND` |
@@ -70,10 +70,12 @@ This is the **agreed route inventory for implementation**, not a claim that ever
 | `POST /manager/returns/{id}/decision` | M | `{decision,approvedAmount?,reason}` → approved/rejected status; refund simulated/manual |
 | `POST /support/tickets`, `GET /support/tickets` | C | `{subject,orderId?,message}` / paging → ticket / own tickets |
 | `GET /support/tickets/{id}`, `POST /support/tickets/{id}/messages` | C (own) or S | none / `{message}` → conversation / new message |
-| `POST /order-items/{id}/review` | C (own delivered item) | `{rating,comment?}` → review |
-| `GET /products/{id}/reviews` | P | paging → visible reviews |
-| `PATCH /manager/reviews/{id}` | M | `{status}` → moderated review |
-| `GET/POST/PATCH/DELETE /manager/products`, `/manager/categories` | M | feature DTO → catalog resource; exact ID routes in OpenAPI |
+| `POST /order-items/{id}/review`, `PATCH /order-items/{id}/review` | C (own delivered item) | `{rating 1-5,comment?}` → review; `409` if one already exists (use PATCH to edit) |
+| `GET /products/{id}/reviews` | P | `page,size` → VISIBLE reviews only |
+| `GET /manager/reviews`, `PATCH /manager/reviews/{id}` | M (`MANAGER_REVIEW_MODERATE`) | `status` filter / `{status: VISIBLE\|HIDDEN}` |
+| `GET/POST /manager/products`, `PATCH /manager/products/{id}`, `PATCH /manager/products/{id}/status` | M (`MANAGER_PRODUCT_MANAGE`) | product DTO; new products start `DRAFT` with stock 0; stock fields are never writable here; no hard delete |
+| `GET/POST /manager/categories`, `PATCH /manager/categories/{id}` | M (`MANAGER_CATEGORY_MANAGE`) | `{name,description,status}`; a category holding ACTIVE products cannot be archived |
+| `GET/POST/PATCH/DELETE /manager/vouchers` | M | feature DTO → promotion resource (Stream C); exact ID routes in OpenAPI |
 | `GET/POST /manager/vouchers`, `PATCH/DELETE /manager/vouchers/{id}` | M (`MANAGER_VOUCHER_MANAGE`) | `{code,discountType,discountValue,maxDiscount?,minOrderAmount,usageLimit,validFrom,validUntil,status}` → voucher with `usedCount` **implemented**. Codes are stored upper-case and unique (`409 VOUCHER_CODE_EXISTS`); a used voucher cannot be deleted (`409 VOUCHER_IN_USE`) and its `usageLimit` cannot drop below usage (`409 VOUCHER_LIMIT_BELOW_USAGE`) |
 | `GET /manager/dashboard`, `GET /manager/reports` | M | date/filter → aggregate metrics/exportable data |
 | `POST /staff/daily-reports` | S/W/D | `{reportDate,content}` → report |
