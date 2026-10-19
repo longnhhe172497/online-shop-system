@@ -19,7 +19,17 @@ export interface Page<T> {
   totalPages: number
 }
 
-export async function listProducts(page = 0, size = 20): Promise<Page<Product>> {
-  const response = await api.get<Page<Product>>('/products', { params: { page, size } })
+export type ProductSort = 'newest' | 'price_asc' | 'price_desc' | 'name'
+
+export interface ProductQuery {
+  q?: string
+  categoryId?: number
+  minPrice?: number
+  maxPrice?: number
+  sort?: ProductSort
+}
+
+export async function listProducts(page = 0, size = 20, query: ProductQuery = {}): Promise<Page<Product>> {
+  const response = await api.get<Page<Product>>('/products', { params: { page, size, ...query } })
   return response.data
 }
