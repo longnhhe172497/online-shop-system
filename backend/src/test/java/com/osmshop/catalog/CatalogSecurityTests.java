@@ -27,7 +27,7 @@ class CatalogSecurityTests {
     @Test
     void publicCatalogAndCartRoutesDoNotRequireLogin() throws Exception {
         mvc.perform(get("/api/categories")).andExpect(status().isNotFound());
-        mvc.perform(get("/api/cart")).andExpect(status().isNotFound());
+        mvc.perform(get("/api/cart")).andExpect(status().isOk());
     }
 
     @Test

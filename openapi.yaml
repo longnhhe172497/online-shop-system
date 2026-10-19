@@ -200,6 +200,71 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
+  /cart:
+    get:
+      summary: Current cart of the signed-in Customer or the guest FORME_CART cookie
+      responses:
+        '200':
+          description: Cart; empty when there is no cart yet
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Cart' }
+        '403': { description: Staff accounts cannot use the cart }
+  /cart/items:
+    post:
+      summary: Add a product; quantities for the same product are added together
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [productId, quantity]
+              properties:
+                productId: { type: integer, format: int64, minimum: 1 }
+                quantity: { type: integer, minimum: 1, maximum: 99 }
+      responses:
+        '200':
+          description: Updated cart. The first guest add also sets an HttpOnly FORME_CART cookie.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Cart' }
+        '400': { description: Invalid product ID or quantity }
+        '403': { description: Staff account, or CSRF token missing for a request with a cart or session cookie }
+        '404': { description: Product not found }
+        '409': { description: PRODUCT_UNAVAILABLE, INSUFFICIENT_STOCK or QUANTITY_LIMIT }
+        '429': { description: Too many new guest carts from this address }
+  /cart/items/{id}:
+    parameters:
+      - { in: path, name: id, required: true, schema: { type: integer, format: int64 } }
+    patch:
+      summary: Change a line's quantity (raising it is stock-checked)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [quantity]
+              properties:
+                quantity: { type: integer, minimum: 1, maximum: 99 }
+      responses:
+        '200':
+          description: Updated cart
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Cart' }
+        '404': { description: Line not in the caller's cart }
+        '409': { description: PRODUCT_UNAVAILABLE or INSUFFICIENT_STOCK }
+    delete:
+      summary: Remove a line from the caller's cart
+      responses:
+        '200':
+          description: Updated cart
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Cart' }
+        '404': { description: Line not in the caller's cart }
   /admin/users:
     get:
       summary: Search managed accounts (Admin only)
@@ -1076,6 +1141,29 @@ components:
         size: { type: integer }
         totalItems: { type: integer, format: int64 }
         totalPages: { type: integer, format: int64 }
+    CartLine:
+      type: object
+      required: [id, productId, sku, name, unitPrice, quantity, availableQuantity, lineTotal]
+      properties:
+      id: { type: integer, format: int64 }
+      productId: { type: integer, format: int64 }
+      sku: { type: string }
+      name: { type: string }
+      imageUrl: { type: string, nullable: true }
+      unitPrice: { type: number, description: Current price; checkout revalidates }
+      quantity: { type: integer, minimum: 1, maximum: 99 }
+      availableQuantity: { type: integer, minimum: 0 }
+      lineTotal: { type: number }
+      warning: { type: string, nullable: true, enum: [PRODUCT_UNAVAILABLE, INSUFFICIENT_STOCK] }
+    Cart:
+      type: object
+      required: [items, itemCount, subtotal]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/CartLine' }
+        itemCount: { type: integer, description: Sum of quantities, for the header badge }
+        subtotal: { type: number, description: Lines with a warning are excluded }
     Problem:
       type: object
       properties:
