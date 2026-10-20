@@ -7,7 +7,7 @@ spring:
     password: ${DB_PASSWORD:online_shop_local}
   jpa:
     hibernate:
-      ddl-auto: none
+      ddl-auto: validate
     open-in-view: false
   flyway:
     enabled: true

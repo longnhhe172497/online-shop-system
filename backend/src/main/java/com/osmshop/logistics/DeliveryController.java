@@ -35,12 +35,13 @@ public class DeliveryController {
 
     @GetMapping("/shipments")
     public PageResponse<ShipmentListItem> shipments(@AuthenticationPrincipal AuthPrincipal actor,
-            Authentication authentication,
-            @RequestParam(defaultValue = "MINE") DeliveryService.Scope scope,
-            @RequestParam(required = false) ShipmentStatus status,
-            @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int size) {
-        return service.list(actor.id(), isAdmin(authentication), scope, status, page, size);
-    }
+        Authentication authentication,
+        @RequestParam(defaultValue = "MINE") DeliveryService.Scope scope,
+        @RequestParam(required = false) ShipmentStatus status,
+        @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int size) {
+    long actorId = actor != null ? actor.id() : 0L;
+    return service.list(actorId, isAdmin(authentication), scope, status, page, size);
+}
 
     @GetMapping("/shipments/{id}")
     public ShipmentDetailResponse shipment(@AuthenticationPrincipal AuthPrincipal actor,
