@@ -56,10 +56,16 @@ public final class LogisticsDtos {
     public record ShipmentDetailResponse(ShipmentListItem shipment, List<OrderItemView> items,
                                          List<HistoryView> history) {}
 
+    public record DeliveryResultRow(long historyId, long shipmentId, String orderCode, String trackingNumber,
+                                    String recipientName, String deliveryAddress, ShipmentStatus status,
+                                    BigDecimal codCollectedAmount, String note, OffsetDateTime timestamp) {}
+
+    public record DeliveryDailyReport(LocalDate date, int deliveredCount, int failedCount,
+                                      BigDecimal totalCodCollected, List<DeliveryResultRow> results) {}
+
     // ---- Báo cáo ngày (bảng staff_daily_reports) ----
     public record DailyReportRequest(@NotBlank @Size(max = 4000) String content) {}
 
-    /** timeAgo: "Today", "Yesterday", hoặc ngày dd/MM/yyyy nếu cũ hơn. */
     public record DailyReportView(long id, String staffName, LocalDate reportDate, String timeAgo,
                                   String content, OffsetDateTime updatedAt, boolean mine) {}
 }

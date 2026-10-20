@@ -5,7 +5,9 @@ import com.osmshop.logistics.LogisticsDtos.OrderItemView;
 import com.osmshop.logistics.LogisticsDtos.ShipmentDetailResponse;
 import com.osmshop.logistics.LogisticsDtos.ShipmentListItem;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -14,9 +16,10 @@ import java.util.stream.Collectors;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
-/** Truy vấn đọc dùng chung (đơn hàng, dòng hàng) và lắp ráp response vận đơn. */
 @Component
 public class LogisticsQueries {
+    private static final String DEFAULT_ZONE = "Asia/Ho_Chi_Minh";
+
     public record OrderInfo(long id, String orderCode, String recipientName, String recipientPhone,
                             String deliveryAddress, BigDecimal totalAmount, String paymentMethod,
                             String paymentStatus, String status, OffsetDateTime createdAt) {}
@@ -34,9 +37,12 @@ public class LogisticsQueries {
     public Map<Long, OrderInfo> orders(Collection<Long> ids) {
         if (ids.isEmpty()) return Map.of();
         List<OrderInfo> rows = jdbc.query("""
-                SELECT id,order_code,recipient_name,recipient_phone,delivery_address,total_amount,
-                       payment_method,payment_status,status,created_at
-                FROM orders WHERE id IN (""" + marks(ids.size()) + ")",
+                SELECT o.id, o.order_code, o.recipient_name, o.recipient_phone, o.shipping_address, o.total_amount,
+                       o.payment_method,
+                       COALESCE((SELECT pa.status FROM payment_attempts pa WHERE pa.order_id = o.id ORDER BY pa.attempt_number DESC LIMIT 1),
+                                CASE WHEN o.payment_method = 'COD' THEN 'UNPAID' ELSE 'PAID' END),
+                       o.status, o.created_at
+                FROM orders o WHERE o.id IN (""" + marks(ids.size()) + ")",
                 (rs, row) -> new OrderInfo(rs.getLong(1), rs.getString(2), rs.getString(3), rs.getString(4),
                         rs.getString(5), rs.getBigDecimal(6), rs.getString(7), rs.getString(8),
                         rs.getString(9), rs.getObject(10, OffsetDateTime.class)),
@@ -47,7 +53,7 @@ public class LogisticsQueries {
     public Map<Long, List<OrderItemView>> items(Collection<Long> orderIds) {
         if (orderIds.isEmpty()) return Map.of();
         List<ItemRow> rows = jdbc.query("""
-                SELECT order_id,product_id,product_name,sku,quantity
+                SELECT order_id, product_id, name_snapshot, sku_snapshot, quantity
                 FROM order_items WHERE order_id IN (""" + marks(orderIds.size()) + ") ORDER BY id",
                 (rs, row) -> new ItemRow(rs.getLong(1),
                         new OrderItemView(rs.getLong(2), rs.getString(3), rs.getString(4), rs.getInt(5))),
@@ -57,21 +63,52 @@ public class LogisticsQueries {
     }
 
     public ShipmentListItem listItem(Shipment s, OrderInfo o) {
-        return new ShipmentListItem(s.getId(), s.getOrderId(), o.orderCode(), s.getTrackingNumber(),
+        String tracking = s.getTrackingNumber() != null ? s.getTrackingNumber()
+                : (o != null ? "TRK-" + o.orderCode() : null);
+        List<ShipmentStatusHistory> attemptList = s.getId() == null ? List.of()
+                : histories.findByShipmentIdOrderByIdAsc(s.getId());
+        String latestReason = s.getFailedReason();
+        if (latestReason == null && !attemptList.isEmpty()) {
+            ShipmentStatusHistory last = attemptList.get(attemptList.size() - 1);
+            if (last.getNewStatus() == ShipmentStatus.DELIVERY_FAILED) {
+                latestReason = last.getNote();
+            }
+        }
+        return new ShipmentListItem(s.getId(), s.getOrderId(),
+                o != null ? o.orderCode() : "", tracking,
                 s.getCarrierName(), s.getStatus(), s.getDeliveryStaffId(), s.getWarehouseStaffId(),
-                o.recipientName(), o.recipientPhone(), o.deliveryAddress(), o.paymentMethod(), o.totalAmount(),
-                s.getCodAmount(), s.isCodCollected(), s.getDeliveryNotes(), s.getFailedReason(),
+                o != null ? o.recipientName() : "", o != null ? o.recipientPhone() : "",
+                o != null ? o.deliveryAddress() : "", o != null ? o.paymentMethod() : "COD",
+                o != null ? o.totalAmount() : BigDecimal.ZERO,
+                s.getCodAmount(), s.isCodCollected(), s.getDeliveryNotes(), latestReason,
                 s.getCreatedAt(), s.getDispatchedAt(), s.getDeliveredAt());
     }
 
     public ShipmentDetailResponse detail(Shipment s) {
         OrderInfo order = orders(List.of(s.getOrderId())).get(s.getOrderId());
         List<OrderItemView> items = items(List.of(s.getOrderId())).getOrDefault(s.getOrderId(), List.of());
-        List<HistoryView> history = histories.findByShipmentIdOrderByIdAsc(s.getId()).stream()
+        List<HistoryView> history = s.getId() == null ? List.of()
+                : histories.findByShipmentIdOrderByIdAsc(s.getId()).stream()
                 .map(h -> new HistoryView(h.getId(), h.getPreviousStatus(), h.getNewStatus(), h.getNote(),
                         h.getUpdatedBy(), h.getCreatedAt()))
                 .toList();
         return new ShipmentDetailResponse(listItem(s, order), items, history);
+    }
+
+    public String reportZone() {
+        List<String> values = jdbc.query(
+                "SELECT value_text FROM system_settings WHERE setting_key='reporting_time_zone'",
+                (rs, row) -> rs.getString(1));
+        return values.isEmpty() || values.get(0) == null || values.get(0).isBlank()
+                ? DEFAULT_ZONE : values.get(0).trim();
+    }
+
+    public LocalDate today(String zone) {
+        try {
+            return LocalDate.now(ZoneId.of(zone));
+        } catch (Exception e) {
+            return LocalDate.now(ZoneId.of(DEFAULT_ZONE));
+        }
     }
 
     private static String marks(int count) {

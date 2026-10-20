@@ -2,11 +2,14 @@ package com.osmshop.logistics;
 
 import com.osmshop.api.PageResponse;
 import com.osmshop.auth.AuthApiException;
+import com.osmshop.logistics.LogisticsDtos.DeliveryDailyReport;
+import com.osmshop.logistics.LogisticsDtos.DeliveryResultRow;
 import com.osmshop.logistics.LogisticsDtos.ShipmentDetailResponse;
 import com.osmshop.logistics.LogisticsDtos.ShipmentListItem;
 import com.osmshop.logistics.LogisticsDtos.UpdateShipmentStatusRequest;
 import com.osmshop.logistics.LogisticsQueries.OrderInfo;
 import jakarta.persistence.criteria.Predicate;
+import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -84,18 +87,24 @@ public class DeliveryServiceImpl implements DeliveryService {
 
         OffsetDateTime now = OffsetDateTime.now();
         String note = blankToNull(request.note());
+        List<ShipmentStatusHistory> existingAttempts = histories.findByShipmentIdOrderByIdAsc(shipmentId);
+
         switch (next) {
-            case SHIPPING -> {
-                if (previous == ShipmentStatus.DELIVERY_FAILED) {
-                    long failures = histories.countByShipmentIdAndNewStatus(shipmentId, ShipmentStatus.DELIVERY_FAILED);
-                    if (failures >= maxDeliveryAttempts()) throw error(HttpStatus.CONFLICT, "MAX_ATTEMPTS_REACHED",
-                            "Vận đơn đã đạt số lần giao tối đa.");
-                }
+            case SHIPPING, IN_TRANSIT -> {
+                long failures = histories.countByShipmentIdAndNewStatus(shipmentId, ShipmentStatus.DELIVERY_FAILED);
+                if (failures >= maxDeliveryAttempts()) throw error(HttpStatus.CONFLICT, "MAX_ATTEMPTS_REACHED",
+                        "Vận đơn đã đạt số lần giao tối đa.");
                 if (s.getDeliveryStaffId() == null) s.setDeliveryStaffId(actorId);
                 s.setDispatchedAt(now);
                 s.setFailedReason(null);
-                jdbc.update("UPDATE orders SET status='SHIPPING',updated_at=now() WHERE id=? AND status IN ('PACKED','SHIPPING')",
+                jdbc.update("""
+                        UPDATE orders SET status='DELIVERING', updated_at=now()
+                        WHERE id=? AND status IN ('READY_FOR_DELIVERY','ASSIGNED','DELIVERING','DELIVERY_FAILED')""",
                         s.getOrderId());
+
+                short nextAttemptNo = (short) Math.min(2, existingAttempts.size() + 1);
+                histories.save(new ShipmentStatusHistory(shipmentId, nextAttemptNo, previous,
+                        ShipmentStatus.SHIPPING, note, actorId));
             }
             case DELIVERED -> {
                 boolean cod = s.getCodAmount().signum() > 0;
@@ -104,10 +113,15 @@ public class DeliveryServiceImpl implements DeliveryService {
                 s.setCodCollected(cod);
                 s.setDeliveredAt(now);
                 s.setFailedReason(null);
-                jdbc.update("""
-                        UPDATE orders SET status='DELIVERED',
-                               payment_status = CASE WHEN payment_method='COD' THEN 'PAID' ELSE payment_status END,
-                               updated_at=now() WHERE id=?""", s.getOrderId());
+                jdbc.update("UPDATE orders SET status='DELIVERED', delivered_at=now(), updated_at=now() WHERE id=?",
+                        s.getOrderId());
+                if (cod) {
+                    jdbc.update("""
+                            UPDATE payment_attempts SET status='PAID', paid_at=now(), recorded_by=?
+                            WHERE order_id=? AND method='COD' AND status IN ('PENDING','UNPAID')""",
+                            actorId, s.getOrderId());
+                }
+                saveOrUpdateAttempt(existingAttempts, shipmentId, previous, ShipmentStatus.DELIVERED, note, actorId, now);
             }
             case DELIVERY_FAILED -> {
                 String reason = blankToNull(request.failedReason());
@@ -115,14 +129,67 @@ public class DeliveryServiceImpl implements DeliveryService {
                         "Cần nhập lý do giao thất bại.");
                 s.setFailedReason(reason);
                 if (note == null) note = reason;
+                jdbc.update("UPDATE orders SET status='DELIVERY_FAILED', updated_at=now() WHERE id=?",
+                        s.getOrderId());
+                saveOrUpdateAttempt(existingAttempts, shipmentId, previous, ShipmentStatus.DELIVERY_FAILED, reason, actorId, now);
             }
             default -> throw error(HttpStatus.BAD_REQUEST, "INVALID_TARGET_STATUS", "Trạng thái đích không hợp lệ.");
         }
         if (note != null) s.setDeliveryNotes(note);
-        s.setStatus(next);
+        s.setStatus(next == ShipmentStatus.IN_TRANSIT ? ShipmentStatus.SHIPPING : next);
         shipments.save(s);
-        histories.save(new ShipmentStatusHistory(shipmentId, previous, next, note, actorId));
         return queries.detail(s);
+    }
+
+    private void saveOrUpdateAttempt(List<ShipmentStatusHistory> existingAttempts, long shipmentId,
+                                     ShipmentStatus previous, ShipmentStatus target, String reasonOrNote,
+                                     long actorId, OffsetDateTime now) {
+        if (!existingAttempts.isEmpty()) {
+            ShipmentStatusHistory current = existingAttempts.get(existingAttempts.size() - 1);
+            if (current.getNewStatus() == ShipmentStatus.SHIPPING
+                    || current.getNewStatus() == ShipmentStatus.READY_FOR_DISPATCH) {
+                current.setNewStatus(target);
+                current.setNote(reasonOrNote);
+                current.setUpdatedBy(actorId);
+                current.setFinishedAt(now);
+                histories.save(current);
+                return;
+            }
+        }
+        short attemptNo = (short) Math.min(2, existingAttempts.size() + 1);
+        histories.save(new ShipmentStatusHistory(shipmentId, attemptNo, previous, target, reasonOrNote, actorId));
+    }
+
+    
+    @Transactional(readOnly = true)
+    public DeliveryDailyReport dailyReport(long actorId, boolean admin) {
+        String zone = queries.reportZone();
+        Object[] totals = jdbc.queryForObject("""
+                SELECT count(*) FILTER (WHERE h.status='DELIVERED'),
+                       count(*) FILTER (WHERE h.status='FAILED'),
+                       COALESCE(sum(s.cod_amount) FILTER (WHERE h.status='DELIVERED' AND s.cod_collected_at IS NOT NULL), 0)
+                FROM delivery_attempts h JOIN shipments s ON s.id=h.shipment_id
+                WHERE h.status IN ('DELIVERED','FAILED')
+                  AND (h.created_at AT TIME ZONE ?)::date = (now() AT TIME ZONE ?)::date
+                  AND (? = true OR h.delivery_staff_id = ?)""",
+                (rs, row) -> new Object[] {rs.getInt(1), rs.getInt(2), rs.getBigDecimal(3)},
+                zone, zone, admin, actorId);
+        List<DeliveryResultRow> results = jdbc.query("""
+                SELECT h.id, s.id, o.order_code, 'TRK-' || o.order_code, o.recipient_name, o.shipping_address, h.status,
+                       CASE WHEN h.status='DELIVERED' AND s.cod_collected_at IS NOT NULL THEN s.cod_amount ELSE 0 END,
+                       h.failure_reason, h.created_at
+                FROM delivery_attempts h
+                JOIN shipments s ON s.id=h.shipment_id JOIN orders o ON o.id=s.order_id
+                WHERE h.status IN ('DELIVERED','FAILED')
+                  AND (h.created_at AT TIME ZONE ?)::date = (now() AT TIME ZONE ?)::date
+                  AND (? = true OR h.delivery_staff_id = ?)
+                ORDER BY h.created_at DESC, h.id DESC LIMIT 500""",
+                (rs, row) -> new DeliveryResultRow(rs.getLong(1), rs.getLong(2), rs.getString(3), rs.getString(4),
+                        rs.getString(5), rs.getString(6), ShipmentStatus.fromDbValue(rs.getString(7)),
+                        rs.getBigDecimal(8), rs.getString(9), rs.getObject(10, OffsetDateTime.class)),
+                zone, zone, admin, actorId);
+        return new DeliveryDailyReport(queries.today(zone), (Integer) totals[0], (Integer) totals[1],
+                (BigDecimal) totals[2], results);
     }
 
     private int maxDeliveryAttempts() {
