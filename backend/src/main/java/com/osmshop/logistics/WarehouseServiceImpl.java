@@ -157,7 +157,10 @@ public class WarehouseServiceImpl implements WarehouseService {
                 UPDATE stock_reservations SET status='CONSUMED', finished_at=now()
                 WHERE order_item_id IN (SELECT id FROM order_items WHERE order_id=?) AND status='ACTIVE'""", orderId);
         jdbc.update("UPDATE orders SET status='READY_FOR_DELIVERY', updated_at=now() WHERE id=?", orderId);
-
+        String packNote = request == null ? null : blankToNull(request.notes());
+        if (packNote != null) {
+            jdbc.update("UPDATE orders SET internal_note=?, updated_at=now() WHERE id=?", packNote, orderId);
+        }
         boolean unpaidCod = "COD".equals(order.paymentMethod()) && !"PAID".equals(order.paymentStatus());
         Shipment shipment = new Shipment();
         shipment.setOrderId(orderId);

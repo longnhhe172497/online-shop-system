@@ -18,6 +18,7 @@ public class RolePermissionService {
             new PermissionDefinition("MANAGER_ORDER_VIEW", "Xem đơn hàng", "Đơn hàng", "GET /manager/orders"),
             new PermissionDefinition("MANAGER_ORDER_ASSIGN", "Phân công giao hàng", "Đơn hàng", "POST /manager/orders/{id}/assign"),
             new PermissionDefinition("MANAGER_RETURN_DECIDE", "Quyết định trả hàng", "Hậu mãi", "POST /manager/returns/{id}/decision"),
+            new PermissionDefinition("MANAGER_VOUCHER_MANAGE", "Quản lý mã giảm giá", "Khuyến mãi", "GET/POST/PATCH/DELETE /manager/vouchers"),
             new PermissionDefinition("SUPPORT_ORDER_VIEW", "Xem đơn chờ xác nhận", "Đơn hàng", "GET /support/orders/pending"),
             new PermissionDefinition("SUPPORT_ORDER_CONFIRM", "Xác nhận đơn COD", "Đơn hàng", "POST /support/orders/{id}/confirm"),
             new PermissionDefinition("WAREHOUSE_PACK_VIEW", "Xem hàng cần đóng gói", "Kho", "GET /warehouse/packing-queue"),
@@ -26,7 +27,10 @@ public class RolePermissionService {
             new PermissionDefinition("WAREHOUSE_INVENTORY_ADJUST", "Điều chỉnh tồn kho", "Kho", "POST /warehouse/inventory/adjustments"),
             new PermissionDefinition("WAREHOUSE_RETURN_INSPECT", "Kiểm tra hàng trả", "Hậu mãi", "POST /warehouse/returns/{id}/inspection"),
             new PermissionDefinition("DELIVERY_ASSIGNMENT_VIEW", "Xem chuyến giao được phân", "Giao hàng", "GET /delivery/assignments"),
-            new PermissionDefinition("DELIVERY_ATTEMPT_UPDATE", "Cập nhật lần giao", "Giao hàng", "PATCH /delivery/attempts/{id}"));
+            new PermissionDefinition("DELIVERY_ATTEMPT_UPDATE", "Cập nhật lần giao", "Giao hàng", "PATCH /delivery/attempts/{id}"),
+            new PermissionDefinition("MANAGER_PRODUCT_MANAGE", "Quản lý sản phẩm", "Danh mục", "GET/POST/PATCH /manager/products"),
+            new PermissionDefinition("MANAGER_CATEGORY_MANAGE", "Quản lý danh mục", "Danh mục", "GET/POST/PATCH /manager/categories"),
+            new PermissionDefinition("MANAGER_REVIEW_MODERATE", "Duyệt đánh giá", "Danh mục", "GET/PATCH /manager/reviews"));
     private static final List<String> EDITABLE_ROLES = List.of("MANAGER", "SUPPORT", "WAREHOUSE", "DELIVERY");
     private static final Set<String> CODES = CATALOG.stream().map(PermissionDefinition::code)
             .collect(java.util.stream.Collectors.toUnmodifiableSet());

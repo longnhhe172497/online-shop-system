@@ -22,7 +22,15 @@ public class LogisticsQueries {
 
     public record OrderInfo(long id, String orderCode, String recipientName, String recipientPhone,
                             String deliveryAddress, BigDecimal totalAmount, String paymentMethod,
-                            String paymentStatus, String status, OffsetDateTime createdAt) {}
+                            String paymentStatus, String status, OffsetDateTime createdAt,
+                            String internalNote, OffsetDateTime deliveredAt) {
+        public OrderInfo(long id, String orderCode, String recipientName, String recipientPhone,
+                         String deliveryAddress, BigDecimal totalAmount, String paymentMethod,
+                         String paymentStatus, String status, OffsetDateTime createdAt) {
+            this(id, orderCode, recipientName, recipientPhone, deliveryAddress, totalAmount,
+                    paymentMethod, paymentStatus, status, createdAt, null, null);
+        }
+    }
 
     private record ItemRow(long orderId, OrderItemView item) {}
 
@@ -41,11 +49,13 @@ public class LogisticsQueries {
                        o.payment_method,
                        COALESCE((SELECT pa.status FROM payment_attempts pa WHERE pa.order_id = o.id ORDER BY pa.attempt_number DESC LIMIT 1),
                                 CASE WHEN o.payment_method = 'COD' THEN 'UNPAID' ELSE 'PAID' END),
-                       o.status, o.created_at
+                       o.status, o.created_at, o.internal_note, o.delivered_at
                 FROM orders o WHERE o.id IN (""" + marks(ids.size()) + ")",
-                (rs, row) -> new OrderInfo(rs.getLong(1), rs.getString(2), rs.getString(3), rs.getString(4),
+                (rs, row) -> new OrderInfo(
+                        rs.getLong(1), rs.getString(2), rs.getString(3), rs.getString(4),
                         rs.getString(5), rs.getBigDecimal(6), rs.getString(7), rs.getString(8),
-                        rs.getString(9), rs.getObject(10, OffsetDateTime.class)),
+                        rs.getString(9), rs.getObject(10, OffsetDateTime.class),
+                        rs.getString(11), rs.getObject(12, OffsetDateTime.class)),
                 ids.toArray());
         return rows.stream().collect(Collectors.toMap(OrderInfo::id, Function.identity()));
     }
@@ -67,21 +77,53 @@ public class LogisticsQueries {
                 : (o != null ? "TRK-" + o.orderCode() : null);
         List<ShipmentStatusHistory> attemptList = s.getId() == null ? List.of()
                 : histories.findByShipmentIdOrderByIdAsc(s.getId());
-        String latestReason = s.getFailedReason();
-        if (latestReason == null && !attemptList.isEmpty()) {
-            ShipmentStatusHistory last = attemptList.get(attemptList.size() - 1);
-            if (last.getNewStatus() == ShipmentStatus.DELIVERY_FAILED) {
-                latestReason = last.getNote();
+
+        ShipmentStatusHistory lastAttempt = attemptList.isEmpty() ? null : attemptList.get(attemptList.size() - 1);
+
+        // Lấy lý do thất bại nhất quán từ delivery_attempts khi vận đơn đang ở trạng thái DELIVERY_FAILED
+        String latestReason = null;
+        if (s.getStatus() == ShipmentStatus.DELIVERY_FAILED) {
+            latestReason = s.getFailedReason();
+            if (latestReason == null && lastAttempt != null) {
+                latestReason = lastAttempt.getNote();
             }
         }
+
+        // Lấy ghi chú giao hàng nhất quán từ orders.internal_note hoặc delivery_attempts
+        String notes = s.getDeliveryNotes();
+        if (notes == null && o != null && o.internalNote() != null) {
+            notes = o.internalNote();
+        }
+        if (notes == null && lastAttempt != null) {
+            notes = lastAttempt.getNote();
+        }
+
+        // Lấy thời điểm bắt đầu giao nhất quán từ delivery_attempts.started_at hoặc shipments.assigned_at
+        OffsetDateTime dispatchedAt = s.getDispatchedAt();
+        if (dispatchedAt == null && lastAttempt != null && lastAttempt.getStartedAt() != null) {
+            dispatchedAt = lastAttempt.getStartedAt();
+        }
+
+        // Lấy thời điểm giao thành công nhất quán từ orders.delivered_at hoặc delivery_attempts.finished_at
+        OffsetDateTime deliveredAt = null;
+        if (s.getStatus() == ShipmentStatus.DELIVERED) {
+            deliveredAt = s.getDeliveredAt();
+            if (deliveredAt == null && o != null && o.deliveredAt() != null) {
+                deliveredAt = o.deliveredAt();
+            }
+            if (deliveredAt == null && lastAttempt != null && lastAttempt.getFinishedAt() != null) {
+                deliveredAt = lastAttempt.getFinishedAt();
+            }
+        }
+
         return new ShipmentListItem(s.getId(), s.getOrderId(),
                 o != null ? o.orderCode() : "", tracking,
                 s.getCarrierName(), s.getStatus(), s.getDeliveryStaffId(), s.getWarehouseStaffId(),
                 o != null ? o.recipientName() : "", o != null ? o.recipientPhone() : "",
                 o != null ? o.deliveryAddress() : "", o != null ? o.paymentMethod() : "COD",
                 o != null ? o.totalAmount() : BigDecimal.ZERO,
-                s.getCodAmount(), s.isCodCollected(), s.getDeliveryNotes(), latestReason,
-                s.getCreatedAt(), s.getDispatchedAt(), s.getDeliveredAt());
+                s.getCodAmount(), s.isCodCollected(), notes, latestReason,
+                s.getCreatedAt(), dispatchedAt, deliveredAt);
     }
 
     public ShipmentDetailResponse detail(Shipment s) {

@@ -179,27 +179,114 @@ paths:
         '404': { description: Address is not owned by current Customer }
   /products:
     get:
-      summary: List active products in active categories
+      summary: Search active products in active categories
       parameters:
-        - in: query
-          name: page
-          schema: { type: integer, minimum: 0, default: 0 }
-        - in: query
-          name: size
-          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+        - { in: query, name: page, schema: { type: integer, minimum: 0, default: 0 } }
+        - { in: query, name: size, schema: { type: integer, minimum: 1, maximum: 100, default: 20 } }
+        - { in: query, name: q, description: Matches name, description or category name (wildcards are literal), schema: { type: string, maxLength: 100 } }
+        - { in: query, name: categoryId, schema: { type: integer, format: int64, minimum: 1 } }
+        - { in: query, name: minPrice, schema: { type: number, minimum: 0 } }
+        - { in: query, name: maxPrice, schema: { type: number, minimum: 0 } }
+        - { in: query, name: sort, schema: { type: string, enum: [newest, price_asc, price_desc, name], default: newest } }
       responses:
         '200':
           description: Product page
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/ProductPage'
+              schema: { $ref: '#/components/schemas/ProductPage' }
         '400':
-          description: Invalid pagination parameters
+          description: Invalid parameters, or minPrice greater than maxPrice
           content:
             application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+  /products/{id}:
+    get:
+      summary: Product detail with rating from visible reviews
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: integer, format: int64, minimum: 1 } }
+      responses:
+        '200':
+          description: Product detail
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ProductDetail' }
+        '404': { description: Product missing, not ACTIVE, or its category is not ACTIVE }
+  /categories:
+    get:
+      summary: List active categories (flat list)
+      responses:
+        '200':
+          description: Categories ordered by name
+          content:
+            application/json:
               schema:
-                $ref: '#/components/schemas/Problem'
+                type: array
+                items: { $ref: '#/components/schemas/Category' }
+  /cart:
+    get:
+      summary: Current cart of the signed-in Customer or the guest FORME_CART cookie
+      responses:
+        '200':
+          description: Cart; empty when there is no cart yet
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Cart' }
+        '403': { description: Staff accounts cannot use the cart }
+  /cart/items:
+    post:
+      summary: Add a product; quantities for the same product are added together
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [productId, quantity]
+              properties:
+                productId: { type: integer, format: int64, minimum: 1 }
+                quantity: { type: integer, minimum: 1, maximum: 99 }
+      responses:
+        '200':
+          description: Updated cart. The first guest add also sets an HttpOnly FORME_CART cookie.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Cart' }
+        '400': { description: Invalid product ID or quantity }
+        '403': { description: Staff account, or CSRF token missing for a request with a cart or session cookie }
+        '404': { description: Product not found }
+        '409': { description: PRODUCT_UNAVAILABLE, INSUFFICIENT_STOCK or QUANTITY_LIMIT }
+        '429': { description: Too many new guest carts from this address }
+  /cart/items/{id}:
+    parameters:
+      - { in: path, name: id, required: true, schema: { type: integer, format: int64 } }
+    patch:
+      summary: Change a line's quantity (raising it is stock-checked)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [quantity]
+              properties:
+                quantity: { type: integer, minimum: 1, maximum: 99 }
+      responses:
+        '200':
+          description: Updated cart
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Cart' }
+        '404': { description: Line not in the caller's cart }
+        '409': { description: PRODUCT_UNAVAILABLE or INSUFFICIENT_STOCK }
+    delete:
+      summary: Remove a line from the caller's cart
+      responses:
+        '200':
+          description: Updated cart
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Cart' }
+        '404': { description: Line not in the caller's cart }
   /admin/users:
     get:
       summary: Search managed accounts (Admin only)
@@ -665,6 +752,229 @@ paths:
       responses:
         '201': { description: Account activated }
         '400': { description: Invalid or expired invitation }
+  /orders:
+    post:
+      summary: Place an order from the current Customer's ACTIVE cart
+      description: >-
+        Locks the cart and product rows, re-checks product availability and stock, applies an optional
+        voucher, reserves stock and the voucher, and marks the cart CONVERTED. On-hand stock is reduced
+        only when the warehouse packs the order. SIMULATED_QR orders start AWAITING_PAYMENT with a PENDING
+        simulated attempt (no real money is transferred); COD orders start PENDING_CONFIRMATION.
+      security: [{ bearerAuth: [] }, { sessionCookie: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PlaceOrderRequest' }
+            example: { addressId: 12, paymentMethod: SIMULATED_QR, voucherCode: SHOP50 }
+      responses:
+        '201':
+          description: Order placed
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OrderDetail' }
+        '400': { description: Invalid request body }
+        '403': { description: Authenticated role is not Customer }
+        '404':
+          description: ADDRESS_NOT_FOUND — the address does not belong to the current Customer
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '409':
+          description: PRODUCT_UNAVAILABLE, INSUFFICIENT_STOCK or VOUCHER_USAGE_LIMIT_REACHED
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '422':
+          description: CART_EMPTY, VOUCHER_INVALID, VOUCHER_NOT_ACTIVE or VOUCHER_MIN_ORDER_NOT_MET
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+    get:
+      summary: List the current Customer's orders, newest first
+      security: [{ bearerAuth: [] }, { sessionCookie: [] }]
+      parameters:
+        - in: query
+          name: page
+          schema: { type: integer, minimum: 0, default: 0 }
+        - in: query
+          name: size
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+      responses:
+        '200':
+          description: Own order page
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OrderPage' }
+        '400': { description: Invalid pagination parameters }
+        '403': { description: Authenticated role is not Customer }
+  /orders/{id}:
+    parameters:
+      - { in: path, name: id, required: true, schema: { type: integer, format: int64 } }
+    get:
+      summary: Get an order owned by the current Customer
+      security: [{ bearerAuth: [] }, { sessionCookie: [] }]
+      responses:
+        '200':
+          description: Order detail with item snapshots and the latest payment attempt
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OrderDetail' }
+        '403': { description: Authenticated role is not Customer }
+        '404': { description: ORDER_NOT_FOUND — absent or owned by another Customer }
+  /orders/preview:
+    post:
+      summary: Quote the current Customer's ACTIVE cart without reserving anything
+      security: [{ bearerAuth: [] }, { sessionCookie: [] }]
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                voucherCode: { type: string, maxLength: 60, nullable: true }
+      responses:
+        '200':
+          description: Quote; an empty cart returns no lines and canPlaceOrder=false
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CheckoutPreview' }
+        '403': { description: Authenticated role is not Customer }
+        '409': { description: VOUCHER_USAGE_LIMIT_REACHED }
+        '422': { description: VOUCHER_INVALID, VOUCHER_NOT_ACTIVE or VOUCHER_MIN_ORDER_NOT_MET }
+  /orders/{id}/cancel:
+    parameters:
+      - { in: path, name: id, required: true, schema: { type: integer, format: int64 } }
+    post:
+      summary: Cancel an own order before packing
+      description: >-
+        Allowed in AWAITING_PAYMENT, PENDING_CONFIRMATION and CONFIRMED. Releases reserved stock and the voucher
+        and cancels unfinished payment attempts. A paid order gets a PENDING simulated refund (CANCELLED_PAID_ORDER).
+      security: [{ bearerAuth: [] }, { sessionCookie: [] }]
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason: { type: string, maxLength: 300, nullable: true }
+      responses:
+        '200':
+          description: Cancelled order
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OrderDetail' }
+        '404': { description: ORDER_NOT_FOUND }
+        '409': { description: ORDER_NOT_CANCELLABLE }
+  /orders/{id}/payment-attempts:
+    parameters:
+      - { in: path, name: id, required: true, schema: { type: integer, format: int64 } }
+    post:
+      summary: Create a new simulated QR attempt after a failed or expired one
+      description: >-
+        Re-checks product status, unchanged price, available stock and the voucher, then reserves again.
+        At most max_qr_attempts attempts per order. No real money is transferred.
+      security: [{ bearerAuth: [] }, { sessionCookie: [] }]
+      responses:
+        '201':
+          description: Order with the new PENDING attempt
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OrderDetail' }
+        '404': { description: ORDER_NOT_FOUND }
+        '409':
+          description: >-
+            PAYMENT_RETRY_NOT_ALLOWED, PAYMENT_ATTEMPT_ALREADY_PENDING, PAYMENT_ATTEMPTS_EXHAUSTED,
+            PRICE_CHANGED, PRODUCT_UNAVAILABLE, INSUFFICIENT_STOCK or VOUCHER_USAGE_LIMIT_REACHED
+        '422': { description: VOUCHER_NOT_ACTIVE or VOUCHER_MIN_ORDER_NOT_MET }
+  /payment-attempts/{id}/simulate:
+    parameters:
+      - { in: path, name: id, required: true, schema: { type: integer, format: int64 } }
+    post:
+      summary: Simulate the result of an own PENDING QR attempt (development only, no real money)
+      description: >-
+        SUCCESS marks the attempt PAID, the order CONFIRMED and the voucher CONSUMED. FAILURE marks the attempt
+        FAILED and releases its stock and voucher; after the last allowed attempt the order is CANCELLED.
+      security: [{ bearerAuth: [] }, { sessionCookie: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [outcome]
+              properties:
+                outcome: { type: string, enum: [SUCCESS, FAILURE] }
+      responses:
+        '200':
+          description: Updated order
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OrderDetail' }
+        '404': { description: PAYMENT_ATTEMPT_NOT_FOUND }
+        '409': { description: PAYMENT_ATTEMPT_NOT_PENDING or PAYMENT_ATTEMPT_EXPIRED }
+  /manager/vouchers:
+    get:
+      summary: List vouchers (requires MANAGER_VOUCHER_MANAGE)
+      security: [{ bearerAuth: [] }, { sessionCookie: [] }]
+      parameters:
+        - { in: query, name: search, schema: { type: string } }
+        - { in: query, name: page, schema: { type: integer, minimum: 0, default: 0 } }
+        - { in: query, name: size, schema: { type: integer, minimum: 1, maximum: 100, default: 20 } }
+      responses:
+        '200':
+          description: Voucher page, newest first
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/VoucherPage' }
+        '403': { description: Missing MANAGER_VOUCHER_MANAGE }
+    post:
+      summary: Create a store-wide voucher (requires MANAGER_VOUCHER_MANAGE)
+      security: [{ bearerAuth: [] }, { sessionCookie: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/VoucherRequest' }
+      responses:
+        '201':
+          description: Created voucher
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Voucher' }
+        '400': { description: Invalid request body }
+        '403': { description: Missing MANAGER_VOUCHER_MANAGE }
+        '409': { description: VOUCHER_CODE_EXISTS }
+        '422': { description: VOUCHER_RULE_INVALID }
+  /manager/vouchers/{id}:
+    parameters:
+      - { in: path, name: id, required: true, schema: { type: integer, format: int64 } }
+    patch:
+      summary: Replace a voucher's fields (requires MANAGER_VOUCHER_MANAGE)
+      security: [{ bearerAuth: [] }, { sessionCookie: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/VoucherRequest' }
+      responses:
+        '200':
+          description: Updated voucher
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Voucher' }
+        '404': { description: VOUCHER_NOT_FOUND }
+        '409': { description: VOUCHER_CODE_EXISTS or VOUCHER_LIMIT_BELOW_USAGE }
+        '422': { description: VOUCHER_RULE_INVALID }
+    delete:
+      summary: Delete a voucher that was never used (requires MANAGER_VOUCHER_MANAGE)
+      security: [{ bearerAuth: [] }, { sessionCookie: [] }]
+      responses:
+        '204': { description: Deleted }
+        '404': { description: VOUCHER_NOT_FOUND }
+        '409': { description: VOUCHER_IN_USE — set it INACTIVE instead }
 components:
   securitySchemes:
     bearerAuth:
@@ -853,6 +1163,45 @@ components:
         size: { type: integer }
         totalItems: { type: integer, format: int64 }
         totalPages: { type: integer, format: int64 }
+    ProductDetail:
+      allOf:
+        - { $ref: '#/components/schemas/Product' }
+        - type: object
+          required: [categoryId, reviewCount]
+          properties:
+            categoryId: { type: integer, format: int64 }
+            avgRating: { type: number, nullable: true, description: Average of VISIBLE reviews, one decimal }
+            reviewCount: { type: integer, format: int64, minimum: 0 }
+    Category:
+      type: object
+      required: [id, name]
+      properties:
+        id: { type: integer, format: int64 }
+        name: { type: string }
+        description: { type: string, nullable: true }
+    CartLine:
+      type: object
+      required: [id, productId, sku, name, unitPrice, quantity, availableQuantity, lineTotal]
+      properties:
+        id: { type: integer, format: int64 }
+        productId: { type: integer, format: int64 }
+        sku: { type: string }
+        name: { type: string }
+        imageUrl: { type: string, nullable: true }
+        unitPrice: { type: number, description: Current price; checkout revalidates }
+        quantity: { type: integer, minimum: 1, maximum: 99 }
+        availableQuantity: { type: integer, minimum: 0 }
+        lineTotal: { type: number }
+        warning: { type: string, nullable: true, enum: [PRODUCT_UNAVAILABLE, INSUFFICIENT_STOCK] }
+    Cart:
+      type: object
+      required: [items, itemCount, subtotal]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/CartLine' }
+        itemCount: { type: integer, description: Sum of quantities, for the header badge }
+        subtotal: { type: number, description: Lines with a warning are excluded }
     Problem:
       type: object
       properties:
@@ -861,3 +1210,163 @@ components:
         status: { type: integer }
         detail: { type: string }
         code: { type: string }
+    PlaceOrderRequest:
+      type: object
+      required: [addressId, paymentMethod]
+      properties:
+        addressId: { type: integer, format: int64, description: One of the current Customer's saved addresses }
+        paymentMethod: { type: string, enum: [SIMULATED_QR, COD] }
+        voucherCode: { type: string, maxLength: 60, nullable: true, description: Case-insensitive }
+    OrderStatus:
+      type: string
+      enum: [AWAITING_PAYMENT, PENDING_CONFIRMATION, CONFIRMED, READY_FOR_DELIVERY, ASSIGNED, DELIVERING,
+             DELIVERED, DELIVERY_FAILED, RETURNED_TO_WAREHOUSE, CANCELLED]
+    OrderSummary:
+      type: object
+      required: [id, orderCode, status, paymentMethod, totalAmount, itemCount, createdAt]
+      properties:
+        id: { type: integer, format: int64 }
+        orderCode: { type: string, example: OD261015-7KQ2MX }
+        status: { $ref: '#/components/schemas/OrderStatus' }
+        paymentMethod: { type: string, enum: [SIMULATED_QR, COD] }
+        totalAmount: { type: number, description: VND amount }
+        itemCount: { type: integer, description: Total quantity across lines }
+        createdAt: { type: string, format: date-time }
+    OrderPage:
+      type: object
+      required: [items, page, size, totalItems, totalPages]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/OrderSummary' }
+        page: { type: integer }
+        size: { type: integer }
+        totalItems: { type: integer, format: int64 }
+        totalPages: { type: integer, format: int64 }
+    OrderItem:
+      type: object
+      required: [id, productId, sku, name, unitPrice, quantity, discountAmount, lineTotal]
+      properties:
+        id: { type: integer, format: int64 }
+        productId: { type: integer, format: int64 }
+        sku: { type: string, description: Snapshot at checkout }
+        name: { type: string, description: Snapshot at checkout }
+        unitPrice: { type: number, description: VND snapshot at checkout }
+        quantity: { type: integer, minimum: 1 }
+        discountAmount: { type: number, description: This line's share of the order voucher discount }
+        lineTotal: { type: number, description: unitPrice × quantity − discountAmount }
+    PaymentAttempt:
+      type: object
+      required: [id, attemptNumber, method, status, amount, simulated]
+      properties:
+        id: { type: integer, format: int64 }
+        attemptNumber: { type: integer, minimum: 1, maximum: 3 }
+        method: { type: string, enum: [SIMULATED_QR, COD] }
+        status: { type: string, enum: [PENDING, UNPAID, PAID, FAILED, EXPIRED, CANCELLED] }
+        amount: { type: number, description: VND amount }
+        simulationCode: { type: string, nullable: true, description: QR only }
+        expiresAt: { type: string, format: date-time, nullable: true, description: QR only }
+        paidAt: { type: string, format: date-time, nullable: true }
+        simulated: { type: boolean, description: True for QR — simulated payment, no real money is transferred }
+    OrderDetail:
+      type: object
+      required: [id, orderCode, status, paymentMethod, recipientName, recipientPhone, shippingAddress,
+                 subtotal, discountAmount, shippingFee, totalAmount, createdAt, items]
+      properties:
+        id: { type: integer, format: int64 }
+        orderCode: { type: string }
+        status: { $ref: '#/components/schemas/OrderStatus' }
+        paymentMethod: { type: string, enum: [SIMULATED_QR, COD] }
+        recipientName: { type: string }
+        recipientPhone: { type: string }
+        shippingAddress: { type: string, description: Address snapshot at checkout }
+        subtotal: { type: number }
+        discountAmount: { type: number }
+        shippingFee: { type: number }
+        totalAmount: { type: number, description: subtotal − discountAmount + shippingFee }
+        voucherCode: { type: string, nullable: true }
+        createdAt: { type: string, format: date-time }
+        confirmedAt: { type: string, format: date-time, nullable: true }
+        deliveredAt: { type: string, format: date-time, nullable: true }
+        cancelledAt: { type: string, format: date-time, nullable: true }
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/OrderItem' }
+        payment:
+          allOf: [{ $ref: '#/components/schemas/PaymentAttempt' }]
+          nullable: true
+          description: Latest payment attempt
+        refund:
+          allOf: [{ $ref: '#/components/schemas/Refund' }]
+          nullable: true
+          description: Latest simulated refund, e.g. after cancelling a paid order
+        paymentAttemptsUsed: { type: integer }
+        maxPaymentAttempts: { type: integer }
+        cancellable: { type: boolean, description: True before packing }
+        paymentRetryAllowed: { type: boolean, description: True when a new QR attempt can be created now }
+    Refund:
+      type: object
+      required: [amount, status, reason, simulated]
+      properties:
+        amount: { type: number }
+        status: { type: string, enum: [PENDING, COMPLETED, FAILED] }
+        reason: { type: string, enum: [CUSTOMER_RETURN, CANCELLED_PAID_ORDER, FAILED_PREPAID_DELIVERY] }
+        simulated: { type: boolean, description: Always true — no real money is transferred }
+    PreviewLine:
+      type: object
+      required: [productId, sku, name, unitPrice, quantity, availableQuantity, lineSubtotal]
+      properties:
+        productId: { type: integer, format: int64 }
+        sku: { type: string }
+        name: { type: string }
+        unitPrice: { type: number }
+        quantity: { type: integer }
+        availableQuantity: { type: integer }
+        lineSubtotal: { type: number }
+        problem: { type: string, enum: [PRODUCT_UNAVAILABLE, INSUFFICIENT_STOCK], nullable: true }
+    CheckoutPreview:
+      type: object
+      required: [items, subtotal, discountAmount, shippingFee, totalAmount, canPlaceOrder]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/PreviewLine' }
+        subtotal: { type: number }
+        discountAmount: { type: number }
+        shippingFee: { type: number }
+        totalAmount: { type: number }
+        voucherCode: { type: string, nullable: true }
+        canPlaceOrder: { type: boolean }
+    VoucherRequest:
+      type: object
+      required: [code, discountType, discountValue, minOrderAmount, usageLimit, validFrom, validUntil, status]
+      properties:
+        code: { type: string, pattern: '^[A-Za-z0-9_-]{3,60}$', description: Stored upper-case }
+        discountType: { type: string, enum: [FIXED, PERCENT] }
+        discountValue: { type: number, minimum: 0, exclusiveMinimum: true, description: VND, or percent up to 100 }
+        maxDiscount: { type: number, nullable: true, description: Cap for PERCENT vouchers }
+        minOrderAmount: { type: number, minimum: 0 }
+        usageLimit: { type: integer, minimum: 1 }
+        validFrom: { type: string, format: date-time }
+        validUntil: { type: string, format: date-time, description: Must be after validFrom }
+        status: { type: string, enum: [DRAFT, ACTIVE, INACTIVE] }
+    Voucher:
+      allOf:
+        - { $ref: '#/components/schemas/VoucherRequest' }
+        - type: object
+          required: [id, usedCount, createdAt]
+          properties:
+            id: { type: integer, format: int64 }
+            usedCount: { type: integer, description: RESERVED + CONSUMED usages }
+            createdAt: { type: string, format: date-time }
+    VoucherPage:
+      type: object
+      required: [items, page, size, totalItems, totalPages]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/Voucher' }
+        page: { type: integer }
+        size: { type: integer }
+        totalItems: { type: integer, format: int64 }
+        totalPages: { type: integer, format: int64 }

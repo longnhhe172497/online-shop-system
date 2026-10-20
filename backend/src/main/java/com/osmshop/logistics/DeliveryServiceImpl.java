@@ -95,12 +95,16 @@ public class DeliveryServiceImpl implements DeliveryService {
                 if (failures >= maxDeliveryAttempts()) throw error(HttpStatus.CONFLICT, "MAX_ATTEMPTS_REACHED",
                         "Vận đơn đã đạt số lần giao tối đa.");
                 if (s.getDeliveryStaffId() == null) s.setDeliveryStaffId(actorId);
+                s.setAssignedAt(now);
                 s.setDispatchedAt(now);
                 s.setFailedReason(null);
                 jdbc.update("""
                         UPDATE orders SET status='DELIVERING', updated_at=now()
                         WHERE id=? AND status IN ('READY_FOR_DELIVERY','ASSIGNED','DELIVERING','DELIVERY_FAILED')""",
                         s.getOrderId());
+                if (note != null) {
+                    jdbc.update("UPDATE orders SET internal_note=?, updated_at=now() WHERE id=?", note, s.getOrderId());
+                }
 
                 short nextAttemptNo = (short) Math.min(2, existingAttempts.size() + 1);
                 histories.save(new ShipmentStatusHistory(shipmentId, nextAttemptNo, previous,
@@ -115,6 +119,9 @@ public class DeliveryServiceImpl implements DeliveryService {
                 s.setFailedReason(null);
                 jdbc.update("UPDATE orders SET status='DELIVERED', delivered_at=now(), updated_at=now() WHERE id=?",
                         s.getOrderId());
+                if (note != null) {
+                    jdbc.update("UPDATE orders SET internal_note=?, updated_at=now() WHERE id=?", note, s.getOrderId());
+                }
                 if (cod) {
                     jdbc.update("""
                             UPDATE payment_attempts SET status='PAID', paid_at=now(), recorded_by=?
@@ -131,6 +138,7 @@ public class DeliveryServiceImpl implements DeliveryService {
                 if (note == null) note = reason;
                 jdbc.update("UPDATE orders SET status='DELIVERY_FAILED', updated_at=now() WHERE id=?",
                         s.getOrderId());
+                jdbc.update("UPDATE orders SET internal_note=?, updated_at=now() WHERE id=?", note, s.getOrderId());
                 saveOrUpdateAttempt(existingAttempts, shipmentId, previous, ShipmentStatus.DELIVERY_FAILED, reason, actorId, now);
             }
             default -> throw error(HttpStatus.BAD_REQUEST, "INVALID_TARGET_STATUS", "Trạng thái đích không hợp lệ.");
@@ -160,7 +168,6 @@ public class DeliveryServiceImpl implements DeliveryService {
         histories.save(new ShipmentStatusHistory(shipmentId, attemptNo, previous, target, reasonOrNote, actorId));
     }
 
-    
     @Transactional(readOnly = true)
     public DeliveryDailyReport dailyReport(long actorId, boolean admin) {
         String zone = queries.reportZone();

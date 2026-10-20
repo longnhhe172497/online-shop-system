@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 
-export type InternalIconName = 'dashboard' | 'users' | 'settings' | 'audit'
+export type InternalIconName = 'dashboard' | 'users' | 'settings' | 'audit' | 'tag'
 export interface InternalNavItem<T extends string> {
   id: T
   label: string
@@ -19,6 +19,7 @@ function NavIcon({ name }: { name: InternalIconName }) {
     {name === 'users' && <><circle cx="9" cy="8" r="3" /><path d="M3.5 20v-2a5.5 5.5 0 0 1 11 0v2M17 5a3 3 0 0 1 0 6M18 14a5 5 0 0 1 2.5 4.5V20" /></>}
     {name === 'settings' && <><circle cx="12" cy="12" r="3" /><path d="m19.4 15 .5 1.5-2 2-.5-.5a2 2 0 0 0-2.2-.4l-.8.4V21h-4.8v-3l-.8-.4a2 2 0 0 0-2.2.4l-.5.5-2-2L4.6 15a2 2 0 0 0-1.3-1.8L2.5 13v-2l.8-.2A2 2 0 0 0 4.6 9l-.5-1.5 2-2 .5.5a2 2 0 0 0 2.2.4l.8-.4V3h4.8v3l.8.4a2 2 0 0 0 2.2-.4l.5-.5 2 2-.5 1.5a2 2 0 0 0 1.3 1.8l.8.2v2l-.8.2a2 2 0 0 0-1.3 1.8Z" /></>}
     {name === 'audit' && <><path d="M7 3h9l4 4v14H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2ZM16 3v5h4M9 12h7M9 16h7" /></>}
+    {name === 'tag' && <><path d="M3 12V4a1 1 0 0 1 1-1h8l9 9-9 9-9-9Z" /><circle cx="7.5" cy="7.5" r="1.5" /></>}
   </svg>
 }
 

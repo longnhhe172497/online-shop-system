@@ -8,6 +8,7 @@ import { getUiError } from './uiError'
 import InternalLayout, { type InternalNavItem } from './InternalLayout'
 import { internalRoleNames, isInternalRole } from './internalAccess'
 import RolePermissionsPage from './RolePermissionsPage'
+import VoucherManagementPage from './VoucherManagementPage'
 
 const roles: Record<string, string> = { CUSTOMER: 'Khách hàng', ADMIN: 'Quản trị viên',
   MANAGER: 'Quản lý', SUPPORT: 'Hỗ trợ', WAREHOUSE: 'Nhân viên kho', DELIVERY: 'Giao hàng' }
@@ -16,7 +17,7 @@ const statuses: Record<string, string> = { ACTIVE: 'Đang hoạt động', INACT
 const settingNames: Record<string, string> = { qr_expiry_minutes: 'Thời hạn mã QR (phút)',
   max_qr_attempts: 'Số lần thử QR tối đa', return_window_days: 'Thời hạn trả hàng (ngày)',
   max_saved_addresses: 'Số địa chỉ lưu tối đa', max_delivery_attempts: 'Số lần giao tối đa',
-  reporting_time_zone: 'Múi giờ báo cáo' }
+  reporting_time_zone: 'Múi giờ báo cáo', shipping_fee: 'Phí giao hàng mỗi đơn (₫)' }
 const actionNames: Record<string, string> = { USER_CREATED: 'Tạo tài khoản', USER_UPDATED: 'Sửa tài khoản',
   USER_ROLE_CHANGED: 'Đổi vai trò', USER_STATUS_CHANGED: 'Đổi trạng thái', SETTING_CHANGED: 'Đổi thiết lập',
   ROLE_PERMISSIONS_CHANGED: 'Đổi quyền vai trò',
@@ -32,7 +33,7 @@ const invitationStatuses: Record<Invitation['status'], string> = {
   REVOKED: 'Đã thu hồi', EXPIRED: 'Đã hết hạn', ACCEPTED: 'Đã chấp nhận',
 }
 
-type Tab = 'dashboard' | 'users' | 'invitations' | 'permissions' | 'settings' | 'audit'
+type Tab = 'dashboard' | 'users' | 'invitations' | 'permissions' | 'settings' | 'audit' | 'vouchers'
 const navigation: InternalNavItem<Tab>[] = [
   { id: 'dashboard', label: 'Tổng quan', icon: 'dashboard' },
   { id: 'users', label: 'Tài khoản', icon: 'users' },
@@ -41,10 +42,16 @@ const navigation: InternalNavItem<Tab>[] = [
   { id: 'settings', label: 'Thiết lập', icon: 'settings' },
   { id: 'audit', label: 'Nhật ký', icon: 'audit' },
 ]
+// Business sections per staff role. The API still enforces the configured permission on every request.
+const roleNavigation: Record<string, InternalNavItem<Tab>[]> = {
+  ADMIN: navigation,
+  MANAGER: [navigation[0], { id: 'vouchers', label: 'Mã giảm giá', icon: 'tag' }],
+}
+function navigationFor(role: string) { return roleNavigation[role] ?? navigation.slice(0, 1) }
 const pageTitles: Record<Tab, string> = { dashboard: 'Tổng quan', users: 'Quản lý tài khoản',
   invitations: 'Lời mời nhân viên',
   permissions: 'Phân quyền vai trò',
-  settings: 'Thiết lập hệ thống', audit: 'Nhật ký thao tác' }
+  settings: 'Thiết lập hệ thống', audit: 'Nhật ký thao tác', vouchers: 'Mã giảm giá' }
 const pageDescriptions: Record<Tab, string> = {
   dashboard: 'Một nơi theo dõi hoạt động của hệ thống khi các tính năng được hoàn thiện.',
   users: 'Quản lý tài khoản, vai trò và trạng thái truy cập.',
@@ -52,6 +59,7 @@ const pageDescriptions: Record<Tab, string> = {
   permissions: 'Kiểm soát các thao tác mà mỗi vai trò nội bộ được phép thực hiện.',
   settings: 'Điều chỉnh các giới hạn vận hành của cửa hàng.',
   audit: 'Theo dõi các thao tác quản trị đã được ghi nhận.',
+  vouchers: 'Tạo và điều chỉnh mã giảm giá áp dụng khi khách đặt hàng.',
 }
 type Editor = { id: number; email: string; fullName: string; phone: string; role: string }
 type InviteEditor = { email: string; fullName: string; phone: string; role: string }
@@ -61,8 +69,8 @@ type PendingChange = { user: ManagedUser; kind: 'role' | 'status'; value: string
 
 function tabFromPath(path: string): Tab {
   const segment = path.split('/')[2]
-  return segment === 'users' || segment === 'invitations' || segment === 'permissions' || segment === 'settings' || segment === 'audit'
-    ? segment : 'dashboard'
+  return segment === 'users' || segment === 'invitations' || segment === 'permissions' || segment === 'settings'
+    || segment === 'audit' || segment === 'vouchers' ? segment : 'dashboard'
 }
 
 function routeFor(tab: Tab) { return tab === 'dashboard' ? '/internal' : `/internal/${tab}` }
@@ -103,7 +111,7 @@ export default function AdminPage() {
     if (active) { setRole(isInternalRole(me.role) ? me.role : null); setAccessChecked(true) }
   }).catch(() => { if (active) setAccessChecked(true) }); return () => { active = false } }, [])
   useEffect(() => {
-    if (accessChecked && role && role !== 'ADMIN' && tab !== 'dashboard') {
+    if (accessChecked && role && !navigationFor(role).some((item) => item.id === tab)) {
       navigate('/internal', { replace: true })
     }
   }, [accessChecked, role, tab, navigate])
@@ -191,7 +199,7 @@ export default function AdminPage() {
       {accessChecked && !role && <div className="internal-access"><div className="admin-panel">
         <h2>Không có quyền truy cập</h2><p>Chỉ nhân viên nội bộ được xem trang này.</p>
         <Link to="/">Về cửa hàng</Link></div></div>}
-      {role && <InternalLayout items={role === 'ADMIN' ? navigation : navigation.slice(0, 1)}
+      {role && <InternalLayout items={navigationFor(role)}
         active={tab} roleName={internalRoleNames[role] ?? 'Nhân viên'} onNavigate={(next) => {
         navigate(routeFor(next)); setError(''); setNotice('') }} title={pageTitles[tab]} subtitle={pageDescriptions[tab]}>
       {error && <p className="auth-error" role="alert">{error}</p>}
@@ -285,6 +293,7 @@ export default function AdminPage() {
           {settings.map((setting) => <SettingRow key={`${setting.key}:${setting.value}`} setting={setting} busy={busy}
             onSave={(value) => void saveSetting(setting, value)} />)}</div></section>}
       {role === 'ADMIN' && tab === 'permissions' && <RolePermissionsPage />}
+      {role === 'MANAGER' && tab === 'vouchers' && <VoucherManagementPage />}
       {role === 'ADMIN' && tab === 'audit' && <section className="admin-panel"><h2>Nhật ký thao tác</h2>
         <form className="admin-filters audit-filters" onSubmit={(event) => { event.preventDefault(); setAuditPage(0)
           setAuditFilters({ ...auditDraft }) }}>

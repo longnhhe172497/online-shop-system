@@ -63,6 +63,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/auth/csrf", "/api/auth/google/config").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/products", "/api/products/**")
                         .permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/categories").permitAll()         
+                        .requestMatchers("/api/cart", "/api/cart/**").permitAll()                
                         .requestMatchers("/api/me/addresses", "/api/me/addresses/**").hasRole("CUSTOMER")
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.GET, "/api/manager/orders").hasAuthority("PERM_MANAGER_ORDER_VIEW")
@@ -77,9 +79,21 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/warehouse/returns/*/inspection").hasAuthority("PERM_WAREHOUSE_RETURN_INSPECT")
                         .requestMatchers(HttpMethod.GET, "/api/delivery/assignments").hasAuthority("PERM_DELIVERY_ASSIGNMENT_VIEW")
                         .requestMatchers(HttpMethod.PATCH, "/api/delivery/attempts/*").hasAuthority("PERM_DELIVERY_ATTEMPT_UPDATE")
+                        .requestMatchers("/api/manager/vouchers", "/api/manager/vouchers/*")
+                        .hasAuthority("PERM_MANAGER_VOUCHER_MANAGE")
+                        .requestMatchers("/api/manager/products", "/api/manager/products/**")    
+                        .hasAuthority("PERM_MANAGER_PRODUCT_MANAGE")                             
+                        .requestMatchers("/api/manager/categories", "/api/manager/categories/**")
+                        .hasAuthority("PERM_MANAGER_CATEGORY_MANAGE")                            
+                        .requestMatchers("/api/manager/reviews", "/api/manager/reviews/**")      
+                        .hasAuthority("PERM_MANAGER_REVIEW_MODERATE")
                         .requestMatchers("/api/manager/**", "/api/support/**", "/api/warehouse/**", "/api/delivery/**")
                         .denyAll()
                         .requestMatchers("/api/orders/**").hasRole("CUSTOMER")
+                        
+
+                        .requestMatchers("/api/orders", "/api/orders/**", "/api/payment-attempts/**").hasRole("CUSTOMER")
+                        .requestMatchers("/api/order-items/**").hasRole("CUSTOMER")
                         .requestMatchers("/api/internal/warehouse/**").hasAnyRole("WAREHOUSE", "ADMIN")
                         .requestMatchers("/api/internal/delivery/**").hasAnyRole("DELIVERY", "ADMIN")
                         .requestMatchers("/api/internal/daily-reports/**").hasAnyRole("WAREHOUSE", "DELIVERY", "ADMIN")
@@ -94,7 +108,7 @@ public class SecurityConfig {
             return false;
         if (request.getCookies() == null) return false;
         for (Cookie cookie : request.getCookies()) {
-            if ("FORME_SESSION".equals(cookie.getName())) return true;
+            if ("FORME_SESSION".equals(cookie.getName()) || "FORME_CART".equals(cookie.getName())) return true;
         }
         return false;
     }
