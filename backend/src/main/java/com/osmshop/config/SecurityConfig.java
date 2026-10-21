@@ -7,6 +7,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -24,6 +25,8 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 @Configuration
+
+@EnableMethodSecurity
 public class SecurityConfig {
     @Bean
     PasswordEncoder passwordEncoder() {
@@ -86,8 +89,14 @@ public class SecurityConfig {
                         .hasAuthority("PERM_MANAGER_REVIEW_MODERATE")
                         .requestMatchers("/api/manager/**", "/api/support/**", "/api/warehouse/**", "/api/delivery/**")
                         .denyAll()
+                        .requestMatchers("/api/orders/**").hasRole("CUSTOMER")
+                        
+
                         .requestMatchers("/api/orders", "/api/orders/**", "/api/payment-attempts/**").hasRole("CUSTOMER")
                         .requestMatchers("/api/order-items/**").hasRole("CUSTOMER")
+                        .requestMatchers("/api/internal/warehouse/**").hasAnyRole("WAREHOUSE", "ADMIN")
+                        .requestMatchers("/api/internal/delivery/**").hasAnyRole("DELIVERY", "ADMIN")
+                        .requestMatchers("/api/internal/daily-reports/**").hasAnyRole("WAREHOUSE", "DELIVERY", "ADMIN")
                         .anyRequest().authenticated())
                 .addFilterBefore(bearer, UsernamePasswordAuthenticationFilter.class)
                 .build();

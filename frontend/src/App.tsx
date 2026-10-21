@@ -7,6 +7,8 @@ import VerifyPage from './VerifyPage'
 import PasswordResetPage from './PasswordResetPage'
 import ProfilePage from './ProfilePage'
 import AdminPage from './AdminPage'
+import WarehousePage from './WarehousePage'
+import DeliveryPage from './DeliveryPage'
 import { AcceptInvitationPage, MfaLoginPage, RegistrationSentPage,
   ResendVerificationPage } from './AuthExtraPages'
 import AccountSecurityPage from './AccountSecurityPage'
@@ -80,6 +82,8 @@ export default function App() {
     <Route path="/me/orders/:id" element={<OrderDetailPage />} />
     <Route path="/checkout" element={<CheckoutPage />} />
     <Route path="/email-change/confirm" element={<EmailChangeConfirmPage />} />
+    <Route path="/internal/warehouse" element={<WarehousePage />} />
+    <Route path="/internal/delivery" element={<DeliveryPage />} />
     <Route path="/internal/*" element={<AdminPage />} />
     <Route path="/admin" element={<Navigate to="/internal" replace />} />
   </Routes></>
