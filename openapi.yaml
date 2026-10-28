@@ -975,6 +975,184 @@ paths:
         '204': { description: Deleted }
         '404': { description: VOUCHER_NOT_FOUND }
         '409': { description: VOUCHER_IN_USE — set it INACTIVE instead }
+  /manager/products:
+    get:
+      summary: List products in every status (requires MANAGER_PRODUCT_MANAGE)
+      security: [{ bearerAuth: [] }, { sessionCookie: [] }]
+      parameters:
+        - { in: query, name: q, description: 'Matches name or SKU (wildcards are literal)', schema: { type: string, maxLength: 100 } }
+        - { in: query, name: categoryId, schema: { type: integer, format: int64, minimum: 1 } }
+        - { in: query, name: status, schema: { type: string, enum: [DRAFT, ACTIVE, INACTIVE, ARCHIVED] } }
+        - { in: query, name: page, schema: { type: integer, minimum: 0, default: 0 } }
+        - { in: query, name: size, schema: { type: integer, minimum: 1, maximum: 100, default: 20 } }
+      responses:
+        '200':
+          description: Product page, newest first
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ManagerProductPage' }
+        '400': { description: Invalid filter }
+        '403': { description: Missing MANAGER_PRODUCT_MANAGE }
+    post:
+      summary: Create a product as DRAFT with zero stock (requires MANAGER_PRODUCT_MANAGE)
+      security: [{ bearerAuth: [] }, { sessionCookie: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ManagerProductRequest' }
+      responses:
+        '201':
+          description: Created product
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ManagerProduct' }
+        '400': { description: Invalid request body }
+        '403': { description: Missing MANAGER_PRODUCT_MANAGE }
+        '409': { description: SKU_ALREADY_EXISTS }
+        '422': { description: 'CATEGORY_INVALID (missing or archived category)' }
+  /manager/products/category-options:
+    get:
+      summary: Non-archived categories for the product form (requires MANAGER_PRODUCT_MANAGE)
+      security: [{ bearerAuth: [] }, { sessionCookie: [] }]
+      responses:
+        '200':
+          description: Categories ordered by name
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/CategoryOption' }
+        '403': { description: Missing MANAGER_PRODUCT_MANAGE }
+  /manager/products/{id}:
+    parameters:
+      - { in: path, name: id, required: true, schema: { type: integer, format: int64 } }
+    get:
+      summary: Read one product in any status (requires MANAGER_PRODUCT_MANAGE)
+      security: [{ bearerAuth: [] }, { sessionCookie: [] }]
+      responses:
+        '200':
+          description: Product
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ManagerProduct' }
+        '404': { description: PRODUCT_NOT_FOUND }
+    patch:
+      summary: Replace a product's details; stock is never changed here (requires MANAGER_PRODUCT_MANAGE)
+      security: [{ bearerAuth: [] }, { sessionCookie: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ManagerProductRequest' }
+      responses:
+        '200':
+          description: Updated product
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ManagerProduct' }
+        '400': { description: Invalid request body }
+        '404': { description: PRODUCT_NOT_FOUND }
+        '409': { description: 'SKU_ALREADY_EXISTS, or CATEGORY_NOT_ACTIVE when moving an ACTIVE product' }
+        '422': { description: CATEGORY_INVALID }
+  /manager/products/{id}/status:
+    parameters:
+      - { in: path, name: id, required: true, schema: { type: integer, format: int64 } }
+    patch:
+      summary: Publish, hide or archive a product; products are never hard-deleted (requires MANAGER_PRODUCT_MANAGE)
+      security: [{ bearerAuth: [] }, { sessionCookie: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ProductStatusRequest' }
+      responses:
+        '200':
+          description: Product with the new status
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ManagerProduct' }
+        '400': { description: Unknown status }
+        '404': { description: PRODUCT_NOT_FOUND }
+        '409': { description: 'CATEGORY_NOT_ACTIVE (ACTIVE needs an ACTIVE category)' }
+  /manager/categories:
+    get:
+      summary: List categories with product counts (requires MANAGER_CATEGORY_MANAGE)
+      security: [{ bearerAuth: [] }, { sessionCookie: [] }]
+      parameters:
+        - { in: query, name: status, schema: { type: string, enum: [ACTIVE, INACTIVE, ARCHIVED] } }
+      responses:
+        '200':
+          description: Categories ordered by name
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/ManagerCategory' }
+        '403': { description: Missing MANAGER_CATEGORY_MANAGE }
+    post:
+      summary: Create an ACTIVE category (requires MANAGER_CATEGORY_MANAGE)
+      security: [{ bearerAuth: [] }, { sessionCookie: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CategoryRequest' }
+      responses:
+        '201':
+          description: Created category
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ManagerCategory' }
+        '400': { description: Invalid request body }
+        '409': { description: 'CATEGORY_NAME_EXISTS (names are unique ignoring case)' }
+  /manager/categories/{id}:
+    parameters:
+      - { in: path, name: id, required: true, schema: { type: integer, format: int64 } }
+    patch:
+      summary: Rename a category or change its description (requires MANAGER_CATEGORY_MANAGE)
+      security: [{ bearerAuth: [] }, { sessionCookie: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CategoryRequest' }
+      responses:
+        '200':
+          description: Updated category
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ManagerCategory' }
+        '404': { description: CATEGORY_NOT_FOUND }
+        '409': { description: CATEGORY_NAME_EXISTS }
+    delete:
+      summary: Delete an empty category (requires MANAGER_CATEGORY_MANAGE)
+      security: [{ bearerAuth: [] }, { sessionCookie: [] }]
+      responses:
+        '204': { description: Deleted }
+        '404': { description: CATEGORY_NOT_FOUND }
+        '409': { description: 'CATEGORY_HAS_PRODUCTS (reassign or remove its products first)' }
+  /manager/categories/{id}/status:
+    parameters:
+      - { in: path, name: id, required: true, schema: { type: integer, format: int64 } }
+    patch:
+      summary: Activate, hide or archive a category (requires MANAGER_CATEGORY_MANAGE)
+      description: INACTIVE hides the category and its products from the shop. ARCHIVED needs every product in it to be archived or moved.
+      security: [{ bearerAuth: [] }, { sessionCookie: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CategoryStatusRequest' }
+      responses:
+        '200':
+          description: Category with the new status
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ManagerCategory' }
+        '400': { description: Unknown status }
+        '404': { description: CATEGORY_NOT_FOUND }
+        '409': { description: CATEGORY_HAS_PRODUCTS }
 components:
   securitySchemes:
     bearerAuth:
@@ -1202,6 +1380,81 @@ components:
           items: { $ref: '#/components/schemas/CartLine' }
         itemCount: { type: integer, description: Sum of quantities, for the header badge }
         subtotal: { type: number, description: Lines with a warning are excluded }
+    ManagerProductRequest:
+      type: object
+      required: [sku, name, price, categoryId]
+      properties:
+        sku: { type: string, maxLength: 80, pattern: '^[A-Za-z0-9][A-Za-z0-9_-]*$', description: 'Stored upper-case; unique ignoring case' }
+        name: { type: string, minLength: 1, maxLength: 200 }
+        description: { type: string, nullable: true, maxLength: 5000, description: Blank means none }
+        imageUrl: { type: string, nullable: true, maxLength: 500, description: 'http(s) URL or a path starting with /; blank means none' }
+        price: { type: number, minimum: 0, exclusiveMinimum: true, description: VND }
+        categoryId: { type: integer, format: int64, description: Must exist and not be ARCHIVED }
+    ManagerProduct:
+      type: object
+      required: [id, sku, name, price, categoryId, categoryName, categoryStatus, status, stockOnHand, stockReserved, availableQuantity, createdAt, updatedAt]
+      properties:
+        id: { type: integer, format: int64 }
+        sku: { type: string }
+        name: { type: string }
+        description: { type: string, nullable: true }
+        imageUrl: { type: string, nullable: true }
+        price: { type: number }
+        categoryId: { type: integer, format: int64 }
+        categoryName: { type: string }
+        categoryStatus: { type: string, enum: [ACTIVE, INACTIVE, ARCHIVED] }
+        status: { type: string, enum: [DRAFT, ACTIVE, INACTIVE, ARCHIVED] }
+        stockOnHand: { type: integer, description: 'Read-only here; changed by Warehouse' }
+        stockReserved: { type: integer, description: 'Read-only; reserved by unpaid or unpacked orders' }
+        availableQuantity: { type: integer, description: stockOnHand minus stockReserved }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    ManagerProductPage:
+      type: object
+      required: [items, page, size, totalItems, totalPages]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/ManagerProduct' }
+        page: { type: integer }
+        size: { type: integer }
+        totalItems: { type: integer, format: int64 }
+        totalPages: { type: integer, format: int64 }
+    ProductStatusRequest:
+      type: object
+      required: [status]
+      properties:
+        status: { type: string, enum: [DRAFT, ACTIVE, INACTIVE, ARCHIVED] }
+    CategoryOption:
+      type: object
+      required: [id, name, status]
+      properties:
+        id: { type: integer, format: int64 }
+        name: { type: string }
+        status: { type: string, enum: [ACTIVE, INACTIVE] }
+    CategoryRequest:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 150 }
+        description: { type: string, nullable: true, maxLength: 2000 }
+    CategoryStatusRequest:
+      type: object
+      required: [status]
+      properties:
+        status: { type: string, enum: [ACTIVE, INACTIVE, ARCHIVED] }
+    ManagerCategory:
+      type: object
+      required: [id, name, status, productCount, activeProductCount, createdAt, updatedAt]
+      properties:
+        id: { type: integer, format: int64 }
+        name: { type: string }
+        description: { type: string, nullable: true }
+        status: { type: string, enum: [ACTIVE, INACTIVE, ARCHIVED] }
+        productCount: { type: integer, format: int64, description: Products in any status }
+        activeProductCount: { type: integer, format: int64 }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
     Problem:
       type: object
       properties:
