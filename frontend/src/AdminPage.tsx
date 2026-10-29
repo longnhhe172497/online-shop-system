@@ -9,6 +9,8 @@ import InternalLayout, { type InternalNavItem } from './InternalLayout'
 import { getInternalHome, internalRoleNames, isInternalRole } from './internalAccess'
 import RolePermissionsPage from './RolePermissionsPage'
 import VoucherManagementPage from './VoucherManagementPage'
+import ManagerProductsPage from './ManagerProductsPage'
+import ManagerCategoriesPage from './ManagerCategoriesPage'
 
 const roles: Record<string, string> = { CUSTOMER: 'Khách hàng', ADMIN: 'Quản trị viên',
   MANAGER: 'Quản lý', SUPPORT: 'Hỗ trợ', WAREHOUSE: 'Nhân viên kho', DELIVERY: 'Giao hàng' }
@@ -26,14 +28,19 @@ const actionNames: Record<string, string> = { USER_CREATED: 'Tạo tài khoản'
   USER_SESSIONS_REVOKED: 'Đăng xuất toàn bộ phiên', AUTH_LOGIN_SUCCESS: 'Đăng nhập thành công',
   AUTH_LOGIN_FAILED: 'Đăng nhập thất bại', MFA_EMAIL_ENABLED: 'Bật MFA qua email',
   MFA_TOTP_ENABLED: 'Bật ứng dụng xác thực', MFA_DISABLED: 'Tắt MFA',
-  MFA_RECOVERY_REGENERATED: 'Tạo lại mã khôi phục' }
-const entityNames: Record<string, string> = { USER: 'Tài khoản', SYSTEM_SETTING: 'Thiết lập', ROLE: 'Vai trò' }
+  MFA_RECOVERY_REGENERATED: 'Tạo lại mã khôi phục',
+  PRODUCT_CREATED: 'Tạo sản phẩm', PRODUCT_UPDATED: 'Sửa sản phẩm', PRODUCT_STATUS_CHANGED: 'Đổi trạng thái sản phẩm',
+  CATEGORY_CREATED: 'Tạo danh mục', CATEGORY_UPDATED: 'Sửa danh mục', CATEGORY_STATUS_CHANGED: 'Đổi trạng thái danh mục',
+  CATEGORY_DELETED: 'Xóa danh mục' }
+const entityNames: Record<string, string> = { USER: 'Tài khoản', SYSTEM_SETTING: 'Thiết lập', ROLE: 'Vai trò',
+  PRODUCT: 'Sản phẩm', CATEGORY: 'Danh mục' }
 const invitationStatuses: Record<Invitation['status'], string> = {
   PENDING: 'Đang gửi', STALLED: 'Chưa rõ kết quả gửi', SENT: 'Đã gửi', FAILED: 'Gửi thất bại',
   REVOKED: 'Đã thu hồi', EXPIRED: 'Đã hết hạn', ACCEPTED: 'Đã chấp nhận',
 }
 
-type Tab = 'dashboard' | 'users' | 'invitations' | 'permissions' | 'settings' | 'audit' | 'vouchers'
+type Tab = 'dashboard' | 'users' | 'invitations' | 'permissions' | 'settings' | 'audit' | 'vouchers' | 'products'
+  | 'categories'
 const navigation: InternalNavItem<Tab>[] = [
   { id: 'dashboard', label: 'Tổng quan', icon: 'dashboard' },
   { id: 'users', label: 'Tài khoản', icon: 'users' },
@@ -45,13 +52,15 @@ const navigation: InternalNavItem<Tab>[] = [
 // Business sections per staff role. The API still enforces the configured permission on every request.
 const roleNavigation: Record<string, InternalNavItem<Tab>[]> = {
   ADMIN: navigation,
-  MANAGER: [navigation[0], { id: 'vouchers', label: 'Mã giảm giá', icon: 'tag' }],
+  MANAGER: [navigation[0], { id: 'products', label: 'Sản phẩm', icon: 'box' },
+    { id: 'categories', label: 'Danh mục', icon: 'folder' }, { id: 'vouchers', label: 'Mã giảm giá', icon: 'tag' }],
 }
 function navigationFor(role: string) { return roleNavigation[role] ?? navigation.slice(0, 1) }
 const pageTitles: Record<Tab, string> = { dashboard: 'Tổng quan', users: 'Quản lý tài khoản',
   invitations: 'Lời mời nhân viên',
   permissions: 'Phân quyền vai trò',
-  settings: 'Thiết lập hệ thống', audit: 'Nhật ký thao tác', vouchers: 'Mã giảm giá' }
+  settings: 'Thiết lập hệ thống', audit: 'Nhật ký thao tác', vouchers: 'Mã giảm giá',
+  products: 'Quản lý sản phẩm', categories: 'Quản lý danh mục' }
 const pageDescriptions: Record<Tab, string> = {
   dashboard: 'Một nơi theo dõi hoạt động của hệ thống khi các tính năng được hoàn thiện.',
   users: 'Quản lý tài khoản, vai trò và trạng thái truy cập.',
@@ -60,6 +69,8 @@ const pageDescriptions: Record<Tab, string> = {
   settings: 'Điều chỉnh các giới hạn vận hành của cửa hàng.',
   audit: 'Theo dõi các thao tác quản trị đã được ghi nhận.',
   vouchers: 'Tạo và điều chỉnh mã giảm giá áp dụng khi khách đặt hàng.',
+  products: 'Tạo, chỉnh sửa và mở bán sản phẩm trên cửa hàng.',
+  categories: 'Sắp xếp sản phẩm theo danh mục để khách dễ tìm.',
 }
 type Editor = { id: number; email: string; fullName: string; phone: string; role: string }
 type InviteEditor = { email: string; fullName: string; phone: string; role: string }
@@ -70,7 +81,8 @@ type PendingChange = { user: ManagedUser; kind: 'role' | 'status'; value: string
 function tabFromPath(path: string): Tab {
   const segment = path.split('/')[2]
   return segment === 'users' || segment === 'invitations' || segment === 'permissions' || segment === 'settings'
-    || segment === 'audit' || segment === 'vouchers' ? segment : 'dashboard'
+    || segment === 'audit' || segment === 'vouchers' || segment === 'products' || segment === 'categories'
+    ? segment : 'dashboard'
 }
 
 function routeFor(role: string, tab: Tab) {
@@ -303,6 +315,8 @@ export default function AdminPage() {
             onSave={(value) => void saveSetting(setting, value)} />)}</div></section>}
       {role === 'ADMIN' && tab === 'permissions' && <RolePermissionsPage />}
       {role === 'MANAGER' && tab === 'vouchers' && <VoucherManagementPage />}
+      {role === 'MANAGER' && tab === 'products' && <ManagerProductsPage />}
+      {role === 'MANAGER' && tab === 'categories' && <ManagerCategoriesPage />}
       {role === 'ADMIN' && tab === 'audit' && <section className="admin-panel"><h2>Nhật ký thao tác</h2>
         <form className="admin-filters audit-filters" onSubmit={(event) => { event.preventDefault(); setAuditPage(0)
           setAuditFilters({ ...auditDraft }) }}>

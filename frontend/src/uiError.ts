@@ -64,6 +64,12 @@ const messages: Record<string, string> = {
   PAYMENT_ATTEMPT_ALREADY_PENDING: 'Mã QR hiện tại vẫn còn hiệu lực.',
   PAYMENT_RETRY_NOT_ALLOWED: 'Đơn hàng này không thể tạo mã QR mới.',
   PAYMENT_ATTEMPTS_EXHAUSTED: 'Đã hết số lần thanh toán QR, đơn hàng đã bị hủy.',
+  SKU_ALREADY_EXISTS: 'Mã SKU này đã được dùng cho sản phẩm khác. Hãy chọn mã khác.',
+  CATEGORY_INVALID: 'Danh mục không tồn tại hoặc đã được lưu trữ. Hãy chọn danh mục khác.',
+  CATEGORY_NOT_ACTIVE: 'Danh mục đang tạm ẩn nên sản phẩm chưa thể mở bán. Hãy hiển thị danh mục trước.',
+  CATEGORY_NAME_EXISTS: 'Tên danh mục đã tồn tại.',
+  CATEGORY_HAS_PRODUCTS: 'Danh mục vẫn còn sản phẩm. Hãy chuyển hoặc lưu trữ các sản phẩm trước.',
+  CATEGORY_NOT_FOUND: 'Không tìm thấy danh mục. Hãy tải lại trang.',
 }
 
 export function getUiError(error: unknown) {
