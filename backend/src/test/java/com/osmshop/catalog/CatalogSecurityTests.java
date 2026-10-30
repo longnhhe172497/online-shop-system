@@ -15,7 +15,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
-/** Route policy only. A permitted request reaches 404 because the controllers arrive in later PRs. */
+/** Route policy only. A permitted request to a route whose controller is not built yet returns 404. */
 @SpringBootTest(properties = "management.health.mail.enabled=false")
 @AutoConfigureMockMvc
 @Transactional
@@ -38,8 +38,8 @@ class CatalogSecurityTests {
         mvc.perform(get("/api/manager/products").header("Authorization", session("WAREHOUSE")))
                 .andExpect(status().isForbidden());
         String manager = session("MANAGER");
-        mvc.perform(get("/api/manager/products").header("Authorization", manager)).andExpect(status().isNotFound());
-        mvc.perform(get("/api/manager/categories").header("Authorization", manager)).andExpect(status().isNotFound());
+        mvc.perform(get("/api/manager/products").header("Authorization", manager)).andExpect(status().isOk());
+        mvc.perform(get("/api/manager/categories").header("Authorization", manager)).andExpect(status().isOk());
         mvc.perform(get("/api/manager/reviews").header("Authorization", manager)).andExpect(status().isNotFound());
     }
 
