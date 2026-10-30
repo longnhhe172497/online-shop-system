@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { getMe, logout, type AuthUser } from './api/auth'
-import { isInternalRole } from './internalAccess'
+import { getInternalHome, isInternalRole } from './internalAccess'
 
 export default function StoreHeader() {
   const [user, setUser] = useState<AuthUser | null>(null)
@@ -22,7 +22,7 @@ export default function StoreHeader() {
     <nav aria-label="Điều hướng cửa hàng"><Link to="/">SẢN PHẨM</Link></nav>
     <div className="shop-account">
       {user ? <>
-        {isInternalRole(user.role) && <Link to="/internal">Quản lý nội bộ</Link>}
+        {isInternalRole(user.role) && <Link to={getInternalHome(user.role)}>Khu vực nội bộ</Link>}
         <Link to="/me">Hồ sơ của tôi</Link>
         <button type="button" onClick={signOut}>Đăng xuất · {user.fullName}</button>
       </> : <Link to="/auth">Đăng nhập</Link>}

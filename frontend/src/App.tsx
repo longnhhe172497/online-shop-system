@@ -9,6 +9,8 @@ import ProfilePage from './ProfilePage'
 import AdminPage from './AdminPage'
 import WarehousePage from './WarehousePage'
 import DeliveryPage from './DeliveryPage'
+import InternalEntryRedirect from './InternalEntryRedirect'
+import InternalRoleRoute from './InternalRoleRoute'
 import { AcceptInvitationPage, MfaLoginPage, RegistrationSentPage,
   ResendVerificationPage } from './AuthExtraPages'
 import AccountSecurityPage from './AccountSecurityPage'
@@ -22,6 +24,7 @@ import OrderDetailPage from './OrderDetailPage'
 import StorefrontPage from './StorefrontPage'
 import ProductDetailPage from './ProductDetailPage'
 import './App.css'
+import './mockup-theme.css'
 
 // function ProductsPage() {
 //   const [products, setProducts] = useState<Product[]>([])
@@ -82,9 +85,12 @@ export default function App() {
     <Route path="/me/orders/:id" element={<OrderDetailPage />} />
     <Route path="/checkout" element={<CheckoutPage />} />
     <Route path="/email-change/confirm" element={<EmailChangeConfirmPage />} />
-    <Route path="/internal/warehouse" element={<WarehousePage />} />
-    <Route path="/internal/delivery" element={<DeliveryPage />} />
-    <Route path="/internal/*" element={<AdminPage />} />
-    <Route path="/admin" element={<Navigate to="/internal" replace />} />
+    <Route path="/admin/*" element={<AdminPage />} />
+    <Route path="/manager/*" element={<AdminPage />} />
+    <Route path="/support/*" element={<AdminPage />} />
+    <Route path="/warehouse/*" element={<InternalRoleRoute role="WAREHOUSE"><WarehousePage /></InternalRoleRoute>} />
+    <Route path="/delivery/*" element={<InternalRoleRoute role="DELIVERY"><DeliveryPage /></InternalRoleRoute>} />
+    <Route path="/internal/*" element={<InternalEntryRedirect />} />
+    <Route path="/staff" element={<Navigate to="/internal" replace />} />
   </Routes></>
 }

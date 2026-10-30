@@ -75,5 +75,42 @@ class GoogleIdentityFlowTests {
                 .content("{\"credential\":\"test-credential\"}"))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.user.role").value("SUPPORT"))
                 .andExpect(jsonPath("$.user.id").value(userId));
+        mvc.perform(post("/api/me/google/unlink").header("Authorization", "Bearer " + bearer)
+                .contentType(MediaType.APPLICATION_JSON).content("{\"password\":\"wrong\"}"))
+                .andExpect(status().isUnauthorized());
+        mvc.perform(post("/api/me/google/unlink").header("Authorization", "Bearer " + bearer)
+                .contentType(MediaType.APPLICATION_JSON).content("{\"password\":\"StrongPass123\"}"))
+                .andExpect(status().isNoContent());
+        mvc.perform(get("/api/me/google").header("Authorization", "Bearer " + bearer))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.linked").value(false));
+        mvc.perform(post("/api/auth/browser-google-login").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"credential\":\"test-credential\"}"))
+                .andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("GOOGLE_LINK_REQUIRED"));
+    }
+
+    @Test
+    void confirmingEmailChangeRemovesOldGoogleLinkAndRevokesSessions() throws Exception {
+        String oldEmail = "old-" + UUID.randomUUID() + "@example.com";
+        String newEmail = "new-" + UUID.randomUUID() + "@example.com";
+        long userId = jdbc.queryForObject("""
+                INSERT INTO users(email,password_hash,full_name,role,status,verified_at)
+                VALUES (?,?,'Khách','CUSTOMER','ACTIVE',now()) RETURNING id
+                """, Long.class, oldEmail, passwords.encode("StrongPass123"));
+        jdbc.update("INSERT INTO google_identities(user_id,google_sub) VALUES (?,?)", userId,
+                "sub-" + UUID.randomUUID());
+        String token = UUID.randomUUID().toString();
+        jdbc.update("""
+                INSERT INTO email_change_requests(user_id,new_email,token_hash,expires_at)
+                VALUES (?,?,?,now() + interval '30 minutes')
+                """, userId, newEmail, AuthService.hash(token));
+
+        mvc.perform(post("/api/auth/email-change/confirm").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"token\":\"" + token + "\"}"))
+                .andExpect(status().isNoContent());
+
+        org.junit.jupiter.api.Assertions.assertEquals(newEmail,
+                jdbc.queryForObject("SELECT email FROM users WHERE id=?", String.class, userId));
+        org.junit.jupiter.api.Assertions.assertEquals(0,
+                jdbc.queryForObject("SELECT count(*) FROM google_identities WHERE user_id=?", Integer.class, userId));
     }
 }

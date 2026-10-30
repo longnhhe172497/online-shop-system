@@ -1,0 +1,388 @@
+/* The account/auth/internal surfaces follow forme-html-mockups/css/site.css.
+   Noto Serif covers Vietnamese headings; the FORME wordmark retains DM Serif. */
+@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Manrope:wght@400;500;600;700;800&family=Noto+Serif:wght@400;500;600;700&display=swap');
+
+:root {
+  --forme-bg: #faf8f3;
+  --forme-paper: #fff;
+  --forme-ink: #332d29;
+  --forme-muted: #766f69;
+  --forme-line: #ddd7cf;
+  --forme-blue: #344bc5;
+  --forme-orange: #d75227;
+  --forme-green: #267c5b;
+  --forme-navy: #282b52;
+  --forme-red: #ba3341;
+  --forme-shadow: 0 12px 32px rgba(45, 39, 33, .08);
+}
+
+.forme-page,
+.internal-shell,
+.internal-access {
+  background: var(--forme-bg);
+  color: var(--forme-ink);
+  font-family: Manrope, 'Segoe UI', Arial, sans-serif;
+  font-size: 14px;
+}
+
+.forme-page *, .internal-shell * { font-family: inherit; }
+.forme-page button, .internal-shell button { cursor: pointer; }
+.forme-page a, .internal-shell a { text-decoration: none; }
+
+.announcement {
+  background: var(--forme-orange);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .03em;
+  padding: 7px 16px;
+}
+
+.forme-header {
+  background: rgba(250, 248, 243, .97);
+  border-bottom-color: var(--forme-line);
+  min-height: 72px;
+  padding: 0 max(32px, calc((100vw - 1450px) / 2 + 32px));
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.forme-header .brand, .internal-logo, .forme-footer strong {
+  color: var(--forme-ink);
+  font-family: 'DM Serif Display', Georgia, serif;
+  font-weight: 400;
+  letter-spacing: 0;
+}
+
+.forme-header .brand { font-size: 34px; }
+.forme-header nav a {
+  color: var(--forme-ink);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .12em;
+}
+.forme-header nav a:hover, .forme-page a:hover { color: var(--forme-blue); }
+
+.auth-main {
+  align-items: flex-start;
+  min-height: 660px;
+  padding: 50px 20px 90px;
+}
+.auth-main-split { max-width: none; }
+.auth-showcase { display: none; }
+.auth-card, .auth-card-wide, .verify-card, .auth-result-card {
+  background: var(--forme-paper);
+  border: 1px solid var(--forme-line);
+  border-radius: 5px;
+  box-shadow: var(--forme-shadow);
+  flex: none;
+  margin: 0 auto;
+  max-width: 470px;
+  padding: 28px;
+  width: 100%;
+}
+.auth-card-wide { align-self: flex-start; }
+.auth-card h1, .verify-card h1 {
+  color: var(--forme-ink);
+  font-family: 'Noto Serif', Georgia, serif;
+  font-size: clamp(36px, 4vw, 46px);
+  font-weight: 500;
+  letter-spacing: -.03em;
+  line-height: 1.15;
+  margin: 0 0 11px;
+}
+.auth-lead { color: var(--forme-muted); font-size: 13px; margin-bottom: 21px; }
+.auth-kicker, .card-eyebrow, .internal-nav-caption, .internal-topbar-kicker {
+  color: var(--forme-muted);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+.auth-tabs, .permission-role-tabs {
+  border-bottom: 1px solid var(--forme-line);
+  gap: 3px;
+  margin: 0 0 24px;
+}
+.auth-tabs button, .permission-role-tabs button {
+  border-bottom: 3px solid transparent;
+  color: var(--forme-muted);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .09em;
+  padding: 13px 15px;
+}
+.auth-tabs button.active, .permission-role-tabs button.active {
+  border-bottom-color: var(--forme-blue);
+  color: var(--forme-blue);
+}
+.auth-card form label, .account-form label, .address-form-grid label, .audit-filters label {
+  color: var(--forme-ink);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+}
+.auth-card input, .account-form input, .address-form-grid input,
+.admin-filters input, .admin-filters select, .admin-table select,
+.setting-row input, .admin-editor select, .google-link-password input {
+  background: #fff;
+  border: 1px solid var(--forme-line);
+  border-radius: 3px;
+  color: var(--forme-ink);
+  min-height: 45px;
+}
+.auth-card input:focus, .account-form input:focus, .address-form-grid input:focus,
+.admin-filters input:focus, .admin-filters select:focus, .admin-table select:focus {
+  border-color: var(--forme-blue);
+  outline: 2px solid #dce2ff;
+}
+.auth-card input:disabled, .account-form input:disabled { background: #f4f1ec; color: var(--forme-muted); }
+.auth-card-wide form label { margin-bottom: 7px; }
+.auth-card-wide form > label:has(input) { margin-bottom: 18px; }
+.auth-submit, .account-primary, .auth-cta-link {
+  background: var(--forme-blue);
+  border: 1px solid var(--forme-blue);
+  border-radius: 3px;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  min-height: 45px;
+  padding: 11px 18px;
+  text-transform: uppercase;
+}
+.auth-submit:hover:not(:disabled), .account-primary:hover:not(:disabled) {
+  background: #263aa6;
+  border-color: #263aa6;
+}
+.account-secondary, .google-button-placeholder {
+  background: #fff;
+  border: 1px solid var(--forme-line);
+  border-radius: 3px;
+  color: var(--forme-ink);
+}
+.auth-links a, .auth-help a, .auth-card a, .verify-card a,
+.security-panel a, .admin-link, .admin-pagination button,
+.dashboard-panel-head button, .dashboard-quick-link b { color: var(--forme-blue); }
+.auth-divider { color: var(--forme-muted); }
+.auth-divider::before, .auth-divider::after { background: var(--forme-line); }
+.auth-notice { background: #e5f4ed; border-left: 3px solid var(--forme-green); color: #176949; }
+.auth-error { color: var(--forme-red); }
+.password-input button { color: var(--forme-blue); }
+
+.forme-footer {
+  align-items: center;
+  background: var(--forme-navy);
+  border-top: none;
+  color: #fff;
+  min-height: 104px;
+  padding: 24px max(32px, calc((100vw - 1450px) / 2 + 32px));
+}
+.forme-footer strong { color: #fff; font-size: 34px; }
+.forme-footer span { color: #d9d9e8; }
+
+.account-workspace {
+  display: block;
+  max-width: 1450px;
+  padding: 46px 32px 96px;
+}
+.account-heading {
+  border-bottom: 0;
+  margin-bottom: 22px;
+}
+.account-heading h1, .internal-page-heading h1 {
+  color: var(--forme-ink);
+  font-family: 'Noto Serif', Georgia, serif;
+  font-size: clamp(36px, 5vw, 58px);
+  font-weight: 500;
+  letter-spacing: -.03em;
+  line-height: 1.16;
+}
+.account-heading p:last-child, .internal-page-heading > p:last-child { color: var(--forme-muted); }
+.account-nav-panel {
+  align-items: stretch;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--forme-line);
+  border-radius: 0;
+  display: flex;
+  gap: 3px;
+  margin: 0 0 28px;
+  overflow-x: auto;
+  padding: 0;
+  position: static;
+}
+.account-nav-panel a {
+  border-bottom: 3px solid transparent;
+  color: var(--forme-muted);
+  display: inline-flex;
+  flex: 0 0 auto;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  padding: 13px 15px;
+  text-transform: uppercase;
+}
+.account-nav-panel a span { display: none; }
+.account-nav-panel a.active, .account-nav-panel a:hover {
+  background: transparent;
+  border-bottom-color: var(--forme-blue);
+  box-shadow: none;
+  color: var(--forme-blue);
+}
+.account-card, .admin-panel, .dashboard-panel, .dashboard-metric,
+.role-permissions-panel, .address-modal, .confirm-modal {
+  background: var(--forme-paper);
+  border: 1px solid var(--forme-line);
+  border-radius: 5px;
+  box-shadow: none;
+}
+.account-card h2, .admin-panel h2, .internal-main .admin-panel h2,
+.dashboard-intro h2, .dashboard-panel h3, .security-panel h2,
+.address-modal-head h2, .confirm-modal h2 {
+  color: var(--forme-ink);
+  font-family: 'Noto Serif', Georgia, serif;
+  font-weight: 500;
+  letter-spacing: -.02em;
+  line-height: 1.2;
+}
+.account-card h2, .admin-panel h2, .internal-main .admin-panel h2 { font-size: 28px; }
+.profile-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  gap: 30px;
+  align-items: start;
+}
+.account-workspace .personal-card { max-width: none; padding: 24px; }
+.personal-card h2 { margin: 4px 0 25px; }
+.personal-card .account-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 20px; }
+.personal-card .account-form label { margin: 0; }
+.personal-card .account-form .account-primary { grid-column: 1 / -1; justify-self: start; width: auto; }
+.profile-field-note { color: var(--forme-muted); font-size: 12px; margin: 0; align-self: center; }
+.profile-summary { padding: 30px 20px; text-align: center; }
+.profile-summary .account-avatar {
+  background: var(--forme-orange);
+  border: 0;
+  border-radius: 50%;
+  color: #fff;
+  font-family: Manrope, sans-serif;
+  height: 100px;
+  margin: 0 auto 18px;
+  width: 100px;
+}
+.profile-summary h2 { overflow-wrap: anywhere; }
+.profile-summary p { color: var(--forme-muted); overflow-wrap: anywhere; }
+.role-pill, .default-badge, .secondary-badge, .security-state {
+  border: 1px solid #ced5ff;
+  border-radius: 99px;
+  background: #e9edff;
+  color: #263aa6;
+  display: inline-flex;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .05em;
+  padding: 5px 9px;
+  text-transform: uppercase;
+}
+.default-badge, .security-state.on { background: #e5f4ed; border-color: #c5e6d7; color: #176949; }
+.secondary-badge { background: #f6f3ee; border-color: var(--forme-line); color: var(--forme-muted); }
+.address-table th { background: #fff; border-color: var(--forme-line); color: var(--forme-muted); }
+.address-table td { border-color: var(--forme-line); }
+.address-section-head { border-bottom: 1px solid var(--forme-line); }
+.address-row-actions button, .address-empty button { color: var(--forme-blue); }
+.address-row-actions button:last-child { color: var(--forme-red); }
+.address-modal-backdrop { background: rgba(40, 43, 82, .55); }
+.address-modal { box-shadow: var(--forme-shadow); }
+.account-return { border-color: var(--forme-line); color: var(--forme-muted); margin-top: 32px; }
+.account-footer-actions { align-items: center; display: flex; flex-wrap: wrap; gap: 22px; margin-top: 32px; }
+.account-footer-actions .account-return { border: 0; margin: 0; padding: 0; }
+.account-sign-out, .internal-sign-out {
+  background: transparent;
+  border: 0;
+  color: var(--forme-red);
+  font-size: 12px;
+  font-weight: 800;
+  padding: 5px 0;
+  text-align: left;
+}
+.account-sign-out:hover, .internal-sign-out:hover { text-decoration: underline; }
+
+.internal-shell { grid-template-columns: 252px minmax(0, 1fr); }
+.internal-sidebar {
+  background: #fff;
+  border-right: 1px solid var(--forme-line);
+  padding: 24px 17px 20px;
+}
+.internal-logo { font-size: 34px; }
+.internal-logo span { color: var(--forme-muted); font-family: Manrope, sans-serif; letter-spacing: .12em; }
+.internal-workspace { background: var(--forme-bg); border-color: var(--forme-line); border-radius: 5px; }
+.internal-workspace-mark { background: var(--forme-orange); border-radius: 3px; font-family: 'DM Serif Display', Georgia, serif; }
+.internal-workspace small, .internal-nav-caption { color: var(--forme-muted); }
+.internal-nav button {
+  border-radius: 3px;
+  color: var(--forme-ink);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: .02em;
+}
+.internal-nav button:hover { background: #f2f0e9; color: var(--forme-blue); }
+.internal-nav button.active { background: #e9edff; box-shadow: inset 3px 0 var(--forme-blue); color: var(--forme-blue); }
+.internal-sidebar-bottom { border-color: var(--forme-line); }
+.internal-sidebar-bottom a { color: var(--forme-muted); }
+.internal-sidebar-bottom a:hover { color: var(--forme-blue); }
+.internal-topbar { background: rgba(250, 248, 243, .97); border-color: var(--forme-line); }
+.internal-profile-link { background: var(--forme-orange); color: #fff; }
+.internal-main { max-width: 1450px; padding-top: 46px; }
+.internal-page-heading {
+  border-bottom: 1px solid var(--forme-line);
+  margin-bottom: 30px;
+  padding-bottom: 23px;
+}
+.admin-panel { padding: 22px; }
+.admin-section-head p, .admin-panel > p { color: var(--forme-muted); }
+.admin-table-wrap { border-color: var(--forme-line); border-radius: 3px; }
+.admin-table td:first-child, .admin-table td { min-width: 0; }
+.admin-filters input, .admin-filters select, .admin-table select,
+.setting-row input, .admin-editor select { border-color: var(--forme-line); }
+.admin-empty { color: var(--forme-muted); }
+.dashboard-intro {
+  border: 1px solid var(--forme-line);
+  border-left: 5px solid var(--forme-orange);
+  border-radius: 5px;
+  min-height: 172px;
+}
+.dashboard-intro h2 { font-size: clamp(26px, 3vw, 34px); }
+.dashboard-intro .account-primary { background: var(--forme-blue); border-color: var(--forme-blue); }
+.dashboard-tag, .dashboard-quick-link > span { background: #e9edff; color: #263aa6; }
+.dashboard-metric { min-height: 140px; }
+.dashboard-metric strong {
+  font-family: 'Noto Serif', Georgia, serif;
+  font-size: 28px;
+  font-weight: 500;
+}
+.dashboard-quick-link { border-color: var(--forme-line); }
+.dashboard-placeholder { color: var(--forme-muted); }
+.dashboard-placeholder span { background: #e9edff; color: var(--forme-blue); }
+.permission-note, .mfa-recovery-panel, .totp-secret { border-radius: 5px; }
+
+@media (max-width: 900px) {
+  .profile-layout { grid-template-columns: 1fr; }
+  .profile-summary { max-width: 100%; }
+}
+@media (max-width: 780px) {
+  .internal-shell { display: block; }
+  .internal-sidebar { height: auto; min-height: 0; position: static; }
+  .internal-main { padding: 30px 20px 60px; }
+}
+@media (max-width: 600px) {
+  .forme-header { min-height: 62px; padding: 0 18px; }
+  .forme-header .brand { font-size: 29px; }
+  .auth-main { padding: 28px 16px 60px; }
+  .auth-card, .verify-card, .auth-result-card { padding: 22px; }
+  .account-workspace { padding: 32px 18px 64px; }
+  .personal-card .account-form { grid-template-columns: 1fr; }
+  .profile-field-note, .personal-card .account-form .account-primary { grid-column: auto; }
+  .address-section-head, .admin-section-head { align-items: flex-start; flex-direction: column; }
+  .admin-filters { flex-wrap: wrap; }
+}

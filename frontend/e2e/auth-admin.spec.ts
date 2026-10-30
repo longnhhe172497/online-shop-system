@@ -120,6 +120,7 @@ test('register, verify email, sign in with MFA, and invite internal staff', asyn
   await page.getByLabel('ĐỊA CHỈ EMAIL').fill(staffEmail)
   await page.getByLabel('MẬT KHẨU', { exact: true }).fill(password)
   await page.getByRole('button', { name: 'ĐĂNG NHẬP', exact: true }).click()
-  await expect(page.getByRole('heading', { name: 'Tổng quan', exact: true })).toBeVisible()
+  await expect(page).toHaveURL(/\/warehouse$/)
+  await expect(page.getByRole('heading', { name: 'Hàng đợi kho', exact: true })).toBeVisible()
   await expect(page.getByText('Nhân viên kho').first()).toBeVisible()
 })

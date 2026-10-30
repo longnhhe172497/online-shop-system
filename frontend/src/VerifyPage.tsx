@@ -2,22 +2,25 @@ import { useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import FormeLayout from './FormeLayout'
 import { verifyAccount } from './api/auth'
+import { getUiError } from './uiError'
 
 export default function VerifyPage() {
   const [params] = useSearchParams()
   const [status, setStatus] = useState('')
+  const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const token = params.get('token')
 
   async function verify() {
     if (!token) return
     setBusy(true)
+    setError('')
     try {
       await verifyAccount(token)
       setStatus('Email đã được xác minh. Bạn có thể đăng nhập.')
       window.history.replaceState(window.history.state, '', '/verify-email')
-    } catch {
-      setStatus('Liên kết xác minh không hợp lệ, đã hết hạn hoặc đã được sử dụng.')
+    } catch (failure) {
+      setError(getUiError(failure))
     } finally {
       setBusy(false)
     }
@@ -28,6 +31,7 @@ export default function VerifyPage() {
     <p>{token ? 'Xác nhận email để kích hoạt tài khoản của bạn.' : 'Không tìm thấy mã xác minh trong liên kết.'}</p>
     {token && !status && <button className="auth-submit" disabled={busy} onClick={verify}>{busy ? 'ĐANG XÁC MINH…' : 'XÁC MINH EMAIL'}</button>}
     {status && <p role="status">{status}</p>}
+    {error && <p className="auth-error" role="alert">{error}</p>}
     <Link to="/auth">Quay lại đăng nhập</Link>
     <Link to="/resend-verification">Gửi lại liên kết xác minh</Link>
   </div></div></FormeLayout>

@@ -9,7 +9,8 @@ const EXPIRE_AFTER_MS = 30 * 60 * 1000
 export default function SessionIdleNotice() {
   const location = useLocation()
   const navigate = useNavigate()
-  const protectedRoute = location.pathname.startsWith('/me') || location.pathname.startsWith('/internal')
+  const protectedRoute = location.pathname.startsWith('/me') || ['/admin', '/manager', '/support', '/warehouse',
+    '/delivery', '/internal'].some((prefix) => location.pathname.startsWith(prefix))
   const [active, setActive] = useState(false)
   const [warning, setWarning] = useState(false)
   const [busy, setBusy] = useState(false)

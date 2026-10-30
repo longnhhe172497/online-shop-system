@@ -45,7 +45,7 @@ export default function AccountSessionsPage() {
             <small>Hoạt động gần nhất {new Date(item.lastSeenAt ?? item.createdAt).toLocaleString('vi-VN')}
               {' · '}Hết hạn {new Date(item.expiresAt).toLocaleString('vi-VN')}</small></div>
           {item.current ? <span className="security-state on">Thiết bị này</span> :
-            <button className="admin-link" disabled={busy} onClick={() => void remove(item.id)}>Đăng xuất</button>}
+            <button className="admin-link" disabled={busy} onClick={() => void remove(item.id)}>Kết thúc phiên</button>}
         </article>)}</div>}
     </section>
   </AccountLayout>

@@ -2,7 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { acceptInvitation } from './api/admin'
 import { resendVerification, verifyMfa } from './api/auth'
-import { isInternalRole } from './internalAccess'
+import { getInternalHome, isInternalRole } from './internalAccess'
 import { getUiError } from './uiError'
 import FormeLayout from './FormeLayout'
 
@@ -64,7 +64,7 @@ export function MfaLoginPage() {
   const navigate = useNavigate()
   const location = useLocation()
   const state = location.state as { challengeToken?: string; email?: string;
-    mfaMethod?: 'EMAIL' | 'TOTP' } | null
+    mfaMethod?: 'EMAIL' | 'TOTP'; emailDeliveryFailed?: boolean } | null
   const useAuthenticator = state?.mfaMethod === 'TOTP'
   const [code, setCode] = useState('')
   const [busy, setBusy] = useState(false)
@@ -74,12 +74,13 @@ export function MfaLoginPage() {
     if (!state?.challengeToken) return
     setBusy(true); setError('')
     try { const session = await verifyMfa(state.challengeToken, code)
-      if (session.user) navigate(isInternalRole(session.user.role) ? '/internal' : '/', { replace: true }) }
+      if (session.user) navigate(isInternalRole(session.user.role) ? getInternalHome(session.user.role) : '/', { replace: true }) }
     catch (failure) { setError(getUiError(failure)) }
     finally { setBusy(false) }
   }
   return <AuthCard kicker="BẢO MẬT HAI BƯỚC" title="Xác minh đăng nhập">
-    <p className="auth-lead">{useAuthenticator
+    <p className="auth-lead">{state?.emailDeliveryFailed && !useAuthenticator
+      ? 'Hiện không gửi được mã qua email. Bạn vẫn có thể đăng nhập bằng một mã khôi phục đã lưu; nếu không còn mã, hãy liên hệ quản trị viên.' : useAuthenticator
       ? 'Tài khoản này đang dùng ứng dụng xác thực. Mở Google Authenticator hoặc ứng dụng bạn đã thiết lập, tìm FORME và lấy mã 6 số đang hiển thị.'
       : `Tài khoản này đang dùng mã qua email. Lấy mã 6 số đã gửi tới ${state?.email ?? 'email của bạn'}.`}</p>
     <p className="auth-notice">Nếu không lấy được mã {useAuthenticator ? 'từ ứng dụng' : 'từ email'},

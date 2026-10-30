@@ -2,7 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { login, loginWithGoogle, registerAccount } from './api/auth'
 import { getUiError } from './uiError'
-import { isInternalRole } from './internalAccess'
+import { getInternalHome, isInternalRole } from './internalAccess'
 import FormeLayout from './FormeLayout'
 import GoogleButton from './GoogleButton'
 
@@ -39,9 +39,9 @@ export default function AuthPage() {
         setPassword('')
         if (session.mfaRequired && session.challengeToken) {
           navigate('/auth/mfa', { state: { challengeToken: session.challengeToken, email,
-            mfaMethod: session.mfaMethod } })
+            mfaMethod: session.mfaMethod, emailDeliveryFailed: session.emailDeliveryFailed } })
         } else if (session.user) {
-          navigate(isInternalRole(session.user.role) ? '/internal' : customerHome)
+          navigate(isInternalRole(session.user.role) ? getInternalHome(session.user.role) : customerHome)
         }
       }
     } catch (failure) {
@@ -57,15 +57,15 @@ export default function AuthPage() {
       const session = await loginWithGoogle(credential)
       if (session.mfaRequired && session.challengeToken) {
         navigate('/auth/mfa', { state: { challengeToken: session.challengeToken,
-          mfaMethod: session.mfaMethod } })
+          mfaMethod: session.mfaMethod, emailDeliveryFailed: session.emailDeliveryFailed } })
       } else if (session.user) {
-        navigate(isInternalRole(session.user.role) ? '/internal' : customerHome)
+        navigate(isInternalRole(session.user.role) ? getInternalHome(session.user.role) : customerHome)
       }
     } catch (failure) { setError(getUiError(failure)) }
     finally { setBusy(false) }
   }
 
-  return <FormeLayout showcase><section className="auth-card auth-card-wide">
+  return <FormeLayout><section className="auth-card auth-card-wide">
     <p className="auth-kicker">{mode === 'login' ? 'CHÀO MỪNG BẠN' : 'THAM GIA CÙNG CHÚNG TÔI'}</p>
     <h1>{mode === 'login' ? 'Đăng nhập' : 'Tạo tài khoản'}</h1>
     <p className="auth-lead">{mode === 'login' ? 'Tiếp tục hành trình mua sắm cùng FORME.' :
@@ -88,12 +88,14 @@ export default function AuthPage() {
       <div className="password-input"><input id="auth-password" type={showPassword ? 'text' : 'password'}
         value={password} onChange={(event) => setPassword(event.target.value)} required
         minLength={mode === 'register' ? 8 : undefined}
+        maxLength={mode === 'register' ? 72 : undefined}
         autoComplete={mode === 'login' ? 'current-password' : 'new-password'} />
         <button type="button" onClick={() => setShowPassword((value) => !value)}
           aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}>{showPassword ? 'Ẩn' : 'Hiện'}</button></div>
       {mode === 'register' && <><p className="password-hint">Sử dụng ít nhất 8 ký tự. Nên chọn một mật khẩu riêng cho FORME.</p>
         <label>NHẬP LẠI MẬT KHẨU<input type={showPassword ? 'text' : 'password'} value={confirmPassword}
           onChange={(event) => setConfirmPassword(event.target.value)} required minLength={8}
+          maxLength={72}
           autoComplete="new-password" /></label></>}
       <button className="auth-submit" disabled={busy} type="submit">{busy ? 'VUI LÒNG ĐỢI…' :
         mode === 'login' ? 'ĐĂNG NHẬP' : 'TẠO TÀI KHOẢN'}</button>

@@ -2,6 +2,7 @@ import { isAxiosError } from 'axios'
 
 const messages: Record<string, string> = {
   ADDRESS_LIMIT_REACHED: 'Bạn đã lưu tối đa số địa chỉ cho phép.',
+  DEFAULT_ADDRESS_REQUIRED: 'Hãy chọn địa chỉ khác làm mặc định trước khi bỏ mặc định ở địa chỉ này.',
   EMAIL_ALREADY_REGISTERED: 'Email này đã được đăng ký.',
   INVALID_CREDENTIALS: 'Email hoặc mật khẩu không đúng.',
   INVALID_RESET_TOKEN: 'Liên kết đặt lại mật khẩu không hợp lệ hoặc đã hết hạn.',
@@ -11,6 +12,7 @@ const messages: Record<string, string> = {
   INVALID_PERMISSION: 'Danh sách quyền không hợp lệ. Hãy tải lại trang và thử lại.',
   PERMISSION_VERSION_CONFLICT: 'Quyền của vai trò này vừa được người khác thay đổi. Hãy tải lại trước khi lưu.',
   INVALID_STATUS: 'Trạng thái không hợp lệ.',
+  INVALID_STATUS_TRANSITION: 'Tài khoản đã xác minh không thể chuyển lại trạng thái chờ xác minh.',
   INVALID_SETTING: 'Giá trị thiết lập không hợp lệ hoặc vượt giới hạn.',
   EMAIL_NOT_VERIFIED: 'Email của tài khoản này chưa được xác minh.',
   LAST_ADMIN: 'Không thể xóa quyền của quản trị viên đang hoạt động cuối cùng.',
@@ -24,6 +26,7 @@ const messages: Record<string, string> = {
   GOOGLE_LINK_REQUIRED: 'Email đã có tài khoản. Hãy đăng nhập bằng mật khẩu rồi liên kết Google trong Bảo mật tài khoản.',
   GOOGLE_EMAIL_MISMATCH: 'Bạn đã chọn tài khoản Google khác email đang đăng nhập. Hãy chọn đúng tài khoản rồi thử lại.',
   GOOGLE_ALREADY_LINKED: 'Tài khoản Google này đã được liên kết.',
+  GOOGLE_NOT_LINKED: 'Tài khoản này chưa liên kết Google.',
   ACCOUNT_UNAVAILABLE: 'Tài khoản này hiện không thể đăng nhập.',
   INVALID_INVITATION: 'Lời mời không hợp lệ hoặc đã hết hạn.',
   INVITATION_DELIVERY_FAILED: 'Không gửi được email lời mời. Hãy kiểm tra cấu hình thư rồi thử lại.',
@@ -37,6 +40,7 @@ const messages: Record<string, string> = {
   MFA_ALREADY_ENABLED: 'Xác minh hai bước đã được bật. Hãy tải lại trang để xem trạng thái mới nhất.',
   MFA_NOT_ENABLED: 'Xác minh hai bước chưa được bật. Hãy tải lại trang để kiểm tra trạng thái.',
   INVALID_EMAIL_CHANGE_TOKEN: 'Liên kết đổi email không hợp lệ hoặc đã hết hạn.',
+  INVALID_REQUEST: 'Thông tin nhập chưa hợp lệ. Hãy kiểm tra và thử lại.',
   FORBIDDEN: 'Bạn không có quyền thực hiện thao tác này.',
   CART_EMPTY: 'Giỏ hàng đang trống hoặc đơn vừa được đặt. Hãy kiểm tra lại giỏ hàng.',
   ADDRESS_NOT_FOUND: 'Không tìm thấy địa chỉ giao hàng. Hãy chọn lại địa chỉ.',
