@@ -174,9 +174,11 @@ public class AuthService {
         Boolean mfaEnabled = jdbc.queryForObject("SELECT mfa_enabled FROM users WHERE id=?", Boolean.class, user.id());
         if (Boolean.TRUE.equals(mfaEnabled)) {
             String method = mfaMethod(user.id());
-            String challenge = "TOTP".equals(method) ? createTotpChallenge(user.id(), "LOGIN")
+            MfaChallengeStart challenge = "TOTP".equals(method)
+                    ? new MfaChallengeStart(createTotpChallenge(user.id(), "LOGIN"), true)
                     : createMfaChallenge(user.id(), user.email(), "LOGIN");
-            return new LoginResponse(null, null, null, true, challenge, method);
+            return new LoginResponse(null, null, null, true, challenge.token(), method,
+                    !challenge.emailSent());
         }
         return createSession(user, ipAddress, userAgent);
     }
@@ -194,7 +196,7 @@ public class AuthService {
                 VALUES (?,'AUTH_LOGIN_SUCCESS','USER',?,jsonb_build_object('ip',?))
                 """, user.id(), Long.toString(user.id()), safeLength(ipAddress, 64));
         return new LoginResponse(token, expiresAt,
-                new UserResponse(user.id(), user.email(), user.fullName(), user.role()), false, null, null);
+                new UserResponse(user.id(), user.email(), user.fullName(), user.role()), false, null, null, false);
     }
 
     public void requestPasswordReset(String requestedEmail, String ipAddress) {
@@ -374,7 +376,7 @@ public class AuthService {
             throw new AuthApiException(HttpStatus.CONFLICT, "MFA_ALREADY_ENABLED", "Xác minh hai bước đã được bật.");
         }
         String email = jdbc.queryForObject("SELECT email FROM users WHERE id=?", String.class, userId);
-        return createMfaChallenge(userId, email, "ENROLL");
+        return createMfaChallenge(userId, email, "ENROLL").token();
     }
 
     @Transactional(noRollbackFor = AuthApiException.class)
@@ -449,9 +451,10 @@ public class AuthService {
         if (!mfaEnabled(userId)) throw new AuthApiException(HttpStatus.CONFLICT, "MFA_NOT_ENABLED",
                 "Xác minh hai bước chưa được bật.");
         String method = mfaMethod(userId);
-        String challenge = "TOTP".equals(method) ? createTotpChallenge(userId, "STEP_UP")
+        MfaChallengeStart challenge = "TOTP".equals(method)
+                ? new MfaChallengeStart(createTotpChallenge(userId, "STEP_UP"), true)
                 : createMfaChallenge(userId, userEmail(userId), "STEP_UP");
-        return new MfaStepUpResponse(challenge, method);
+        return new MfaStepUpResponse(challenge.token(), method, !challenge.emailSent());
     }
 
     @Transactional
@@ -538,7 +541,7 @@ public class AuthService {
         return codes;
     }
 
-    private String createMfaChallenge(long userId, String email, String purpose) {
+    private MfaChallengeStart createMfaChallenge(long userId, String email, String purpose) {
         String challenge = newToken();
         String code = String.format(Locale.ROOT, "%06d", RANDOM.nextInt(1_000_000));
         jdbc.update("""
@@ -552,8 +555,16 @@ public class AuthService {
         message.setSubject("FORME - Mã xác minh hai bước");
         message.setText("Mã xác minh FORME của bạn: " + code
                 + "\nMã có hiệu lực trong 10 phút. Không chia sẻ mã này cho người khác.");
-        mail.send(message);
-        return challenge;
+        try {
+            mail.send(message);
+            return new MfaChallengeStart(challenge, true);
+        } catch (MailException exception) {
+            if ("ENROLL".equals(purpose)) throw exception;
+            LOGGER.warn("MFA email delivery failed for user id {} ({})", userId,
+                    exception.getClass().getSimpleName());
+            // Keep the challenge so an existing recovery code can still unlock the account.
+            return new MfaChallengeStart(challenge, false);
+        }
     }
 
     private String createTotpChallenge(long userId, String purpose) {
@@ -627,6 +638,7 @@ public class AuthService {
         jdbc.update("UPDATE email_mfa_challenges SET used_at=now() WHERE user_id=? AND used_at IS NULL", userId);
     }
 
+    private record MfaChallengeStart(String token, boolean emailSent) {}
     private record MfaChallenge(long userId, String codeHash, int attempts) {}
     private record TotpCredential(String encryptedSecret, Long lastUsedStep) {}
 

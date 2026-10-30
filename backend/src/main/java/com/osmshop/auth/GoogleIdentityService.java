@@ -103,5 +103,22 @@ public class GoogleIdentityService {
                 """, userId, Long.toString(userId));
     }
 
+    @Transactional
+    public void unlink(long userId, String password) {
+        limits.check("google-unlink", Long.toString(userId), 5, 900);
+        String passwordHash = jdbc.queryForObject("SELECT password_hash FROM users WHERE id=?",
+                String.class, userId);
+        if (!passwords.matches(password, passwordHash))
+            throw new AuthApiException(HttpStatus.UNAUTHORIZED, "INVALID_CURRENT_PASSWORD",
+                    "Mật khẩu hiện tại không đúng.");
+        int removed = jdbc.update("DELETE FROM google_identities WHERE user_id=?", userId);
+        if (removed == 0) throw new AuthApiException(HttpStatus.CONFLICT, "GOOGLE_NOT_LINKED",
+                "Tài khoản này chưa liên kết Google.");
+        jdbc.update("""
+                INSERT INTO audit_logs(actor_id,action,entity_type,entity_id)
+                VALUES (?,'AUTH_GOOGLE_UNLINK','USER',?)
+                """, userId, Long.toString(userId));
+    }
+
     private record UserForLink(String email, String passwordHash) {}
 }

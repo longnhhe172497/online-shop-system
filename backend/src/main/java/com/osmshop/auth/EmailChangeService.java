@@ -89,6 +89,8 @@ public class EmailChangeService {
         try {
             jdbc.update("UPDATE users SET email=?,verified_at=now(),updated_at=now() WHERE id=?",
                     change.newEmail(), change.userId());
+            // A Google identity linked to the old email must not silently remain a login method.
+            jdbc.update("DELETE FROM google_identities WHERE user_id=?", change.userId());
             jdbc.update("UPDATE email_change_requests SET used_at=now() WHERE user_id=? AND used_at IS NULL",
                     change.userId());
             jdbc.update("UPDATE user_sessions SET revoked_at=now() WHERE user_id=? AND revoked_at IS NULL",

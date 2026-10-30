@@ -8,7 +8,8 @@ export interface AuthUser {
 }
 
 export interface LoginResult { user: AuthUser | null; mfaRequired: boolean;
-  challengeToken: string | null; mfaMethod?: 'EMAIL' | 'TOTP' | null }
+  challengeToken: string | null; mfaMethod?: 'EMAIL' | 'TOTP' | null;
+  emailDeliveryFailed?: boolean }
 
 export async function registerAccount(input: {
   fullName: string
@@ -61,6 +62,10 @@ export async function getGoogleLinkStatus() {
 
 export async function linkGoogle(password: string, credential: string) {
   await api.post('/me/google/link', { password, credential })
+}
+
+export async function unlinkGoogle(password: string) {
+  await api.post('/me/google/unlink', { password })
 }
 
 export async function verifyMfa(challengeToken: string, code: string) {

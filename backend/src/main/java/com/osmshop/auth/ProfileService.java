@@ -77,7 +77,11 @@ public class ProfileService {
     public AddressResponse updateAddress(long userId, long addressId, AddressRequest request) {
         lockUser(userId);
         AddressResponse existing = getAddress(userId, addressId);
-        boolean makeDefault = request.isDefault() || existing.isDefault();
+        if (existing.isDefault() && !request.isDefault()) {
+            throw new AuthApiException(HttpStatus.CONFLICT, "DEFAULT_ADDRESS_REQUIRED",
+                    "Choose another default address before removing the current default");
+        }
+        boolean makeDefault = request.isDefault();
         if (request.isDefault()) clearDefault(userId);
         jdbc.update("""
                 UPDATE user_addresses SET recipient_name = ?, phone = ?, address_line = ?, ward = ?,

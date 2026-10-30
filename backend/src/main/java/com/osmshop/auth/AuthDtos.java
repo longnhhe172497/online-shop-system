@@ -28,14 +28,15 @@ public final class AuthDtos {
     public record PasswordResetConfirmResponse(boolean reset) {}
     public record UserResponse(long id, String email, String fullName, String role) {}
     public record LoginResponse(String accessToken, Instant expiresAt, UserResponse user,
-                                boolean mfaRequired, String challengeToken, String mfaMethod) {}
+                                boolean mfaRequired, String challengeToken, String mfaMethod,
+                                boolean emailDeliveryFailed) {}
     public record BrowserLoginResponse(UserResponse user, boolean mfaRequired, String challengeToken,
-                                       String mfaMethod) {}
+                                       String mfaMethod, boolean emailDeliveryFailed) {}
     public record MfaVerifyRequest(@NotBlank String challengeToken, @NotBlank String code) {}
     public record MfaDisableRequest(@NotBlank String password) {}
     public record MfaSensitiveRequest(@NotBlank String password, @NotBlank String challengeToken,
                                       @NotBlank String code) {}
-    public record MfaStepUpResponse(String challengeToken, String mfaMethod) {}
+    public record MfaStepUpResponse(String challengeToken, String mfaMethod, boolean emailDeliveryFailed) {}
     public record TotpStartResponse(String secret, String otpauthUri) {}
     public record TotpConfirmRequest(@NotBlank String code) {}
     public record MfaRecoveryResponse(List<String> recoveryCodes) {}

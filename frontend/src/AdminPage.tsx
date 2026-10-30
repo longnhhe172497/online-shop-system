@@ -6,7 +6,7 @@ import { changeRole, changeSetting, changeStatus, getUserDetail, inviteStaff, li
   type AuditFilters, type AuditLog, type Invitation, type ManagedUser, type Setting, type UserDetail } from './api/admin'
 import { getUiError } from './uiError'
 import InternalLayout, { type InternalNavItem } from './InternalLayout'
-import { internalRoleNames, isInternalRole } from './internalAccess'
+import { getInternalHome, internalRoleNames, isInternalRole } from './internalAccess'
 import RolePermissionsPage from './RolePermissionsPage'
 import VoucherManagementPage from './VoucherManagementPage'
 
@@ -73,7 +73,10 @@ function tabFromPath(path: string): Tab {
     || segment === 'audit' || segment === 'vouchers' ? segment : 'dashboard'
 }
 
-function routeFor(tab: Tab) { return tab === 'dashboard' ? '/internal' : `/internal/${tab}` }
+function routeFor(role: string, tab: Tab) {
+  const home = getInternalHome(role)
+  return tab === 'dashboard' ? home : `${home}/${tab}`
+}
 
 export default function AdminPage() {
   const navigate = useNavigate()
@@ -111,8 +114,13 @@ export default function AdminPage() {
     if (active) { setRole(isInternalRole(me.role) ? me.role : null); setAccessChecked(true) }
   }).catch(() => { if (active) setAccessChecked(true) }); return () => { active = false } }, [])
   useEffect(() => {
+    if (!accessChecked || !role) return
+    const home = getInternalHome(role)
+    if (pathname !== home && !pathname.startsWith(`${home}/`)) navigate(home, { replace: true })
+  }, [accessChecked, role, pathname, navigate])
+  useEffect(() => {
     if (accessChecked && role && !navigationFor(role).some((item) => item.id === tab)) {
-      navigate('/internal', { replace: true })
+      navigate(getInternalHome(role), { replace: true })
     }
   }, [accessChecked, role, tab, navigate])
   useEffect(() => { const timer = window.setTimeout(() => setDebouncedSearch(search), 300)
@@ -201,14 +209,14 @@ export default function AdminPage() {
         <Link to="/">Về cửa hàng</Link></div></div>}
       {role && <InternalLayout items={navigationFor(role)}
         active={tab} roleName={internalRoleNames[role] ?? 'Nhân viên'} onNavigate={(next) => {
-        navigate(routeFor(next)); setError(''); setNotice('') }} title={pageTitles[tab]} subtitle={pageDescriptions[tab]}>
+        navigate(routeFor(role, next)); setError(''); setNotice('') }} title={pageTitles[tab]} subtitle={pageDescriptions[tab]}>
       {error && <p className="auth-error" role="alert">{error}</p>}
       {notice && <p className="auth-notice" role="status">{notice}</p>}
       {tabLoading && <p className="admin-loading" role="status">Đang tải dữ liệu…</p>}
       {tab === 'dashboard' && <Dashboard isAdmin={role === 'ADMIN'} roleName={internalRoleNames[role] ?? 'Nhân viên'}
-        onNavigate={(next) => navigate(routeFor(next))} />}
+        onNavigate={(next) => navigate(routeFor(role, next))} />}
       {role === 'ADMIN' && tab === 'users' && detailId && detail && <section className="admin-panel">
-        <button className="admin-link" onClick={() => navigate('/internal/users')}>← Danh sách tài khoản</button>
+        <button className="admin-link" onClick={() => navigate('/admin/users')}>← Danh sách tài khoản</button>
         <div className="admin-section-head"><div><p className="card-eyebrow">HỒ SƠ TÀI KHOẢN</p>
           <h2>{detail.user.fullName}</h2><p>{detail.user.email}</p></div>
           <button className="account-secondary" onClick={() => setEditor({ id: detail.user.id,
@@ -243,7 +251,7 @@ export default function AdminPage() {
       {role === 'ADMIN' && tab === 'users' && !detailId && <section className="admin-panel"><div className="admin-section-head"><div>
         <h2>Danh sách tài khoản</h2><p>{total} tài khoản</p></div>
         <button className="account-primary" onClick={() => { setInviteError(''); setInviteEditor(emptyInvite)
-          navigate('/internal/invitations') }}>＋ Mời nhân viên</button></div>
+          navigate('/admin/invitations') }}>＋ Mời nhân viên</button></div>
         <div className="admin-filters"><input aria-label="Tìm tài khoản" placeholder="Tìm tên hoặc email…"
           value={search} onChange={(e) => { setSearch(e.target.value); setPage(0) }} />
           <select aria-label="Lọc vai trò" value={roleFilter} onChange={(e) => { setRoleFilter(e.target.value); setPage(0) }}>
@@ -260,8 +268,9 @@ export default function AdminPage() {
               {Object.entries(roles).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></td>
             <td><select aria-label={`Trạng thái của ${user.fullName}`} value={user.status} disabled={busy}
               onChange={(e) => setPendingChange({ user, kind: 'status', value: e.target.value })}>
-              {Object.entries(statuses).map(([key, label]) => <option key={key} value={key} disabled={key === 'PENDING_VERIFICATION'}>{label}</option>)}</select></td>
-            <td><button className="admin-link" onClick={() => navigate(`/internal/users/${user.id}`)}>Chi tiết</button>
+              {Object.entries(statuses).map(([key, label]) => <option key={key} value={key}
+                disabled={key === 'PENDING_VERIFICATION' && user.verifiedAt !== null}>{label}</option>)}</select></td>
+            <td><button className="admin-link" onClick={() => navigate(`/admin/users/${user.id}`)}>Chi tiết</button>
               <button className="admin-link" onClick={() => setEditor({ id: user.id, email: user.email,
               fullName: user.fullName, phone: user.phone ?? '', role: user.role })}>Chỉnh sửa</button></td>
           </tr>)}</tbody></table>{!tabLoading && !error && users.length === 0 &&

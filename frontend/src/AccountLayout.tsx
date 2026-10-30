@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { Link, NavLink } from 'react-router-dom'
+import SignOutButton from './SignOutButton'
 
 export default function AccountLayout({ title, intro, children }: { title: string; intro: string;
   children: ReactNode }) {
@@ -7,19 +8,17 @@ export default function AccountLayout({ title, intro, children }: { title: strin
     <div className="announcement">FORME · KHÔNG GIAN TÀI KHOẢN</div>
     <header className="forme-header"><Link to="/" className="brand">FORME</Link>
       <nav aria-label="Điều hướng chính"><Link to="/">CỬA HÀNG</Link><Link to="/me">TÀI KHOẢN</Link></nav></header>
-    <main className="account-workspace"><aside className="account-nav-panel"><p className="auth-kicker">TÀI KHOẢN CỦA TÔI</p>
-      <h2>Xin chào.</h2><p>Thông tin cá nhân và bảo mật của bạn.</p>
-      <nav aria-label="Điều hướng tài khoản">
+    <main className="account-workspace"><div className="account-workspace-content"><div className="account-heading">
+      <div><p className="auth-kicker">FORME · TÀI KHOẢN</p><h1>{title}</h1><p>{intro}</p></div>
+    </div><nav className="account-nav-panel" aria-label="Điều hướng tài khoản">
         <NavLink to="/me" end>Hồ sơ cá nhân <span>→</span></NavLink>
         <NavLink to="/me/orders">Đơn hàng của tôi <span>→</span></NavLink>
         <NavLink to="/me/addresses">Địa chỉ giao hàng <span>→</span></NavLink>
         <NavLink to="/me/security">Bảo mật tài khoản <span>→</span></NavLink>
         <NavLink to="/me/email">Đổi email đăng nhập <span>→</span></NavLink>
         <NavLink to="/me/sessions">Thiết bị đăng nhập <span>→</span></NavLink>
-      </nav><Link className="account-return" to="/">← Về cửa hàng</Link>
-    </aside><div className="account-workspace-content"><div className="account-heading">
-      <div><p className="auth-kicker">FORME · TÀI KHOẢN</p><h1>{title}</h1><p>{intro}</p></div>
-    </div>{children}</div></main>
+      </nav>{children}<div className="account-footer-actions"><Link className="account-return" to="/">← Về cửa hàng</Link>
+        <SignOutButton className="account-sign-out" /></div></div></main>
     <footer className="forme-footer"><strong>FORME</strong><span>Cửa hàng trực tuyến · Bản chạy trên máy cá nhân</span></footer>
   </div>
 }

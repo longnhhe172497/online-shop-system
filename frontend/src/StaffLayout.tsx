@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
+import SignOutButton from './SignOutButton'
 import './logistics.css'
 
 export interface StaffTab<T extends string> {
@@ -17,16 +18,17 @@ interface StaffLayoutProps<T extends string> {
   children: ReactNode
 }
 
+const TODAY_LABEL = new Date().toLocaleDateString('vi-VN', {
+  weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+})
+
 export default function StaffLayout<T extends string>({
   eyebrow, title, roleName, tabs, active, onNavigate, children,
 }: StaffLayoutProps<T>) {
-  const today = new Date().toLocaleDateString('vi-VN', {
-    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
-  })
   return <div className="staff-root">
     <header className="staff-header">
       <div className="staff-nav">
-        <Link className="staff-brand" to="/">Forme / Staff</Link>
+        <Link className="staff-brand" to="/">FORME / NỘI BỘ</Link>
         <div className="staff-navicons">
           <span className="lg-chip lg-info">{roleName}</span>
           <Link className="staff-iconbtn" to="/me" aria-label="Hồ sơ của tôi">
@@ -34,13 +36,14 @@ export default function StaffLayout<T extends string>({
               <circle cx="12" cy="8" r="4" /><path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1" />
             </svg>
           </Link>
+          <SignOutButton className="staff-signout" />
         </div>
       </div>
     </header>
     <main className="staff-shell">
       <div className="staff-pagehead">
         <div><div className="staff-eyebrow">{eyebrow}</div><h1 className="staff-title">{title}</h1></div>
-        <span className="staff-date">{today}</span>
+        <span className="staff-date">{TODAY_LABEL}</span>
       </div>
       <div className="staff-tabs" role="tablist">
         {tabs.map((tab) => <button key={tab.id} type="button" role="tab" aria-selected={active === tab.id}
