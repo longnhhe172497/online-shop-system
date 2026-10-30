@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import SignOutButton from './SignOutButton'
 import './logistics.css'
 
-export type InternalIconName = 'dashboard' | 'users' | 'settings' | 'audit' | 'tag'
+export type InternalIconName = 'dashboard' | 'users' | 'settings' | 'audit' | 'tag' | 'box' | 'folder'
 export interface InternalNavItem<T extends string> {
   id: T
   label: string
