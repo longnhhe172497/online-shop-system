@@ -2522,3 +2522,39 @@ select:focus-visible {
         margin-left: 60px;
     }
 }
+
+/* Cart (Stream B) */
+.shop-pagehead h1 { font-size: clamp(32px, 4vw, 46px); font-weight: 800; margin: 0; }
+.shop-header .shop-account a.shop-cart-link { color: #2438c5; }
+.shop-cart { align-items: start; display: grid; gap: 30px; grid-template-columns: minmax(0, 1fr) 340px; }
+.shop-cart-lines { display: flex; flex-direction: column; gap: 12px; list-style: none; margin: 0; padding: 0; }
+.shop-cart-line { background: #fff; border: 1px solid #e6e2dc; display: grid; gap: 18px;
+    grid-template-columns: 96px minmax(0, 1fr) auto; padding: 16px; }
+.shop-cart-line.flagged { border-color: #e2b4ae; }
+.shop-cart-line a { color: #1b1716; text-decoration: none; }
+.shop-cart-info { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.shop-cart-info small { color: #77736e; }
+.shop-cart-info .shop-qty { align-self: flex-start; margin: 6px 0 0; }
+.shop-cart-warning { color: #8c241d; font-size: 13px; margin: 0; }
+.shop-cart-side { align-items: flex-end; display: flex; flex-direction: column; gap: 10px; text-align: right; }
+.shop-link { background: none; border: 0; color: #68635f; cursor: pointer; font: inherit; font-size: 13px; text-decoration: underline; }
+.shop-confirm { align-items: center; display: flex; flex-wrap: wrap; font-size: 13px; gap: 8px; justify-content: flex-end; }
+.shop-confirm .shop-secondary { min-height: 34px; }
+.shop-summary { background: #fff; border: 1px solid #e6e2dc; display: flex; flex-direction: column; gap: 14px;
+    padding: 24px; position: sticky; top: 24px; }
+.shop-summary h2 { font-size: 24px; font-weight: 800; margin: 0; }
+.shop-summary-row { border-bottom: 1px solid #eeebe6; display: flex; justify-content: space-between; padding-bottom: 12px; }
+.shop-summary .shop-primary { width: 100%; }
+.shop-summary .shop-note { margin: 0; }
+.shop-summary .shop-back { margin: 0; text-align: center; }
+.shop-notice { font-size: 13px; margin: 12px 0 0; }
+.shop-notice a { color: #2438c5; font-weight: 700; margin-left: 8px; }
+.shop-notice.error { color: #9b1c1c; }
+@media (max-width: 900px) {
+    .shop-cart { grid-template-columns: 1fr; }
+    .shop-summary { position: static; }
+}
+@media (max-width: 480px) {
+    .shop-cart-line { grid-template-columns: 72px minmax(0, 1fr); }
+    .shop-cart-side { align-items: flex-start; grid-column: 2; text-align: left; }
+}
