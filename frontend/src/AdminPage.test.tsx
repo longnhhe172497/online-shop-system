@@ -3,41 +3,61 @@ import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import AdminPage from './AdminPage'
 import { getProfile } from './api/profile'
-import { changeRole, changeSetting, listAudit, listInvitations, listSettings, listUsers,
-  revokeInvitation, type Invitation, type ManagedUser, type Setting } from './api/admin'
+import {
+  changeRole, changeSetting, listAudit, listInvitations, listSettings, listUsers,
+  revokeInvitation, type Invitation, type ManagedUser, type Setting
+} from './api/admin'
 
 vi.mock('./api/profile', () => ({ getProfile: vi.fn() }))
-vi.mock('./api/admin', () => ({ listUsers: vi.fn(), getUserDetail: vi.fn(), updateUser: vi.fn(),
+vi.mock('./api/admin', () => ({
+  listUsers: vi.fn(), getUserDetail: vi.fn(), updateUser: vi.fn(),
   changeRole: vi.fn(), changeStatus: vi.fn(), listSettings: vi.fn(), changeSetting: vi.fn(),
   listAudit: vi.fn(), listInvitations: vi.fn(), inviteStaff: vi.fn(), resendInvitation: vi.fn(),
-  revokeInvitation: vi.fn(), revokeUserSessions: vi.fn() }))
+  revokeInvitation: vi.fn(), revokeUserSessions: vi.fn()
+}))
 vi.mock('./RolePermissionsPage', () => ({ default: () => <div>Ma trận quyền</div> }))
 vi.mock('./SignOutButton', () => ({ default: () => null }))
 
-const user: ManagedUser = { id: 4, email: 'staff@example.com', fullName: 'Nhân viên', phone: null,
+const user: ManagedUser = {
+  id: 4, email: 'staff@example.com', fullName: 'Nhân viên', phone: null,
   role: 'SUPPORT', status: 'ACTIVE', createdAt: '2026-10-01T10:00:00Z',
-  verifiedAt: '2026-10-01T10:00:00Z' }
-const setting: Setting = { key: 'max_saved_addresses', value: '10',
-  description: 'Giới hạn địa chỉ', updatedAt: '2026-10-01T10:00:00Z' }
-const invitation: Invitation = { id: 9, email: 'invite@example.com', fullName: 'Người được mời',
+  verifiedAt: '2026-10-01T10:00:00Z'
+}
+const setting: Setting = {
+  key: 'max_saved_addresses', value: '10',
+  description: 'Giới hạn địa chỉ', updatedAt: '2026-10-01T10:00:00Z'
+}
+const invitation: Invitation = {
+  id: 9, email: 'invite@example.com', fullName: 'Người được mời',
   role: 'SUPPORT', expiresAt: '2026-10-20T10:00:00Z', acceptedAt: null,
-  createdAt: '2026-10-16T10:00:00Z', status: 'SENT' }
+  createdAt: '2026-10-16T10:00:00Z', status: 'SENT'
+}
 
-beforeEach(() => { vi.resetAllMocks()
-  vi.mocked(getProfile).mockResolvedValue({ id: 1, email: 'admin@example.com', fullName: 'Admin',
-    phone: null, role: 'ADMIN' })
-  vi.mocked(listUsers).mockResolvedValue({ items: [user], page: 0, size: 20,
-    totalItems: 1, totalPages: 1 })
+beforeEach(() => {
+  vi.resetAllMocks()
+  vi.mocked(getProfile).mockResolvedValue({
+    id: 1, email: 'admin@example.com', fullName: 'Admin',
+    phone: null, role: 'ADMIN'
+  })
+  vi.mocked(listUsers).mockResolvedValue({
+    items: [user], page: 0, size: 20,
+    totalItems: 1, totalPages: 1
+  })
   vi.mocked(listSettings).mockResolvedValue([setting])
   vi.mocked(listInvitations).mockResolvedValue([invitation])
-  vi.mocked(listAudit).mockResolvedValue({ items: [], page: 0, size: 20,
-    totalItems: 0, totalPages: 0 }) })
+  vi.mocked(listAudit).mockResolvedValue({
+    items: [], page: 0, size: 20,
+    totalItems: 0, totalPages: 0
+  })
+})
 afterEach(cleanup)
 function openPage(path: string) { render(<MemoryRouter initialEntries={[path]}><AdminPage /></MemoryRouter>) }
 
 it('keeps non-admin staff on the shared dashboard without loading Admin tools', async () => {
-  vi.mocked(getProfile).mockResolvedValue({ id: 2, email: 'staff@example.com', fullName: 'Staff',
-    phone: null, role: 'SUPPORT' })
+  vi.mocked(getProfile).mockResolvedValue({
+    id: 2, email: 'staff@example.com', fullName: 'Staff',
+    phone: null, role: 'SUPPORT'
+  })
   openPage('/support/settings')
   expect(await screen.findByText('Chào mừng đến với khu nội bộ')).toBeInTheDocument()
   const navigation = screen.getByRole('navigation', { name: 'Điều hướng nội bộ' })
