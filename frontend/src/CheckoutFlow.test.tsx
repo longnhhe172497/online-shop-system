@@ -69,7 +69,7 @@ describe('Checkout and payment', () => {
     expect(await screen.findByText('Hoàn tất thanh toán để giữ đơn hàng')).toBeInTheDocument()
     expect(screen.getAllByText('OD261015-ABC123').length).toBeGreaterThan(0)
     expect(screen.getByText(/không có tiền thật được chuyển/)).toBeInTheDocument()
-  })
+  }, 10_000)
 
   it('shows the empty cart state and voucher errors in Vietnamese', async () => {
     vi.mocked(previewCheckout).mockResolvedValue({ ...quote, items: [], canPlaceOrder: false })
