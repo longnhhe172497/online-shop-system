@@ -29,6 +29,6 @@ If you do not yet have public HTTPS addresses, keep verification on the same loc
 3. Open the link within 24 hours. It should display a verification success page.
 4. Sign in. An unverified account must not be able to sign in.
 
-If SMTP rejects the message, registration fails and the database transaction rolls back, so the same email can be retried after fixing the configuration. Common causes are an incorrect app password, wrong SMTP host/port, blocked SMTP access, or a From address not permitted by the provider. The backend's error log can help diagnose transport failures; do not share lines containing secrets or verification links.
+If SMTP rejects the first message, the account is still created in `PENDING_VERIFICATION` state and the failed verification token is invalidated. The registration screen reports that delivery failed and offers **Gửi lại email xác minh**. After fixing SMTP, use that action (or `/resend-verification`) instead of registering the same email again. This behavior avoids losing the account while ensuring a link that may not have been delivered cannot later be reused. Common causes are an incorrect app password, wrong SMTP host/port, blocked SMTP access, or a From address not permitted by the provider. The backend log can help diagnose transport failures; do not share lines containing secrets or verification links.
 
-Automated tests mock the mail sender and do not send external messages.
+Automated unit/integration tests mock the mail sender, and browser E2E tests use the isolated MailHog service on port 8026. They never send external messages. Sending through Gmail is a manual smoke test only.
