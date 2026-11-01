@@ -27,3 +27,8 @@ uploads/*
 data/
 .local/
 
+# Local report generation and rendered evidence
+/outputs/
+/tools/
+/unit_test_template_inspection.json
+
