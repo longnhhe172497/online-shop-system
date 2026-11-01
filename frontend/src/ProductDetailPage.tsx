@@ -2,9 +2,11 @@ import axios from 'axios'
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { getProduct, type ProductDetail } from './api/catalog'
+import { addCartItem } from './api/cart'
 import StoreHeader from './StoreHeader'
 import ProductImage from './ProductImage'
 import { formatVnd } from './formatMoney'
+import { getUiError } from './uiError'
 
 interface Loaded {
   id: number
@@ -27,6 +29,21 @@ export default function ProductDetailPage() {
   const validId = Number.isInteger(productId) && productId > 0
   const [loaded, setLoaded] = useState<Loaded | null>(null)
   const [quantity, setQuantity] = useState(1)
+  const [adding, setAdding] = useState(false)
+  const [notice, setNotice] = useState<{ ok: boolean; text: string } | null>(null)
+
+  async function addToCart(productId: number, amount: number) {
+    setAdding(true)
+    setNotice(null)
+    try {
+      await addCartItem(productId, amount)
+      setNotice({ ok: true, text: 'Đã thêm vào giỏ hàng.' })
+    } catch (error) {
+      setNotice({ ok: false, text: getUiError(error) })
+    } finally {
+      setAdding(false)
+    }
+  }
 
   useEffect(() => {
     if (!validId) return
@@ -79,8 +96,11 @@ export default function ProductDetailPage() {
               onClick={() => setQuantity(qty + 1)}>+</button>
           </div>
 
-          <button className="shop-primary" type="button" disabled>THÊM VÀO GIỎ HÀNG</button>
-          <p className="shop-note">Chức năng giỏ hàng sẽ có trong bản cập nhật tiếp theo.</p>
+          <button className="shop-primary" type="button" disabled={available === 0 || adding}
+            onClick={() => addToCart(product.id, qty)}>{adding ? 'ĐANG THÊM…' : 'THÊM VÀO GIỎ HÀNG'}</button>
+          {notice && <p className={notice.ok ? 'shop-notice' : 'shop-notice error'} role={notice.ok ? 'status' : 'alert'}>
+            <span>{notice.text}</span>{notice.ok && <Link to="/cart">Xem giỏ hàng</Link>}
+          </p>}
           <p className="shop-meta">Mã sản phẩm: {product.sku}</p>
         </div>
       </div>

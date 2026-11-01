@@ -5,10 +5,12 @@ import StorefrontPage from './StorefrontPage'
 import { listProducts, type Product } from './api/products'
 import { listCategories } from './api/catalog'
 import { getMe } from './api/auth'
+import { getCart } from './api/cart'
 
 vi.mock('./api/products', () => ({ listProducts: vi.fn() }))
 vi.mock('./api/catalog', () => ({ listCategories: vi.fn(), getProduct: vi.fn() }))
 vi.mock('./api/auth', () => ({ getMe: vi.fn(), logout: vi.fn() }))
+vi.mock('./api/cart', () => ({ getCart: vi.fn(), addCartItem: vi.fn(), updateCartItem: vi.fn(), removeCartItem: vi.fn() }))
 
 const shirt: Product = { id: 1, sku: 'SKU-1', name: 'Áo sơ mi xanh', description: null, imageUrl: null,
   price: 1290000, categoryName: 'Áo sơ mi', availableQuantity: 3 }
@@ -27,6 +29,7 @@ describe('StorefrontPage', () => {
     vi.mocked(getMe).mockRejectedValue(new Error('Không có phiên'))
     vi.mocked(listCategories).mockResolvedValue([{ id: 5, name: 'Áo sơ mi', description: null }])
     vi.mocked(listProducts).mockResolvedValue(pageOf([shirt]))
+    vi.mocked(getCart).mockResolvedValue({ items: [], itemCount: 0, subtotal: 0 })
   })
   afterEach(cleanup)
 

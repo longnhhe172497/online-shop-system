@@ -4,9 +4,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import ProductDetailPage from './ProductDetailPage'
 import { getProduct, type ProductDetail } from './api/catalog'
 import { getMe } from './api/auth'
+import { addCartItem, getCart } from './api/cart'
 
 vi.mock('./api/catalog', () => ({ getProduct: vi.fn(), listCategories: vi.fn() }))
 vi.mock('./api/auth', () => ({ getMe: vi.fn(), logout: vi.fn() }))
+vi.mock('./api/cart', () => ({ getCart: vi.fn(), addCartItem: vi.fn(), updateCartItem: vi.fn(), removeCartItem: vi.fn() }))
 
 const detail: ProductDetail = { id: 1, sku: 'SKU-1', name: 'Áo sơ mi xanh', description: 'Vải cotton thoáng mát.',
   imageUrl: null, price: 1290000, categoryId: 5, categoryName: 'Áo sơ mi', availableQuantity: 2,
@@ -22,6 +24,7 @@ describe('ProductDetailPage', () => {
   beforeEach(() => {
     vi.resetAllMocks()
     vi.mocked(getMe).mockRejectedValue(new Error('Không có phiên'))
+    vi.mocked(getCart).mockResolvedValue({ items: [], itemCount: 0, subtotal: 0 })
   })
   afterEach(cleanup)
 
@@ -62,5 +65,25 @@ describe('ProductDetailPage', () => {
     renderAt('/products/abc')
     expect(screen.getByRole('heading', { name: 'Không tìm thấy sản phẩm' })).toBeInTheDocument()
     expect(getProduct).not.toHaveBeenCalled()
+  })
+
+  it('adds the chosen quantity to the cart', async () => {
+    vi.mocked(getProduct).mockResolvedValue(detail)
+    vi.mocked(addCartItem).mockResolvedValue({ items: [], itemCount: 2, subtotal: 2580000 })
+    renderAt('/products/1')
+    fireEvent.click(await screen.findByRole('button', { name: 'Tăng số lượng' }))
+    fireEvent.click(screen.getByRole('button', { name: 'THÊM VÀO GIỎ HÀNG' }))
+    expect(await screen.findByText('Đã thêm vào giỏ hàng.')).toBeInTheDocument()
+    expect(addCartItem).toHaveBeenCalledWith(1, 2)
+    expect(screen.getByRole('link', { name: 'Xem giỏ hàng' })).toHaveAttribute('href', '/cart')
+  })
+
+  it('shows the server reason when adding fails', async () => {
+    vi.mocked(getProduct).mockResolvedValue(detail)
+    vi.mocked(addCartItem).mockRejectedValue({ isAxiosError: true,
+      response: { status: 409, data: { code: 'QUANTITY_LIMIT' } } })
+    renderAt('/products/1')
+    fireEvent.click(await screen.findByRole('button', { name: 'THÊM VÀO GIỎ HÀNG' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('Mỗi sản phẩm chỉ được đặt tối đa 99 chiếc.')
   })
 })

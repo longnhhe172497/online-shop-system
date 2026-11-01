@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
 import { listProducts } from './api/products'
 import { listCategories } from './api/catalog'
+import { getCart } from './api/cart'
 import {
   confirmPasswordReset, getGoogleConfig, getGoogleLinkStatus, getMe, login, loginWithGoogle,
   registerAccount, requestPasswordReset,
@@ -21,6 +22,7 @@ import {
 
 vi.mock('./api/products', () => ({ listProducts: vi.fn() }))
 vi.mock('./api/catalog', () => ({ listCategories: vi.fn(), getProduct: vi.fn() }))
+vi.mock('./api/cart', () => ({ getCart: vi.fn(), addCartItem: vi.fn(), updateCartItem: vi.fn(), removeCartItem: vi.fn() }))
 vi.mock('./api/auth', () => ({
   login: vi.fn(), registerAccount: vi.fn(), getMe: vi.fn(), logout: vi.fn(), verifyAccount: vi.fn(),
   requestPasswordReset: vi.fn(), confirmPasswordReset: vi.fn(), resendVerification: vi.fn(), verifyMfa: vi.fn(),
@@ -54,6 +56,7 @@ describe('App', () => {
     vi.mocked(getGoogleLinkStatus).mockResolvedValue({ linked: false })
     vi.mocked(getAccountLimits).mockResolvedValue({ maxSavedAddresses: 10 })
     vi.mocked(listCategories).mockResolvedValue([])
+    vi.mocked(getCart).mockResolvedValue({ items: [], itemCount: 0, subtotal: 0 })
   })
   afterEach(() => { cleanup(); delete window.google })
 

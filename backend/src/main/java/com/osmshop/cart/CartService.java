@@ -108,6 +108,36 @@ public class CartService {
         return load(cartId);
     }
 
+    /**
+     * Called after a browser login. A Customer gets the guest lines merged into their cart
+     * (summed, capped at 99 and at available stock); any other role just drops the guest cart.
+     */
+    @Transactional
+    public void adoptGuestCart(long userId, String role, String guestToken) {
+        Long guestCart = findCart(null, guestToken, true);
+        if (guestCart == null) return;
+        if ("CUSTOMER".equals(role)) {
+            long target = customerCart(userId);
+            jdbc.update("""
+                    INSERT INTO cart_items(cart_id, product_id, quantity)
+                    SELECT ?, product_id, quantity FROM cart_items WHERE cart_id = ?
+                    ON CONFLICT (cart_id, product_id)
+                    DO UPDATE SET quantity = cart_items.quantity + EXCLUDED.quantity, updated_at = now()
+                    """, target, guestCart);
+            // A merged line with no stock keeps quantity 1 so the cart shows it as flagged.
+            jdbc.update("""
+                    UPDATE cart_items ci
+                    SET quantity = LEAST(ci.quantity, ?, GREATEST(p.stock_on_hand - p.stock_reserved, 1)),
+                        updated_at = now()
+                    FROM products p
+                    WHERE p.id = ci.product_id AND ci.cart_id = ?
+                      AND ci.product_id IN (SELECT product_id FROM cart_items WHERE cart_id = ?)
+                    """, MAX_LINE_QUANTITY, target, guestCart);
+            touch(target);
+        }
+        jdbc.update("UPDATE carts SET status = 'EXPIRED', updated_at = now() WHERE id = ?", guestCart);
+    }
+
     private Long findCart(Long customerId, String guestToken, boolean lock) {
         String forUpdate = lock ? " FOR UPDATE" : "";
         List<Long> ids;
