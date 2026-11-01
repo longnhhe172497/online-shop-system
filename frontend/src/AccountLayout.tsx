@@ -1,13 +1,12 @@
 import type { ReactNode } from 'react'
 import { Link, NavLink } from 'react-router-dom'
 import SignOutButton from './SignOutButton'
+import { FormeFooter, FormeHeader } from './FormeLayout'
 
 export default function AccountLayout({ title, intro, children }: { title: string; intro: string;
   children: ReactNode }) {
   return <div className="forme-page account-layout">
-    <div className="announcement">FORME · KHÔNG GIAN TÀI KHOẢN</div>
-    <header className="forme-header"><Link to="/" className="brand">FORME</Link>
-      <nav aria-label="Điều hướng chính"><Link to="/">CỬA HÀNG</Link><Link to="/me">TÀI KHOẢN</Link></nav></header>
+    <FormeHeader />
     <main className="account-workspace"><div className="account-workspace-content"><div className="account-heading">
       <div><p className="auth-kicker">FORME · TÀI KHOẢN</p><h1>{title}</h1><p>{intro}</p></div>
     </div><nav className="account-nav-panel" aria-label="Điều hướng tài khoản">
@@ -19,6 +18,6 @@ export default function AccountLayout({ title, intro, children }: { title: strin
         <NavLink to="/me/sessions">Thiết bị đăng nhập <span>→</span></NavLink>
       </nav>{children}<div className="account-footer-actions"><Link className="account-return" to="/">← Về cửa hàng</Link>
         <SignOutButton className="account-sign-out" /></div></div></main>
-    <footer className="forme-footer"><strong>FORME</strong><span>Cửa hàng trực tuyến · Bản chạy trên máy cá nhân</span></footer>
+    <FormeFooter />
   </div>
 }

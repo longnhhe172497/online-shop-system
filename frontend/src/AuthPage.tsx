@@ -66,16 +66,16 @@ export default function AuthPage() {
   }
 
   return <FormeLayout><section className="auth-card auth-card-wide">
-    <p className="auth-kicker">{mode === 'login' ? 'CHÀO MỪNG BẠN' : 'THAM GIA CÙNG CHÚNG TÔI'}</p>
-    <h1>{mode === 'login' ? 'Đăng nhập' : 'Tạo tài khoản'}</h1>
-    <p className="auth-lead">{mode === 'login' ? 'Tiếp tục hành trình mua sắm cùng FORME.' :
-      'Tạo tài khoản để lưu địa chỉ và theo dõi đơn hàng.'}</p>
     <div className="auth-tabs" role="tablist" aria-label="Thao tác tài khoản">
       <button role="tab" aria-selected={mode === 'login'} className={mode === 'login' ? 'active' : ''}
         onClick={() => { setError(''); navigate('/auth') }}>ĐĂNG NHẬP</button>
       <button role="tab" aria-selected={mode === 'register'} className={mode === 'register' ? 'active' : ''}
         onClick={() => { setError(''); navigate('/register') }}>ĐĂNG KÝ</button>
     </div>
+    <p className="auth-kicker">{mode === 'login' ? 'CHÀO MỪNG BẠN' : 'THAM GIA CÙNG CHÚNG TÔI'}</p>
+    <h1>{mode === 'login' ? 'Đăng nhập' : 'Tạo tài khoản'}</h1>
+    <p className="auth-lead">{mode === 'login' ? 'Tiếp tục hành trình mua sắm cùng FORME.' :
+      'Tạo tài khoản để lưu địa chỉ và theo dõi đơn hàng.'}</p>
     {error && <p className="auth-error" role="alert">{error}</p>}
     {mode === 'login' && typeof location.state?.notice === 'string' &&
       <p className="auth-notice" role="status">{location.state.notice}</p>}
