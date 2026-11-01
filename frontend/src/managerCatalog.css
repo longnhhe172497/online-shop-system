@@ -1,0 +1,31 @@
+/* Manager catalog screens (Stream B). Tables, chips and row buttons reuse the internal-area lg-* styles (logistics.css);
+   filters, primary buttons and modals reuse the admin-* / account-* / address-modal styles themed by mockup-theme.css. */
+.catalog-product { align-items: center; display: flex; gap: 10px; min-width: 190px; }
+.catalog-thumb { background: #f2e8c9; border-radius: 2px; flex: 0 0 45px; height: 58px; overflow: hidden; width: 45px; }
+.catalog-thumb .shop-image { aspect-ratio: auto; height: 100%; object-fit: cover; width: 100%; }
+.catalog-thumb .shop-image-placeholder { align-items: center; color: #b9a97b; display: flex; font-family: Georgia, serif; font-size: 20px;
+    font-weight: 800; justify-content: center; }
+.catalog-sku { color: #77736e; display: block; font-family: ui-monospace, Consolas, monospace; font-size: 12px; margin-top: 2px; }
+.catalog-stock { min-width: 110px; }
+.catalog-tablewrap { border: 1px solid var(--lg-line, #ddd7cf); border-radius: 3px; }
+.lg-table.catalog-table td { font-size: 13px; }
+.lg-table.catalog-table tr:last-child td { border-bottom: 0; }
+.lg-table.catalog-table td:last-child { white-space: nowrap; width: 1%; }
+.catalog-status .lg-chip { margin-bottom: 6px; }
+.catalog-status select { background: #fff; border: 1px solid var(--lg-line, #ddd7cf); border-radius: 3px; display: block;
+    font: inherit; font-size: 12px; min-height: 32px; padding: 0 6px; width: 120px; }
+.catalog-filters { display: grid; gap: 10px; grid-template-columns: 2fr 1fr 1fr; }
+.catalog-filters input, .catalog-filters select { width: 100%; }
+.catalog-form { display: grid; gap: 14px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.catalog-form label { color: #34302d; display: block; font-size: 12px; font-weight: 700; }
+.catalog-form input, .catalog-form select, .catalog-form textarea { background: #fff; border: 1px solid #dcd8d2;
+    border-radius: 3px; color: #1b1716; display: block; font: inherit; font-size: 14px; font-weight: 400;
+    margin-top: 6px; min-height: 42px; padding: 8px 12px; width: 100%; }
+.catalog-form textarea { min-height: 96px; resize: vertical; }
+.catalog-form .form-span-2 { grid-column: 1 / -1; }
+.catalog-form .field-note { color: #77736e; display: block; font-size: 12px; font-weight: 400; margin-top: 6px; }
+.catalog-readonly { background: #faf8f3; border: 1px dashed #ddd7cf; border-radius: 3px; color: #57534e; font-size: 13px;
+    padding: 10px 12px; }
+@media (max-width: 720px) {
+    .catalog-filters, .catalog-form { grid-template-columns: 1fr; }
+}

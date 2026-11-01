@@ -114,6 +114,17 @@ describe('App', () => {
     expect(screen.getByLabelText('NHẬP LẠI MẬT KHẨU')).toBeInTheDocument()
   })
 
+  it('renders the mockup navigation, account tabs before the title, and the full footer', () => {
+    renderAt('/auth')
+    const tabs = screen.getByRole('tablist', { name: 'Thao tác tài khoản' })
+    const title = screen.getByRole('heading', { name: 'Đăng nhập' })
+    expect(tabs.compareDocumentPosition(title) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(screen.getByRole('navigation', { name: 'Điều hướng chính' })).toHaveTextContent('TÀI KHOẢN CỦA TÔI')
+    expect(screen.getByRole('link', { name: 'Mở giỏ hàng' })).toHaveAttribute('href', '/checkout')
+    expect(screen.getByText('BẢN TIN MÀU SẮC')).toBeInTheDocument()
+    expect(screen.getByLabelText('Địa chỉ email nhận bản tin')).toBeInTheDocument()
+  })
+
   it('registers then directs the user to verify email', async () => {
     vi.mocked(registerAccount).mockResolvedValue({ userId: 1, verificationRequired: true, emailSent: true })
     renderAt('/auth')

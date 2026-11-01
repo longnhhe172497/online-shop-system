@@ -2,25 +2,28 @@
 
 Tài liệu này phân biệt rõ **unit test** (logic độc lập), **integration test** (API + Spring + PostgreSQL), **UI test** (React với API giả lập) và **E2E** (trình duyệt + API + PostgreSQL + MailHog). Không dùng tổng số test để khẳng định 100% nhánh code đã được bao phủ.
 
+Mốc kiểm tra cục bộ ngày 01/11/2026 sau khi đồng bộ `develop`: backend **243/243**, frontend **62/62**, browser E2E **3/3**. Các con số phải được cập nhật lại nếu nhóm thêm hoặc xóa test.
+
 Các unit test service thuần kiểu Mockito (`when` → gọi service → `assert`/`verify`) nằm tại `backend/src/test/java/com/osmshop/`:
 
 | Service | File test | Số ca |
 | --- | --- | ---: |
-| `AuthService` | `auth/AuthServiceUnitTests.java` | 40 |
+| `AuthService` | `auth/AuthServiceUnitTests.java` | 56 |
 | `EmailChangeService` | `auth/EmailChangeServiceUnitTests.java` | 6 |
-| `GoogleIdentityService` | `auth/GoogleIdentityServiceUnitTests.java` | 11 |
-| `ProfileService` | `auth/ProfileServiceUnitTests.java` | 12 |
-| `AdminService` | `admin/AdminServiceUnitTests.java` | 13 |
-| `InvitationService` | `admin/InvitationServiceUnitTests.java` | 8 |
+| `GoogleIdentityService` | `auth/GoogleIdentityServiceUnitTests.java` | 15 |
+| `ProfileService` | `auth/ProfileServiceUnitTests.java` | 14 |
+| `TotpService` | `auth/TotpServiceTests.java` | 1 |
+| `AdminService` | `admin/AdminServiceUnitTests.java` | 23 |
+| `InvitationService` | `admin/InvitationServiceUnitTests.java` | 10 |
 | `RolePermissionService` | `admin/RolePermissionServiceUnitTests.java` | 8 |
 
 Những test này mock `JdbcTemplate` (dự án hiện dùng SQL trực tiếp thay vì `UserRepository`) và các phụ thuộc khác, không cần chạy PostgreSQL hay SMTP. Các test `*FlowTests`/`*BoundaryTests` bên dưới là test tích hợp, không gọi là unit test thuần khi chụp bằng chứng.
 
 | Nhóm chức năng | Backend | Frontend / E2E |
 | --- | --- | --- |
-| Đăng ký, xác minh, gửi lại email, trùng email, token hết hạn | `AuthFlowTests`, `AuthBoundaryTests` | `App.test.tsx`, `auth-admin.spec.ts` |
-| Đăng nhập bearer/cookie, đăng xuất, CSRF, tài khoản bị khóa | `AuthFlowTests`, `AuthBoundaryTests` | `App.test.tsx`, `auth-admin.spec.ts` |
-| Quên/đặt lại mật khẩu, token sai/hết hạn, thu hồi phiên | `AuthFlowTests`, `AuthAdvancedFlowTests`, `AuthBoundaryTests` | `App.test.tsx` |
+| Đăng ký, xác minh, gửi lại email, trùng email, token hết hạn | `AuthFlowTests`, `AuthBoundaryTests` | `App.test.tsx`, `auth-admin.spec.ts`, `auth-regression.spec.ts` |
+| Đăng nhập bearer/cookie, đăng xuất, CSRF, tài khoản bị khóa/vô hiệu hóa | `AuthFlowTests`, `AuthBoundaryTests` | `App.test.tsx`, `auth-admin.spec.ts`, `auth-regression.spec.ts` |
+| Quên/đặt lại mật khẩu, token sai/hết hạn, thu hồi phiên | `AuthFlowTests`, `AuthAdvancedFlowTests`, `AuthBoundaryTests` | `App.test.tsx`, `auth-regression.spec.ts` |
 | Giới hạn số lần thử | `AuthRateLimiterTests` (unit), `AuthFlowTests` | — |
 | Google đăng nhập, liên kết/hủy liên kết, đổi email | `GoogleIdentityFlowTests`, `EmailChangeBoundaryTests` | `GoogleButton.test.tsx`, `AccountSecurityPage.test.tsx`, `EmailChangePages.test.tsx` |
 | MFA email/TOTP, mã khôi phục, mã dùng lại, tắt MFA | `AuthAdvancedFlowTests`, `TotpServiceTests` (unit) | `AccountSecurityPage.test.tsx`, `App.test.tsx`, `auth-admin.spec.ts` |
@@ -53,7 +56,7 @@ cd C:\DOAN\Online-Shop-System\backend
 .\mvnw.cmd org.jacoco:jacoco-maven-plugin:0.8.13:prepare-agent '-Dtest=*ServiceUnitTests' test org.jacoco:jacoco-maven-plugin:0.8.13:report
 ```
 
-Mở `backend/target/site/jacoco/index.html` để xem nhánh đã/ chưa đi qua. Coverage của riêng unit test không đại diện cho coverage của toàn bộ suite tích hợp; không gọi 98 ca này là “mọi trường hợp” khi các nhánh chưa được xác nhận.
+Mở `backend/target/site/jacoco/index.html` để xem nhánh đã/ chưa đi qua. Coverage của riêng 133 unit test service trong bảng không đại diện cho coverage của toàn bộ suite tích hợp; không gọi chúng là “mọi trường hợp” khi các nhánh chưa được xác nhận.
 
 Frontend:
 
@@ -79,5 +82,6 @@ docker compose -f docker-compose.e2e.yml down
 
 - Email thật qua Gmail SMTP không được gửi trong test; các test backend giả lập bộ gửi mail và E2E dùng MailHog để không làm phiền người nhận.
 - Google Identity Services thật và token OAuth thật không chạy trong CI; bộ xác thực Google được giả lập ở test backend, nút Google được giả lập trong UI test.
+- Gmail SMTP thật không chạy trong E2E. Sau khi tự cấu hình `.env`, chỉ thực hiện một manual smoke test với hộp thư do bạn kiểm soát; không đưa App Password vào ảnh hoặc báo cáo.
 - Dashboard tổng quan hiện là giao diện tĩnh; test chỉ xác nhận điều hướng và phân quyền, không xác nhận số liệu kinh doanh chưa được triển khai.
 - Sau khi cập nhật nhánh này từ `develop`, cần chạy lại toàn bộ suite và bổ sung test tích hợp cho bất kỳ API/permission mới nào được merge từ phần việc của thành viên khác.
