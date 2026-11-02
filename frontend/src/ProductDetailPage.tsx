@@ -1,6 +1,6 @@
 import axios from 'axios'
 import { useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { getProduct, type ProductDetail } from './api/catalog'
 import { addCartItem } from './api/cart'
 import StoreHeader from './StoreHeader'
@@ -29,20 +29,25 @@ export default function ProductDetailPage() {
   const validId = Number.isInteger(productId) && productId > 0
   const [loaded, setLoaded] = useState<Loaded | null>(null)
   const [quantity, setQuantity] = useState(1)
-  const [adding, setAdding] = useState(false)
+  const [adding, setAdding] = useState<'cart' | 'buy' | null>(null)
   const [notice, setNotice] = useState<{ ok: boolean; text: string } | null>(null)
+  const navigate = useNavigate()
 
-  async function addToCart(productId: number, amount: number) {
-    setAdding(true)
+  /** "Mua ngay" puts the item in the cart and opens checkout, which asks guests to sign in first. */
+  async function addToCart(productId: number, amount: number, buyNow = false) {
+    setAdding(buyNow ? 'buy' : 'cart')
     setNotice(null)
     try {
       await addCartItem(productId, amount)
+      if (buyNow) {
+        navigate('/checkout')
+        return
+      }
       setNotice({ ok: true, text: 'Đã thêm vào giỏ hàng.' })
     } catch (error) {
       setNotice({ ok: false, text: getUiError(error) })
-    } finally {
-      setAdding(false)
     }
+    setAdding(null)
   }
 
   useEffect(() => {
@@ -96,8 +101,12 @@ export default function ProductDetailPage() {
               onClick={() => setQuantity(qty + 1)}>+</button>
           </div>
 
-          <button className="shop-primary" type="button" disabled={available === 0 || adding}
-            onClick={() => addToCart(product.id, qty)}>{adding ? 'ĐANG THÊM…' : 'THÊM VÀO GIỎ HÀNG'}</button>
+          <div className="shop-buy-actions">
+            <button className="shop-secondary shop-add-cart" type="button" disabled={available === 0 || adding !== null}
+              onClick={() => addToCart(product.id, qty)}>{adding === 'cart' ? 'ĐANG THÊM…' : 'THÊM VÀO GIỎ HÀNG'}</button>
+            <button className="shop-primary" type="button" disabled={available === 0 || adding !== null}
+              onClick={() => addToCart(product.id, qty, true)}>{adding === 'buy' ? 'ĐANG XỬ LÝ…' : 'MUA NGAY'}</button>
+          </div>
           {notice && <p className={notice.ok ? 'shop-notice' : 'shop-notice error'} role={notice.ok ? 'status' : 'alert'}>
             <span>{notice.text}</span>{notice.ok && <Link to="/cart">Xem giỏ hàng</Link>}
           </p>}

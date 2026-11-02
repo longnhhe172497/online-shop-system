@@ -75,10 +75,19 @@ export default function StorefrontPage() {
     <StoreHeader />
 
     <section className="shop-hero">
-      <p className="shop-kicker">BỘ SƯU TẬP MỚI</p>
-      <h1>Mặc đẹp<br />mỗi ngày.</h1>
-      <p>Thiết kế tối giản, chất liệu dễ chịu, phù hợp cho mọi hoạt động thường ngày.</p>
-      <a className="shop-primary" href="#san-pham">MUA SẮM NGAY</a>
+      <div className="shop-hero-copy">
+        <p className="shop-kicker">BỘ SƯU TẬP MỚI</p>
+        <h1>Mặc đẹp<br />mỗi ngày.</h1>
+        <p>Thiết kế tối giản, chất liệu dễ chịu, phù hợp cho mọi hoạt động thường ngày.</p>
+        <a className="shop-primary" href="#san-pham">MUA SẮM NGAY</a>
+      </div>
+      {/* Free Unsplash photos; see public/images/hero/CREDITS.md */}
+      <div className="shop-hero-gallery" aria-hidden="true">
+        <img className="hero-main" src="/images/hero/hero-white-suit.jpg" alt="" width="900" height="1111" />
+        <img className="hero-top" src="/images/hero/hero-blazer.jpg" alt="" width="620" height="775" />
+        <img className="hero-bottom" src="/images/hero/hero-satin-dress.jpg" alt="" width="620" height="1102" />
+        <span className="hero-credit">Ảnh: Unsplash</span>
+      </div>
     </section>
 
     <main className="shop-main" id="san-pham">

@@ -41,11 +41,13 @@ public class OrderService {
     private final JdbcTemplate jdbc;
     private final OrderStore store;
     private final VoucherService vouchers;
+    private final FulfillmentQueries fulfillment;
 
-    public OrderService(JdbcTemplate jdbc, OrderStore store, VoucherService vouchers) {
+    public OrderService(JdbcTemplate jdbc, OrderStore store, VoucherService vouchers, FulfillmentQueries fulfillment) {
         this.jdbc = jdbc;
         this.store = store;
         this.vouchers = vouchers;
+        this.fulfillment = fulfillment;
     }
 
     /** Read-only quote of the current cart; stock problems are flagged per line instead of thrown. */
@@ -141,6 +143,15 @@ public class OrderService {
         String note = blank(reason) ? "Khách hủy đơn" : "Khách hủy đơn: " + reason.trim();
         store.cancel(orderId, customerId, note);
         return getOrder(customerId, orderId);
+    }
+
+    /** Delivery status of an own order; 404 SHIPMENT_NOT_FOUND until the warehouse has packed it. */
+    public OrderDtos.ShipmentTracking getShipment(long customerId, long orderId) {
+        Boolean owned = jdbc.queryForObject("SELECT EXISTS (SELECT 1 FROM orders WHERE id = ? AND customer_id = ?)",
+                Boolean.class, orderId, customerId);
+        if (!Boolean.TRUE.equals(owned)) throw error(HttpStatus.NOT_FOUND, "ORDER_NOT_FOUND", "Order not found");
+        return fulfillment.tracking(orderId)
+                .orElseThrow(() -> error(HttpStatus.NOT_FOUND, "SHIPMENT_NOT_FOUND", "The order has not been packed yet"));
     }
 
     public PageResponse<OrderSummary> listOrders(long customerId, int page, int size) {

@@ -128,6 +128,10 @@ public class DeliveryServiceImpl implements DeliveryService {
                             WHERE order_id=? AND method='COD' AND status IN ('PENDING','UNPAID')""",
                             actorId, s.getOrderId());
                 }
+                // A COD voucher stays RESERVED until the order is delivered and paid (checkout rule BR-V5).
+                jdbc.update("""
+                        UPDATE voucher_usages SET status='CONSUMED', consumed_at=now()
+                        WHERE order_id=? AND status='RESERVED'""", s.getOrderId());
                 saveOrUpdateAttempt(existingAttempts, shipmentId, previous, ShipmentStatus.DELIVERED, note, actorId, now);
             }
             case DELIVERY_FAILED -> {

@@ -69,6 +69,10 @@ public class OrderMailer {
                 intro = qr ? "Đơn hàng đang chờ thanh toán QR. " + SIMULATION_NOTICE
                         : "Đơn hàng thanh toán khi nhận hàng (COD) đang chờ cửa hàng xác nhận.";
             }
+            case CONFIRMED -> {
+                subject = "FORME - Đơn hàng " + order.code() + " đã được xác nhận";
+                intro = "Cửa hàng đã xác nhận đơn hàng thanh toán khi nhận hàng (COD) và đang chuẩn bị hàng.";
+            }
             case PAID -> {
                 subject = "FORME - Đã thanh toán đơn hàng " + order.code();
                 intro = "Thanh toán đã được ghi nhận, đơn hàng đã được xác nhận. " + SIMULATION_NOTICE;

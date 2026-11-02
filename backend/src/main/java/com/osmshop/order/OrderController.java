@@ -60,6 +60,11 @@ public class OrderController {
         return orders.getOrder(user.id(), id);
     }
 
+    @GetMapping("/{id}/shipment")
+    public OrderDtos.ShipmentTracking shipment(@AuthenticationPrincipal AuthPrincipal user, @PathVariable long id) {
+        return orders.getShipment(user.id(), id);
+    }
+
     @PostMapping("/{id}/cancel")
     public OrderDetail cancel(@AuthenticationPrincipal AuthPrincipal user, @PathVariable long id,
                               @Valid @RequestBody(required = false) CancelRequest request) {

@@ -27,6 +27,9 @@ Admin **không** tự có quyền quản lý voucher (Admin không kế thừa q
 | UC-C7 | Quản lý voucher | `GET/POST /manager/vouchers`, `PATCH/DELETE /manager/vouchers/{id}` |
 | UC-C8 | Hết hạn QR tự động | tác vụ nền mỗi 30 giây |
 | UC-C9 | Email xác nhận | gửi sau khi giao dịch đã lưu |
+| UC-C10 | Theo dõi vận chuyển (UC-CUS-018) | `GET /orders/{id}/shipment` |
+| UC-C11 | Support xác nhận / hủy đơn COD (UC-SUP-001) | `GET /support/orders/pending`, `POST /support/orders/{id}/confirm`, `/cancel` |
+| UC-C12 | Manager xem mọi đơn, phân công giao hàng (UC-MNG-008, UC-MNG-009) | `GET /manager/orders`, `GET /manager/orders/{id}`, `GET /manager/delivery-staff`, `POST /manager/orders/{id}/assign` |
 
 ## 3. Luồng chính
 
@@ -55,6 +58,14 @@ Cho phép khi đơn ở `AWAITING_PAYMENT`, `PENDING_CONFIRMATION` hoặc `CONFI
 
 ### UC-C8 Hết hạn QR
 Tác vụ nền tìm lượt `PENDING` đã quá `expires_at`: lượt → `EXPIRED`, trả tồn và voucher. Nếu đó là lượt cuối cùng được phép, đơn tự chuyển `CANCELLED` (ghi chú "Hết số lần thanh toán QR").
+
+### Luồng hoàn tất đơn hàng (nối với phân hệ 4)
+1. **COD:** khách đặt → `PENDING_CONFIRMATION` → **Support** gọi khách rồi *Xác nhận* (`CONFIRMED`, email "đã được xác nhận") hoặc *Hủy* có lý do (trả tồn, trả voucher).
+2. **QR:** thanh toán mô phỏng thành công → `CONFIRMED`.
+3. **Kho** đóng gói đơn `CONFIRMED` → `READY_FOR_DELIVERY`, tạo vận đơn `READY`, trừ `stock_on_hand` một lần.
+4. **Manager** phân công nhân viên giao hàng → vận đơn và đơn `ASSIGNED`. Được đổi người trước khi xuất kho, và phân công lại sau khi giao thất bại nếu còn lượt.
+5. **Nhân viên giao hàng** bắt đầu giao (`DELIVERING`) → giao thành công (`DELIVERED`; COD chuyển `PAID`, voucher `CONSUMED`) hoặc thất bại (`DELIVERY_FAILED`, tối đa `max_delivery_attempts`).
+6. **Khách** xem mã vận đơn, nhân viên giao, và lịch sử từng lần giao trong chi tiết đơn.
 
 ## 4. Quy tắc nghiệp vụ
 
