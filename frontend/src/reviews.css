@@ -1,0 +1,79 @@
+/* Product reviews (Stream B, PR9). Every class is prefixed rv- because Vite bundles all CSS globally.
+   Colours come from the global --lg-* tokens (logistics.css, same values as the Forme mock-up). */
+
+/* ---------- Stars ---------- */
+.rv-stars { color: #d9d3c7; display: inline-flex; font-size: 15px; letter-spacing: 1px; line-height: 1; }
+.rv-stars .on { color: #dc8c24; }
+
+.rv-picker { border: 0; margin: 0; min-width: 0; padding: 0; }
+.rv-picker legend { color: var(--lg-ink, #332d29); font-size: 12px; font-weight: 700; margin-bottom: 6px; padding: 0; }
+.rv-picker-row { align-items: center; display: flex; gap: 2px; }
+.rv-picker label { color: #d9d3c7; cursor: pointer; font-size: 28px; line-height: 1; padding: 2px; position: relative; }
+.rv-picker label.on { color: #dc8c24; }
+/* Hover preview: light every star up to the pointer, dim the ones after it. */
+.rv-picker:not(:disabled) .rv-picker-row:hover label { color: #dc8c24; }
+.rv-picker:not(:disabled) .rv-picker-row label:hover ~ label { color: #d9d3c7; }
+.rv-picker input { height: 1px; opacity: 0; position: absolute; width: 1px; }
+.rv-picker label:has(input:focus-visible) { outline: 2px solid var(--lg-blue, #344bc5); outline-offset: 1px; border-radius: 3px; }
+.rv-picker:disabled label { cursor: default; opacity: .6; }
+.rv-picker-word { color: var(--lg-muted, #766f69); font-size: 13px; margin-left: 10px; }
+
+/* ---------- Product page ---------- */
+.rv-summary { align-items: center; display: inline-flex; gap: 8px; }
+.rv-summary .rv-stars { font-size: 17px; }
+.rv-list { list-style: none; margin: 0; padding: 0; }
+.rv-item { border-bottom: 1px solid var(--fs-line, #ddd7cf); padding: 22px 0; }
+.rv-item:first-child { padding-top: 6px; }
+.rv-item-head { align-items: center; color: var(--fs-muted, #766f69); display: flex; flex-wrap: wrap; font-size: 13px; gap: 6px 12px; }
+.rv-item-head b { color: var(--fs-ink, #332d29); }
+.rv-verified { color: var(--fs-green, #267c5b); font-size: 12px; font-weight: 700; }
+.rv-comment { line-height: 1.7; margin: 10px 0 0; max-width: 760px; white-space: pre-line; }
+.rv-reply { background: #f4f1ea; border-left: 3px solid var(--lg-blue, #344bc5); font-size: 13px; margin-top: 12px;
+  max-width: 760px; padding: 10px 14px; }
+.rv-reply b { color: var(--lg-blue, #344bc5); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; }
+.rv-reply p { line-height: 1.6; margin: 4px 0 0; white-space: pre-line; }
+.rv-more { margin-top: 22px; }
+
+/* ---------- Order detail (customer) ---------- */
+.rv-order-slot { grid-column: 1 / -1; }
+.rv-order { margin-left: 80px; }
+.rv-order-form { background: #faf9f6; border: 1px solid #ece8e1; border-radius: 10px; display: flex; flex-direction: column;
+  gap: 12px; max-width: 560px; padding: 14px 16px; }
+.rv-order-label { color: #34302d; display: block; font-size: 12px; font-weight: 700; }
+.rv-order-label textarea { background: #fff; border: 1px solid #dcd8d2; border-radius: 8px; display: block; font: inherit;
+  font-size: 14px; font-weight: 400; margin-top: 6px; min-height: 84px; padding: 8px 12px; resize: vertical; width: 100%; }
+.rv-order-actions { display: flex; gap: 8px; justify-content: flex-end; }
+.rv-order-done { max-width: 560px; }
+.rv-order-head { align-items: center; display: flex; font-size: 13px; gap: 10px; }
+.rv-order-head > span:not(.rv-stars) { color: #77736e; }
+.rv-order-head .link-button { font-size: 13px; margin-left: auto; }
+.rv-order-comment { color: #3a3532; font-size: 13px; line-height: 1.6; margin: 6px 0 0; white-space: pre-line; }
+.rv-order-hidden { color: #b54708; font-size: 12px; margin: 6px 0 0; }
+.rv-order-notice { color: #027a48; font-size: 13px; font-weight: 600; margin: 8px 0 0; }
+.rv-order-error { color: #b42318; font-size: 13px; margin: 0; }
+
+/* ---------- Manager moderation ---------- */
+.rv-mgr-list { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); list-style: none;
+  margin: 18px 0 0; padding: 0; }
+.rv-mgr-card { background: #fff; border: 1px solid var(--lg-line, #ddd7cf); border-radius: 3px; display: flex;
+  flex-direction: column; font-family: var(--lg-sans, Manrope, Arial, sans-serif); gap: 8px; padding: 18px; }
+.rv-mgr-card.hidden { background: #fbfaf7; }
+.rv-mgr-card.hidden .rv-mgr-comment { color: var(--lg-muted, #766f69); }
+.rv-mgr-head { align-items: center; display: flex; gap: 10px; }
+.rv-mgr-head time { color: var(--lg-muted, #766f69); font-size: 12px; margin-left: auto; }
+.rv-mgr-product, .rv-mgr-meta, .rv-mgr-comment { margin: 0; }
+.rv-mgr-product { font-size: 14px; }
+.rv-mgr-product .catalog-sku { display: inline; margin-left: 6px; }
+.rv-mgr-meta { color: var(--lg-muted, #766f69); font-size: 12px; overflow-wrap: anywhere; }
+.rv-mgr-comment { font-size: 14px; line-height: 1.6; white-space: pre-line; }
+.rv-mgr-comment.empty { color: var(--lg-muted, #766f69); font-style: italic; }
+.rv-mgr-reply { color: #34302d; display: block; font-size: 12px; font-weight: 700; margin-top: 4px; }
+.rv-mgr-reply textarea { background: #fff; border: 1px solid var(--lg-line, #ddd7cf); border-radius: 3px; display: block;
+  font: inherit; font-size: 13px; font-weight: 400; margin-top: 6px; min-height: 64px; padding: 8px 10px; resize: vertical; width: 100%; }
+.rv-mgr-actions { flex-wrap: wrap; justify-content: flex-end; }
+.rv-mgr-actions .lg-btn { padding: 9px 12px; }
+
+@media (max-width: 720px) {
+  .rv-order { margin-left: 0; }
+  .rv-mgr-list { grid-template-columns: 1fr; }
+}

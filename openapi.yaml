@@ -1324,6 +1324,103 @@ paths:
         '400': { description: Unknown status }
         '404': { description: CATEGORY_NOT_FOUND }
         '409': { description: CATEGORY_HAS_PRODUCTS }
+  /products/{id}/reviews:
+    get:
+      summary: Public VISIBLE reviews of a product, newest first
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: integer, format: int64 } }
+        - { in: query, name: page, schema: { type: integer, minimum: 0, default: 0 } }
+        - { in: query, name: size, schema: { type: integer, minimum: 1, maximum: 50, default: 10 } }
+      responses:
+        '200':
+          description: Review page. Author names are shortened (e.g. "Phạm Đ.").
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PublicReviewPage' }
+        '404': { description: PRODUCT_NOT_FOUND (missing, not ACTIVE, or category not ACTIVE) }
+  /order-items/{id}/review:
+    parameters:
+      - { in: path, name: id, required: true, schema: { type: integer, format: int64 } }
+    get:
+      summary: The Customer's own review of one of their order items
+      security: [{ bearerAuth: [] }, { sessionCookie: [] }]
+      responses:
+        '200':
+          description: Own review (any status)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MyReview' }
+        '404': { description: ORDER_ITEM_NOT_FOUND (not the caller's item) or REVIEW_NOT_FOUND }
+    post:
+      summary: Review an item of an own DELIVERED order (one review per item)
+      security: [{ bearerAuth: [] }, { sessionCookie: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ReviewRequest' }
+      responses:
+        '201':
+          description: Review published (VISIBLE)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MyReview' }
+        '400': { description: INVALID_REQUEST (rating not 1-5, comment over 2000 characters) }
+        '404': { description: ORDER_ITEM_NOT_FOUND }
+        '409': { description: REVIEW_ALREADY_EXISTS (use PATCH to edit) }
+        '422': { description: REVIEW_NOT_ALLOWED (order not DELIVERED) }
+    patch:
+      summary: Edit the own review. A hidden review stays hidden.
+      security: [{ bearerAuth: [] }, { sessionCookie: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ReviewRequest' }
+      responses:
+        '200':
+          description: Updated review
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MyReview' }
+        '400': { description: INVALID_REQUEST }
+        '404': { description: ORDER_ITEM_NOT_FOUND or REVIEW_NOT_FOUND }
+  /manager/reviews:
+    get:
+      summary: All reviews for moderation, newest first (requires MANAGER_REVIEW_MODERATE)
+      security: [{ bearerAuth: [] }, { sessionCookie: [] }]
+      parameters:
+        - { in: query, name: status, schema: { type: string, enum: [VISIBLE, HIDDEN] } }
+        - { in: query, name: rating, schema: { type: integer, minimum: 1, maximum: 5 } }
+        - { in: query, name: q, description: Product name/SKU, order code, customer name/email or comment, schema: { type: string, maxLength: 100 } }
+        - { in: query, name: page, schema: { type: integer, minimum: 0, default: 0 } }
+        - { in: query, name: size, schema: { type: integer, minimum: 1, maximum: 100, default: 20 } }
+      responses:
+        '200':
+          description: Review page
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ManagerReviewPage' }
+  /manager/reviews/{id}:
+    parameters:
+      - { in: path, name: id, required: true, schema: { type: integer, format: int64 } }
+    patch:
+      summary: Hide, restore and/or publicly reply to a review (requires MANAGER_REVIEW_MODERATE)
+      description: Send status, reply or both. A blank reply removes the reply. Every change is audited (REVIEW_HIDDEN, REVIEW_RESTORED, REVIEW_REPLIED, REVIEW_REPLY_REMOVED).
+      security: [{ bearerAuth: [] }, { sessionCookie: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ModerateReviewRequest' }
+      responses:
+        '200':
+          description: Moderated review
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ManagerReview' }
+        '400': { description: INVALID_REQUEST (nothing to change, unknown status, reply over 1000 characters) }
+        '404': { description: REVIEW_NOT_FOUND }
 components:
   securitySchemes:
     bearerAuth:
@@ -1626,6 +1723,77 @@ components:
         activeProductCount: { type: integer, format: int64 }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
+    ReviewRequest:
+      type: object
+      required: [rating]
+      properties:
+        rating: { type: integer, minimum: 1, maximum: 5 }
+        comment: { type: string, nullable: true, maxLength: 2000 }
+    MyReview:
+      type: object
+      required: [id, orderItemId, productId, rating, status, createdAt, updatedAt]
+      properties:
+        id: { type: integer, format: int64 }
+        orderItemId: { type: integer, format: int64 }
+        productId: { type: integer, format: int64 }
+        rating: { type: integer, minimum: 1, maximum: 5 }
+        comment: { type: string, nullable: true }
+        status: { type: string, enum: [VISIBLE, HIDDEN] }
+        managerReply: { type: string, nullable: true }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    PublicReview:
+      type: object
+      required: [id, authorName, rating, createdAt, edited]
+      properties:
+        id: { type: integer, format: int64 }
+        authorName: { type: string, description: First word and last initial of the full name }
+        rating: { type: integer, minimum: 1, maximum: 5 }
+        comment: { type: string, nullable: true }
+        managerReply: { type: string, nullable: true }
+        repliedAt: { type: string, format: date-time, nullable: true }
+        createdAt: { type: string, format: date-time }
+        edited: { type: boolean, description: The customer changed the review after posting it }
+    PublicReviewPage:
+      type: object
+      properties:
+        items: { type: array, items: { $ref: '#/components/schemas/PublicReview' } }
+        page: { type: integer }
+        size: { type: integer }
+        totalItems: { type: integer, format: int64 }
+        totalPages: { type: integer, format: int64 }
+    ModerateReviewRequest:
+      type: object
+      properties:
+        status: { type: string, enum: [VISIBLE, HIDDEN] }
+        reply: { type: string, nullable: true, maxLength: 1000, description: Blank removes the reply }
+    ManagerReview:
+      type: object
+      required: [id, productId, productName, sku, orderId, orderCode, customerName, customerEmail, rating, status, createdAt, updatedAt]
+      properties:
+        id: { type: integer, format: int64 }
+        productId: { type: integer, format: int64 }
+        productName: { type: string }
+        sku: { type: string }
+        orderId: { type: integer, format: int64 }
+        orderCode: { type: string }
+        customerName: { type: string }
+        customerEmail: { type: string }
+        rating: { type: integer, minimum: 1, maximum: 5 }
+        comment: { type: string, nullable: true }
+        status: { type: string, enum: [VISIBLE, HIDDEN] }
+        managerReply: { type: string, nullable: true }
+        repliedAt: { type: string, format: date-time, nullable: true }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    ManagerReviewPage:
+      type: object
+      properties:
+        items: { type: array, items: { $ref: '#/components/schemas/ManagerReview' } }
+        page: { type: integer }
+        size: { type: integer }
+        totalItems: { type: integer, format: int64 }
+        totalPages: { type: integer, format: int64 }
     Problem:
       type: object
       properties:

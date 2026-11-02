@@ -5,6 +5,7 @@ import { getProduct, type ProductDetail } from './api/catalog'
 import { addCartItem } from './api/cart'
 import StoreLayout from './StoreLayout'
 import ProductImage from './ProductImage'
+import ProductReviews from './ProductReviews'
 import { formatVnd } from './formatMoney'
 import { getUiError } from './uiError'
 
@@ -118,17 +119,8 @@ export default function ProductDetailPage() {
         </div>
       </div>
 
-      <section className="fs-reviews" aria-labelledby="fs-reviews-title">
-        <div className="fs-pagehead">
-          <div><p className="fs-eyebrow">Ý kiến khách hàng</p><h2 id="fs-reviews-title">Đánh giá</h2></div>
-          {product.reviewCount > 0 && product.avgRating !== null && <span>
-            <span className="fs-stars" aria-hidden="true">{'★'.repeat(Math.round(product.avgRating))}</span>
-            {' '}{product.avgRating.toLocaleString('vi-VN', { maximumFractionDigits: 1 })} ({product.reviewCount})</span>}
-        </div>
-        <p className="fs-muted">{product.reviewCount === 0
-          ? 'Chưa có đánh giá nào cho sản phẩm này.'
-          : `${product.reviewCount} đánh giá từ khách hàng đã nhận hàng.`}</p>
-      </section>
+      <ProductReviews key={product.id} productId={product.id} avgRating={product.avgRating}
+        reviewCount={product.reviewCount} />
     </>
   }
 

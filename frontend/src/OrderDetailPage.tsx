@@ -6,6 +6,7 @@ import { attemptStatusNames, formatDateTime, formatVnd, orderStatusNames, paymen
   shipmentStatusNames,
   SIMULATION_NOTICE, statusTone } from './orderFormat'
 import { Icon, ProductThumb, ShopLayout, type IconName } from './shopUi'
+import OrderItemReview from './OrderItemReview'
 import { getUiError } from './uiError'
 import './orders.css'
 
@@ -241,6 +242,8 @@ export default function OrderDetailPage() {
             {item.discountAmount > 0 && <span className="discount-note">Giảm {formatVnd(item.discountAmount)}</span>}</div>
           <div className="line-qty">{formatVnd(item.unitPrice)}<span>× {item.quantity}</span></div>
           <strong className="line-total">{formatVnd(item.lineTotal)}</strong>
+          {order.status === 'DELIVERED' && <div className="rv-order-slot">
+            <OrderItemReview orderItemId={item.id} productName={item.name} /></div>}
         </li>)}</ul>
         <dl className="order-totals">
           <div><dt>Tạm tính</dt><dd>{formatVnd(order.subtotal)}</dd></div>
