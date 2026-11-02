@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { cancelOrder, getOrder, retryPayment, simulatePayment, type OrderDetail } from './api/orders'
-import { formatDateTime, formatVnd, orderStatusNames, paymentMethodNames, paymentStatusNames,
+import { cancelOrder, getOrder, getShipment, retryPayment, simulatePayment, type OrderDetail,
+  type ShipmentTracking } from './api/orders'
+import { attemptStatusNames, formatDateTime, formatVnd, orderStatusNames, paymentMethodNames, paymentStatusNames,
+  shipmentStatusNames,
   SIMULATION_NOTICE, statusTone } from './orderFormat'
 import { Icon, ProductThumb, ShopLayout, type IconName } from './shopUi'
 import { getUiError } from './uiError'
@@ -63,6 +65,50 @@ function hero(order: OrderDetail): { title: string; text: string; tone: string }
     case 'DELIVERED': return { title: 'Giao hàng thành công', text: 'Cảm ơn bạn đã mua sắm tại FORME.', tone: 'success' }
     default: return { title: orderStatusNames[order.status], text: 'Theo dõi tiến trình đơn hàng bên dưới.', tone: 'info' }
   }
+}
+
+/** Order states that have a shipment, i.e. the warehouse has packed the order. */
+const SHIPPED = new Set<OrderDetail['status']>(['READY_FOR_DELIVERY', 'ASSIGNED', 'DELIVERING', 'DELIVERED',
+  'DELIVERY_FAILED', 'RETURNED_TO_WAREHOUSE'])
+
+/** Delivery tracking for a packed order (UC-CUS-018). */
+function ShipmentPanel({ orderId, status }: { orderId: number; status: OrderDetail['status'] }) {
+  const [shipment, setShipment] = useState<ShipmentTracking | null>(null)
+  const [error, setError] = useState('')
+  useEffect(() => {
+    let active = true
+    getShipment(orderId).then((data) => { if (active) { setShipment(data); setError('') } })
+      .catch((failure) => { if (active) setError(getUiError(failure)) })
+    return () => { active = false }
+  }, [orderId, status])
+
+  if (error) return <section className="shop-card tracking-card"><p className="field-error" role="alert">{error}</p></section>
+  if (!shipment) return null
+  const events: { at: string | null; title: string; detail?: string; tone?: string }[] = [
+    { at: shipment.packedAt, title: 'Kho đã đóng gói đơn hàng', detail: `Mã vận đơn ${shipment.trackingNumber}` },
+  ]
+  if (shipment.assignedAt) events.push({ at: shipment.assignedAt, title: 'Đã giao cho nhân viên giao hàng',
+    detail: shipment.deliveryStaffName ?? undefined })
+  for (const attempt of shipment.attempts) {
+    if (attempt.startedAt) events.push({ at: attempt.startedAt, title: `Lần giao ${attempt.attemptNumber}: bắt đầu giao` })
+    if (attempt.finishedAt) events.push({ at: attempt.finishedAt,
+      title: `Lần giao ${attempt.attemptNumber}: ${attemptStatusNames[attempt.status].toLowerCase()}`,
+      detail: attempt.failureReason ?? undefined, tone: attempt.status === 'FAILED' ? 'bad' : attempt.status === 'DELIVERED' ? 'ok' : undefined })
+  }
+  events.sort((a, b) => (b.at ?? '').localeCompare(a.at ?? ''))
+  return <section className="shop-card tracking-card">
+    <div className="card-title"><span className="card-icon"><Icon name="truck" /></span><h2>Theo dõi vận chuyển</h2>
+      <span className="tracking-status">{shipmentStatusNames[shipment.status]}</span></div>
+    <dl className="tracking-meta">
+      <div><dt>Mã vận đơn</dt><dd>{shipment.trackingNumber}</dd></div>
+      <div><dt>Nhân viên giao</dt><dd>{shipment.deliveryStaffName ?? 'Đang chờ phân công'}</dd></div>
+      {shipment.codAmount > 0 && <div><dt>Thu hộ (COD)</dt><dd>{formatVnd(shipment.codAmount)}
+        {shipment.codCollectedAt ? ' · đã thu' : ' · thanh toán khi nhận'}</dd></div>}
+    </dl>
+    <ol className="tracking-timeline">{events.map((event, index) => <li key={index} className={event.tone ?? ''}>
+      <strong>{event.title}</strong>{event.detail && <span>{event.detail}</span>}
+      {event.at && <time>{formatDateTime(event.at)}</time>}</li>)}</ol>
+  </section>
 }
 
 export default function OrderDetailPage() {
@@ -179,6 +225,8 @@ export default function OrderDetailPage() {
           : <p className="muted">Đã dùng hết số lần thanh toán QR.</p>}
       </div>}
     </section>}
+
+    {SHIPPED.has(order.status) && <ShipmentPanel orderId={order.id} status={order.status} />}
 
     {order.refund && <section className="refund-banner"><Icon name="return" />
       <p><strong>Hoàn tiền mô phỏng {formatVnd(order.refund.amount)}</strong> — {order.refund.status === 'COMPLETED'

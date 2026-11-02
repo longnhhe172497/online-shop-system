@@ -112,7 +112,7 @@ export default function CartPage() {
           {actionError && <p className="shop-state" role="alert">{actionError}</p>}
           {flagged && <p className="shop-note">Hãy điều chỉnh các sản phẩm được đánh dấu trước khi thanh toán.</p>}
           {!user
-            ? <Link className="shop-primary" to="/auth">ĐĂNG NHẬP ĐỂ THANH TOÁN</Link>
+            ? <Link className="shop-primary" to={`/auth?next=${CHECKOUT_PATH}`}>ĐĂNG NHẬP ĐỂ THANH TOÁN</Link>
             : flagged
               ? <button className="shop-primary" type="button" disabled>THANH TOÁN</button>
               : <Link className="shop-primary" to={CHECKOUT_PATH}>THANH TOÁN</Link>}

@@ -34,7 +34,7 @@ describe('CartPage', () => {
     renderPage()
     expect(await screen.findByText('Áo sơ mi xanh')).toBeInTheDocument()
     expect(screen.getAllByText('200.000 ₫')).toHaveLength(2)
-    expect(screen.getByRole('link', { name: 'ĐĂNG NHẬP ĐỂ THANH TOÁN' })).toHaveAttribute('href', '/auth')
+    expect(screen.getByRole('link', { name: 'ĐĂNG NHẬP ĐỂ THANH TOÁN' })).toHaveAttribute('href', '/auth?next=/checkout')
     expect(await screen.findByRole('link', { name: 'Giỏ hàng (2)' })).toHaveAttribute('href', '/cart')
   })
 

@@ -318,3 +318,21 @@
 .admin-table.voucher-table { width: 100%; }
 .admin-table.voucher-table td, .admin-table.voucher-table td:first-child { min-width: 0; }
 .admin-table.voucher-table td:last-child { width: 1%; }
+
+/* ---------- Shipment tracking (customer order detail) ---------- */
+.tracking-card { margin-bottom: 18px; }
+.tracking-status { background: #f0f2ff; border-radius: 20px; color: #2438c5; font-size: 12px; font-weight: 700;
+  margin-left: auto; padding: 4px 12px; }
+.tracking-meta { display: grid; gap: 10px 24px; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); margin: 0 0 18px; }
+.tracking-meta dt { color: #77736e; font-size: 12px; }
+.tracking-meta dd { font-size: 14px; font-weight: 700; margin: 2px 0 0; }
+.tracking-timeline { border-left: 2px solid #e6e2dc; list-style: none; margin: 0 0 0 8px; padding: 0 0 0 20px; }
+.tracking-timeline li { padding: 0 0 16px; position: relative; }
+.tracking-timeline li::before { background: #fff; border: 2px solid #2438c5; border-radius: 50%; content: ''; height: 10px;
+  left: -27px; position: absolute; top: 4px; width: 10px; }
+.tracking-timeline li:first-child::before { background: #2438c5; }
+.tracking-timeline li.ok::before { background: #027a48; border-color: #027a48; }
+.tracking-timeline li.bad::before { background: #b42318; border-color: #b42318; }
+.tracking-timeline strong { display: block; font-size: 14px; }
+.tracking-timeline span { color: #514c48; display: block; font-size: 13px; margin-top: 2px; }
+.tracking-timeline time { color: #77736e; display: block; font-size: 12px; margin-top: 2px; }

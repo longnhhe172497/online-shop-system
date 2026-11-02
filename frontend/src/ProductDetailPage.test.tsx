@@ -17,6 +17,7 @@ const detail: ProductDetail = { id: 1, sku: 'SKU-1', name: 'Áo sơ mi xanh', de
 function renderAt(path: string) {
   return render(<MemoryRouter initialEntries={[path]}><Routes>
     <Route path="/products/:id" element={<ProductDetailPage />} />
+    <Route path="/checkout" element={<p>Trang thanh toán</p>} />
   </Routes></MemoryRouter>)
 }
 
@@ -53,6 +54,7 @@ describe('ProductDetailPage', () => {
     expect(await screen.findByText('Tạm hết hàng')).toBeInTheDocument()
     expect(screen.getByText('Chưa có đánh giá')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'THÊM VÀO GIỎ HÀNG' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'MUA NGAY' })).toBeDisabled()
   })
 
   it('shows not found for a missing product', async () => {
@@ -76,6 +78,27 @@ describe('ProductDetailPage', () => {
     expect(await screen.findByText('Đã thêm vào giỏ hàng.')).toBeInTheDocument()
     expect(addCartItem).toHaveBeenCalledWith(1, 2)
     expect(screen.getByRole('link', { name: 'Xem giỏ hàng' })).toHaveAttribute('href', '/cart')
+  })
+
+  it('buys now: adds the chosen quantity and opens checkout', async () => {
+    vi.mocked(getProduct).mockResolvedValue(detail)
+    vi.mocked(addCartItem).mockResolvedValue({ items: [], itemCount: 2, subtotal: 2580000 })
+    renderAt('/products/1')
+    fireEvent.click(await screen.findByRole('button', { name: 'Tăng số lượng' }))
+    fireEvent.click(screen.getByRole('button', { name: 'MUA NGAY' }))
+    expect(await screen.findByText('Trang thanh toán')).toBeInTheDocument()
+    expect(addCartItem).toHaveBeenCalledWith(1, 2)
+  })
+
+  it('stays on the product when buying now fails', async () => {
+    vi.mocked(getProduct).mockResolvedValue(detail)
+    vi.mocked(addCartItem).mockRejectedValue({ isAxiosError: true,
+      response: { status: 409, data: { code: 'QUANTITY_LIMIT' } } })
+    renderAt('/products/1')
+    fireEvent.click(await screen.findByRole('button', { name: 'MUA NGAY' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('Mỗi sản phẩm chỉ được đặt tối đa 99 chiếc.')
+    expect(screen.queryByText('Trang thanh toán')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'MUA NGAY' })).toBeEnabled()
   })
 
   it('shows the server reason when adding fails', async () => {

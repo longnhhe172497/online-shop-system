@@ -38,7 +38,7 @@ export default function AuthPage() {
         const session = await login({ email, password })
         setPassword('')
         if (session.mfaRequired && session.challengeToken) {
-          navigate('/auth/mfa', { state: { challengeToken: session.challengeToken, email,
+          navigate('/auth/mfa', { state: { challengeToken: session.challengeToken, email, next: customerHome,
             mfaMethod: session.mfaMethod, emailDeliveryFailed: session.emailDeliveryFailed } })
         } else if (session.user) {
           navigate(isInternalRole(session.user.role) ? getInternalHome(session.user.role) : customerHome)
@@ -56,7 +56,7 @@ export default function AuthPage() {
     try {
       const session = await loginWithGoogle(credential)
       if (session.mfaRequired && session.challengeToken) {
-        navigate('/auth/mfa', { state: { challengeToken: session.challengeToken,
+        navigate('/auth/mfa', { state: { challengeToken: session.challengeToken, next: customerHome,
           mfaMethod: session.mfaMethod, emailDeliveryFailed: session.emailDeliveryFailed } })
       } else if (session.user) {
         navigate(isInternalRole(session.user.role) ? getInternalHome(session.user.role) : customerHome)
