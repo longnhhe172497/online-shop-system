@@ -5,13 +5,15 @@ import {
   errorMessage, listPackingOrders, listProducts, packOrder, restockProduct,
   type PackingOrder, type PageResponse, type ProductStock,
 } from './api/warehouseDelivery'
+import { inspectReturn, listWarehouseReturns, type ReturnRequest } from './api/afterSales'
 import { Pager, formatDateTime, formatVnd } from './logisticsUi'
 import './logistics.css'
 
-type Tab = 'stock' | 'orders' | 'report'
+type Tab = 'stock' | 'orders' | 'returns' | 'report'
 const NAV: StaffTab<Tab>[] = [
   { id: 'stock', label: 'Tồn kho' },
   { id: 'orders', label: 'Đóng gói' },
+  { id: 'returns', label: 'Kiểm tra hàng trả' },
   { id: 'report', label: 'Báo cáo ngày' },
 ]
 const PAGE_SIZE = 20
@@ -20,7 +22,7 @@ export default function WarehousePage() {
   const [tab, setTab] = useState<Tab>('stock')
   return <StaffLayout eyebrow="Vận hành" title="Hàng đợi kho" roleName="Nhân viên kho"
     tabs={NAV} active={tab} onNavigate={setTab}>
-    {tab === 'stock' ? <StockPanel /> : tab === 'orders' ? <PackingPanel /> : <DailyReportPanel team="warehouse" />}
+    {tab === 'stock' ? <StockPanel /> : tab === 'orders' ? <PackingPanel /> : tab === 'returns' ? <ReturnInspectionPanel /> : <DailyReportPanel team="warehouse" />}
   </StaffLayout>
 }
 
@@ -175,5 +177,54 @@ function PackingPanel() {
       {loading && <div className="lg-empty">Đang tải…</div>}
     </div>
     {data && <Pager page={page} size={PAGE_SIZE} total={data.total} onPage={setPage} />}
+  </section>
+}
+
+
+function ReturnInspectionPanel() {
+  const [rows, setRows] = useState<ReturnRequest[]>([])
+  const [drafts, setDrafts] = useState<Record<number, { received: string; restock: string; note: string }>>({})
+  const [error, setError] = useState('')
+  const [busy, setBusy] = useState<number | null>(null)
+  const load = useCallback(async () => {
+    try { setRows((await listWarehouseReturns()).items); setError('') }
+    catch (e) { setError(errorMessage(e)) }
+  }, [])
+  useEffect(() => { void load() }, [load])
+  async function submit(row: ReturnRequest) {
+    setBusy(row.id); setError('')
+    try {
+      const items = row.items.map((item) => {
+        const draft = drafts[item.id] ?? { received: String(item.requestedQuantity), restock: String(item.requestedQuantity), note: 'Hàng nguyên vẹn' }
+        return { returnRequestItemId: item.id, receivedQuantity: Number(draft.received), restockQuantity: Number(draft.restock), conditionNote: draft.note }
+      })
+      if (items.some((i) => !Number.isInteger(i.receivedQuantity) || !Number.isInteger(i.restockQuantity)
+        || i.receivedQuantity < 0 || i.restockQuantity < 0 || i.restockQuantity > i.receivedQuantity || !i.conditionNote.trim())) {
+        setError('Kiểm tra lại số lượng nhận, số lượng nhập kho và ghi chú.'); return
+      }
+      await inspectReturn(row.id, items); await load()
+    } catch (e) { setError(errorMessage(e)) } finally { setBusy(null) }
+  }
+  return <section>
+    {error && <div className="lg-msg err" role="alert">{error}</div>}
+    <div className="lg-toolbar"><span>{rows.length} yêu cầu được phép nhận hàng trả</span><button className="lg-btn ghost" onClick={() => void load()}>Làm mới</button></div>
+    {rows.map((row) => <article className="lg-panel" key={row.id}>
+      <div className="lg-toolbar"><strong>#{row.id} · {row.orderCode}</strong><span>{row.customerName}</span></div>
+      <p>{row.reason}</p>
+      {row.items.map((item) => {
+        const draft = drafts[item.id] ?? { received: String(item.requestedQuantity), restock: String(item.requestedQuantity), note: 'Hàng nguyên vẹn' }
+        const update = (patch: Partial<typeof draft>) => setDrafts({ ...drafts, [item.id]: { ...draft, ...patch } })
+        return <div className="lg-panel" key={item.id}>
+          <strong>{item.productName} ({item.sku}) · yêu cầu {item.requestedQuantity}</strong>
+          <div className="lg-toolbar">
+            <label>Đã nhận <input type="number" min="0" max={item.requestedQuantity} value={draft.received} onChange={(e) => update({ received: e.target.value })} /></label>
+            <label>Nhập kho <input type="number" min="0" max={item.requestedQuantity} value={draft.restock} onChange={(e) => update({ restock: e.target.value })} /></label>
+          </div>
+          <div className="lg-field"><label>Ghi chú tình trạng</label><textarea rows={2} value={draft.note} onChange={(e) => update({ note: e.target.value })} /></div>
+        </div>
+      })}
+      <button className="lg-btn primary" disabled={busy === row.id} onClick={() => void submit(row)}>Lưu kết quả kiểm tra</button>
+    </article>)}
+    {rows.length === 0 && <div className="lg-empty">Không có hàng trả đang chờ kiểm tra.</div>}
   </section>
 }
