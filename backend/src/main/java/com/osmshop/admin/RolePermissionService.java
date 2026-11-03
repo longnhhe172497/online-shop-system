@@ -15,14 +15,14 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class RolePermissionService {
     public static final List<PermissionDefinition> CATALOG = List.of(
-            new PermissionDefinition("MANAGER_ORDER_VIEW", "Xem đơn hàng", "Đơn hàng", "GET /manager/orders"),
-            new PermissionDefinition("MANAGER_ORDER_ASSIGN", "Phân công giao hàng", "Đơn hàng", "POST /manager/orders/{id}/assign"),
-            new PermissionDefinition("MANAGER_RETURN_DECIDE", "Quyết định trả hàng", "Hậu mãi", "GET/POST /manager/returns"),
+            new PermissionDefinition("MANAGER_ORDER_VIEW", "Xem đơn hàng", "Đơn hàng", "GET /manager/orders, GET /manager/orders/{id}"),
+            new PermissionDefinition("MANAGER_ORDER_ASSIGN", "Phân công giao hàng", "Đơn hàng", "GET /manager/delivery-staff, POST /manager/orders/{id}/assign"),
+            new PermissionDefinition("MANAGER_RETURN_DECIDE", "Quyết định trả hàng", "Hậu mãi", "GET /manager/returns, POST /manager/returns/{id}/decision"),
             new PermissionDefinition("MANAGER_REFUND_COMPLETE", "Xác nhận hoàn tiền", "Hậu mãi", "GET/POST /manager/refunds"),
             new PermissionDefinition("MANAGER_REPORT_VIEW", "Xem báo cáo giao dịch", "Báo cáo", "GET /manager/reports"),
             new PermissionDefinition("MANAGER_VOUCHER_MANAGE", "Quản lý mã giảm giá", "Khuyến mãi", "GET/POST/PATCH/DELETE /manager/vouchers"),
             new PermissionDefinition("SUPPORT_ORDER_VIEW", "Xem đơn chờ xác nhận", "Đơn hàng", "GET /support/orders/pending"),
-            new PermissionDefinition("SUPPORT_ORDER_CONFIRM", "Xác nhận đơn COD", "Đơn hàng", "POST /support/orders/{id}/confirm"),
+            new PermissionDefinition("SUPPORT_ORDER_CONFIRM", "Xác nhận / hủy đơn COD", "Đơn hàng", "POST /support/orders/{id}/confirm, /cancel"),
             new PermissionDefinition("SUPPORT_TICKET_VIEW", "Xem ticket hỗ trợ", "Hậu mãi", "GET /support/tickets/queue"),
             new PermissionDefinition("SUPPORT_TICKET_REPLY", "Phản hồi ticket", "Hậu mãi", "POST/PATCH /support/tickets/{id}/messages and status"),
             new PermissionDefinition("WAREHOUSE_PACK_VIEW", "Xem hàng cần đóng gói", "Kho", "GET /warehouse/packing-queue"),

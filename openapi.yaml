@@ -915,6 +915,177 @@ paths:
               schema: { $ref: '#/components/schemas/OrderDetail' }
         '404': { description: PAYMENT_ATTEMPT_NOT_FOUND }
         '409': { description: PAYMENT_ATTEMPT_NOT_PENDING or PAYMENT_ATTEMPT_EXPIRED }
+  /orders/{id}/shipment:
+    parameters:
+      - { in: path, name: id, required: true, schema: { type: integer, format: int64 } }
+    get:
+      summary: Track the shipment of an own order (UC-CUS-018)
+      security: [{ bearerAuth: [] }, { sessionCookie: [] }]
+      responses:
+        '200':
+          description: Shipment with delivery attempts
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ShipmentTracking' }
+        '403': { description: Authenticated role is not Customer }
+        '404': { description: ORDER_NOT_FOUND (absent or another customer's) or SHIPMENT_NOT_FOUND (not packed yet) }
+  /support/orders/pending:
+    get:
+      summary: COD orders waiting for Support confirmation, oldest first (SUPPORT_ORDER_VIEW)
+      security: [{ bearerAuth: [] }, { sessionCookie: [] }]
+      parameters:
+        - { in: query, name: page, schema: { type: integer, minimum: 0, default: 0 } }
+        - { in: query, name: size, schema: { type: integer, minimum: 1, maximum: 100, default: 20 } }
+      responses:
+        '200':
+          description: Page of pending COD orders
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items: { type: array, items: { $ref: '#/components/schemas/StaffOrder' } }
+                  page: { type: integer }
+                  size: { type: integer }
+                  totalItems: { type: integer, format: int64 }
+                  totalPages: { type: integer, format: int64 }
+        '403': { description: Missing SUPPORT_ORDER_VIEW }
+  /support/orders/{id}/confirm:
+    parameters:
+      - { in: path, name: id, required: true, schema: { type: integer, format: int64 } }
+    post:
+      summary: Confirm a COD order so the warehouse can pack it (SUPPORT_ORDER_CONFIRM)
+      description: Stock stays reserved and payment stays UNPAID until the shipper collects the cash. The customer is emailed.
+      security: [{ bearerAuth: [] }, { sessionCookie: [] }]
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { type: object, properties: { note: { type: string, maxLength: 500, nullable: true } } }
+      responses:
+        '200':
+          description: Order CONFIRMED
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/StaffOrder' }
+        '403': { description: Missing SUPPORT_ORDER_CONFIRM }
+        '404': { description: ORDER_NOT_FOUND }
+        '409': { description: ORDER_NOT_PENDING_CONFIRMATION }
+  /support/orders/{id}/cancel:
+    parameters:
+      - { in: path, name: id, required: true, schema: { type: integer, format: int64 } }
+    post:
+      summary: Cancel a COD order that cannot be confirmed (SUPPORT_ORDER_CONFIRM)
+      description: Releases reserved stock and the voucher; the reason is stored in the order note.
+      security: [{ bearerAuth: [] }, { sessionCookie: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties: { reason: { type: string, minLength: 1, maxLength: 300 } }
+      responses:
+        '200':
+          description: Order CANCELLED
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/StaffOrder' }
+        '400': { description: Missing reason }
+        '403': { description: Missing SUPPORT_ORDER_CONFIRM }
+        '404': { description: ORDER_NOT_FOUND }
+        '409': { description: ORDER_NOT_PENDING_CONFIRMATION }
+  /manager/orders:
+    get:
+      summary: All orders, newest first (MANAGER_ORDER_VIEW)
+      security: [{ bearerAuth: [] }, { sessionCookie: [] }]
+      parameters:
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [AWAITING_PAYMENT, PENDING_CONFIRMATION, CONFIRMED, READY_FOR_DELIVERY, ASSIGNED, DELIVERING,
+                   DELIVERED, DELIVERY_FAILED, RETURNED_TO_WAREHOUSE, CANCELLED]
+        - { in: query, name: search, schema: { type: string }, description: Order code, customer name or email, or recipient phone }
+        - { in: query, name: page, schema: { type: integer, minimum: 0, default: 0 } }
+        - { in: query, name: size, schema: { type: integer, minimum: 1, maximum: 100, default: 20 } }
+      responses:
+        '200':
+          description: Order page
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items: { type: array, items: { $ref: '#/components/schemas/StaffOrderSummary' } }
+                  page: { type: integer }
+                  size: { type: integer }
+                  totalItems: { type: integer, format: int64 }
+                  totalPages: { type: integer, format: int64 }
+        '400': { description: INVALID_STATUS or invalid paging }
+        '403': { description: Missing MANAGER_ORDER_VIEW }
+  /manager/orders/{id}:
+    parameters:
+      - { in: path, name: id, required: true, schema: { type: integer, format: int64 } }
+    get:
+      summary: Order detail with items, payment and shipment (MANAGER_ORDER_VIEW)
+      security: [{ bearerAuth: [] }, { sessionCookie: [] }]
+      responses:
+        '200':
+          description: Order
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/StaffOrder' }
+        '403': { description: Missing MANAGER_ORDER_VIEW }
+        '404': { description: ORDER_NOT_FOUND }
+  /manager/delivery-staff:
+    get:
+      summary: Active Delivery Staff with their unfinished shipment count (MANAGER_ORDER_ASSIGN)
+      security: [{ bearerAuth: [] }, { sessionCookie: [] }]
+      responses:
+        '200':
+          description: Delivery Staff
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  required: [id, fullName, email, activeShipments]
+                  properties:
+                    id: { type: integer, format: int64 }
+                    fullName: { type: string }
+                    email: { type: string }
+                    activeShipments: { type: integer }
+        '403': { description: Missing MANAGER_ORDER_ASSIGN }
+  /manager/orders/{id}/assign:
+    parameters:
+      - { in: path, name: id, required: true, schema: { type: integer, format: int64 } }
+    post:
+      summary: Assign or reassign a packed order to a Delivery Staff member (MANAGER_ORDER_ASSIGN)
+      description: >-
+        READY_FOR_DELIVERY or ASSIGNED orders become ASSIGNED (reassignment allowed until the parcel leaves).
+        DELIVERY_FAILED orders keep their status and get a new shipper while delivery attempts remain.
+      security: [{ bearerAuth: [] }, { sessionCookie: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [deliveryStaffId]
+              properties: { deliveryStaffId: { type: integer, format: int64 } }
+      responses:
+        '200':
+          description: Order with the assigned shipment
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/StaffOrder' }
+        '403': { description: Missing MANAGER_ORDER_ASSIGN }
+        '404': { description: ORDER_NOT_FOUND }
+        '409': { description: ORDER_NOT_ASSIGNABLE or MAX_ATTEMPTS_REACHED }
+        '422': { description: INVALID_DELIVERY_STAFF }
   /manager/vouchers:
     get:
       summary: List vouchers (requires MANAGER_VOUCHER_MANAGE)
@@ -1612,6 +1783,69 @@ components:
             id: { type: integer, format: int64 }
             usedCount: { type: integer, description: RESERVED + CONSUMED usages }
             createdAt: { type: string, format: date-time }
+    ShipmentTracking:
+      type: object
+      required: [id, trackingNumber, status, packedAt, codAmount, attempts]
+      properties:
+        id: { type: integer, format: int64 }
+        trackingNumber: { type: string, example: TRK-OD261102-ABC123 }
+        status: { type: string, enum: [READY, ASSIGNED, IN_TRANSIT, DELIVERED, DELIVERY_FAILED, RETURNED_TO_WAREHOUSE] }
+        deliveryStaffName: { type: string, nullable: true }
+        packedAt: { type: string, format: date-time }
+        assignedAt: { type: string, format: date-time, nullable: true }
+        codAmount: { type: number, description: Cash to collect; 0 for paid QR orders }
+        codCollectedAt: { type: string, format: date-time, nullable: true }
+        attempts:
+          type: array
+          items:
+            type: object
+            properties:
+              attemptNumber: { type: integer }
+              status: { type: string, enum: [ASSIGNED, IN_TRANSIT, DELIVERED, FAILED, RETURNED] }
+              failureReason: { type: string, nullable: true }
+              startedAt: { type: string, format: date-time, nullable: true }
+              finishedAt: { type: string, format: date-time, nullable: true }
+    StaffOrderSummary:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        orderCode: { type: string }
+        status: { $ref: '#/components/schemas/OrderStatus' }
+        paymentMethod: { type: string, enum: [SIMULATED_QR, COD] }
+        paymentStatus: { type: string, nullable: true, description: Latest payment attempt status }
+        customerName: { type: string }
+        recipientPhone: { type: string }
+        totalAmount: { type: number }
+        itemCount: { type: integer }
+        createdAt: { type: string, format: date-time }
+        shipmentStatus: { type: string, nullable: true }
+        deliveryStaffName: { type: string, nullable: true }
+    StaffOrder:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        orderCode: { type: string }
+        status: { $ref: '#/components/schemas/OrderStatus' }
+        paymentMethod: { type: string, enum: [SIMULATED_QR, COD] }
+        paymentStatus: { type: string, nullable: true }
+        customerName: { type: string }
+        customerEmail: { type: string }
+        recipientName: { type: string }
+        recipientPhone: { type: string }
+        shippingAddress: { type: string }
+        subtotal: { type: number }
+        discountAmount: { type: number }
+        shippingFee: { type: number }
+        totalAmount: { type: number }
+        voucherCode: { type: string, nullable: true }
+        note: { type: string, nullable: true, description: Internal note, staff only }
+        createdAt: { type: string, format: date-time }
+        confirmedAt: { type: string, format: date-time, nullable: true }
+        confirmedBy: { type: string, nullable: true }
+        cancelledAt: { type: string, format: date-time, nullable: true }
+        items: { type: array, items: { $ref: '#/components/schemas/OrderItem' } }
+        shipment: { allOf: [{ $ref: '#/components/schemas/ShipmentTracking' }], nullable: true }
+        assignable: { type: boolean }
     VoucherPage:
       type: object
       required: [items, page, size, totalItems, totalPages]

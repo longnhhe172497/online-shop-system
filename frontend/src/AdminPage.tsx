@@ -11,6 +11,8 @@ import InternalLayout, { type InternalNavItem } from './InternalLayout'
 import { getInternalHome, internalRoleNames, isInternalRole } from './internalAccess'
 import RolePermissionsPage from './RolePermissionsPage'
 import VoucherManagementPage from './VoucherManagementPage'
+import ManagerOrdersPage from './ManagerOrdersPage'
+import SupportOrdersPage from './SupportOrdersPage'
 import ManagerProductsPage from './ManagerProductsPage'
 import ManagerCategoriesPage from './ManagerCategoriesPage'
 
@@ -52,7 +54,7 @@ const invitationStatuses: Record<Invitation['status'], string> = {
 }
 
 type Tab = 'dashboard' | 'users' | 'invitations' | 'permissions' | 'settings' | 'audit' | 'vouchers' | 'products'
-  | 'categories'
+  | 'categories' | 'orders'
 const navigation: InternalNavItem<Tab>[] = [
   { id: 'dashboard', label: 'Tổng quan', icon: 'dashboard' },
   { id: 'users', label: 'Tài khoản', icon: 'users' },
@@ -64,16 +66,17 @@ const navigation: InternalNavItem<Tab>[] = [
 // Business sections per staff role. The API still enforces the configured permission on every request.
 const roleNavigation: Record<string, InternalNavItem<Tab>[]> = {
   ADMIN: navigation,
-  MANAGER: [navigation[0], { id: 'products', label: 'Sản phẩm', icon: 'box' },
+  MANAGER: [navigation[0], { id: 'orders', label: 'Đơn hàng', icon: 'audit' }, { id: 'products', label: 'Sản phẩm', icon: 'box' },
     { id: 'categories', label: 'Danh mục', icon: 'folder' }, { id: 'vouchers', label: 'Mã giảm giá', icon: 'tag' }],
 }
+roleNavigation.SUPPORT = [navigation[0], { id: 'orders', label: 'Đơn chờ xác nhận', icon: 'audit' }]
 function navigationFor(role: string) { return roleNavigation[role] ?? navigation.slice(0, 1) }
 const pageTitles: Record<Tab, string> = {
   dashboard: 'Tổng quan', users: 'Quản lý tài khoản',
   invitations: 'Lời mời nhân viên',
   permissions: 'Phân quyền vai trò',
   settings: 'Thiết lập hệ thống', audit: 'Nhật ký thao tác', vouchers: 'Mã giảm giá',
-  products: 'Quản lý sản phẩm', categories: 'Quản lý danh mục'
+  products: 'Quản lý sản phẩm', categories: 'Quản lý danh mục', orders: 'Đơn hàng'
 }
 const pageDescriptions: Record<Tab, string> = {
   dashboard: 'Một nơi theo dõi hoạt động của hệ thống khi các tính năng được hoàn thiện.',
@@ -85,6 +88,7 @@ const pageDescriptions: Record<Tab, string> = {
   vouchers: 'Tạo và điều chỉnh mã giảm giá áp dụng khi khách đặt hàng.',
   products: 'Tạo, chỉnh sửa và mở bán sản phẩm trên cửa hàng.',
   categories: 'Sắp xếp sản phẩm theo danh mục để khách dễ tìm.',
+  orders: 'Theo dõi đơn hàng, xác nhận đơn COD và phân công giao hàng.',
 }
 type Editor = { id: number; email: string; fullName: string; phone: string; role: string }
 type InviteEditor = { email: string; fullName: string; phone: string; role: string }
@@ -96,6 +100,7 @@ function tabFromPath(path: string): Tab {
   const segment = path.split('/')[2]
   return segment === 'users' || segment === 'invitations' || segment === 'permissions' || segment === 'settings'
     || segment === 'audit' || segment === 'vouchers' || segment === 'products' || segment === 'categories'
+    || segment === 'orders'
     ? segment : 'dashboard'
 }
 
@@ -356,6 +361,8 @@ export default function AdminPage() {
           {settings.map((setting) => <SettingRow key={`${setting.key}:${setting.value}`} setting={setting} busy={busy}
             onSave={(value) => void saveSetting(setting, value)} />)}</div></section>}
       {role === 'ADMIN' && tab === 'permissions' && <RolePermissionsPage />}
+      {role === 'MANAGER' && tab === 'orders' && <ManagerOrdersPage />}
+      {role === 'SUPPORT' && tab === 'orders' && <SupportOrdersPage />}
       {role === 'MANAGER' && tab === 'vouchers' && <VoucherManagementPage />}
       {role === 'MANAGER' && tab === 'products' && <ManagerProductsPage />}
       {role === 'MANAGER' && tab === 'categories' && <ManagerCategoriesPage />}

@@ -63,7 +63,7 @@ export function ResendVerificationPage() {
 export function MfaLoginPage() {
   const navigate = useNavigate()
   const location = useLocation()
-  const state = location.state as { challengeToken?: string; email?: string;
+  const state = location.state as { challengeToken?: string; email?: string; next?: string;
     mfaMethod?: 'EMAIL' | 'TOTP'; emailDeliveryFailed?: boolean } | null
   const useAuthenticator = state?.mfaMethod === 'TOTP'
   const [code, setCode] = useState('')
@@ -74,7 +74,7 @@ export function MfaLoginPage() {
     if (!state?.challengeToken) return
     setBusy(true); setError('')
     try { const session = await verifyMfa(state.challengeToken, code)
-      if (session.user) navigate(isInternalRole(session.user.role) ? getInternalHome(session.user.role) : '/', { replace: true }) }
+      if (session.user) navigate(isInternalRole(session.user.role) ? getInternalHome(session.user.role) : (state?.next ?? '/'), { replace: true }) }
     catch (failure) { setError(getUiError(failure)) }
     finally { setBusy(false) }
   }

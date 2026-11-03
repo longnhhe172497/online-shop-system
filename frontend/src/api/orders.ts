@@ -71,3 +71,20 @@ export async function simulatePayment(attemptId: number, outcome: 'SUCCESS' | 'F
   const { data } = await api.post<OrderDetail>(`/payment-attempts/${attemptId}/simulate`, { outcome })
   return data
 }
+
+export type ShipmentStatusCode = 'READY' | 'ASSIGNED' | 'IN_TRANSIT' | 'DELIVERED' | 'DELIVERY_FAILED' | 'RETURNED_TO_WAREHOUSE'
+export interface TrackingAttempt {
+  attemptNumber: number; status: 'ASSIGNED' | 'IN_TRANSIT' | 'DELIVERED' | 'FAILED' | 'RETURNED'
+  failureReason: string | null; startedAt: string | null; finishedAt: string | null
+}
+export interface ShipmentTracking {
+  id: number; trackingNumber: string; status: ShipmentStatusCode; deliveryStaffName: string | null
+  packedAt: string; assignedAt: string | null; codAmount: number; codCollectedAt: string | null
+  attempts: TrackingAttempt[]
+}
+
+/** Shipment of an own order; the API answers 404 SHIPMENT_NOT_FOUND until the warehouse has packed it. */
+export async function getShipment(orderId: number) {
+  const { data } = await api.get<ShipmentTracking>(`/orders/${orderId}/shipment`)
+  return data
+}
