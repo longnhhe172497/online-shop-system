@@ -89,7 +89,8 @@ describe('CartPage', () => {
   it('links staff to their role page instead of /internal and hides the cart', async () => {
     vi.mocked(getMe).mockResolvedValue({ id: 5, email: 'ql@example.com', fullName: 'Quản lý', role: 'MANAGER' })
     renderPage()
-    expect(await screen.findByRole('link', { name: 'Khu vực nội bộ' })).toHaveAttribute('href', '/manager')
-    expect(screen.queryByRole('link', { name: /^Giỏ hàng/ })).not.toBeInTheDocument()
+    const header = screen.getByRole('navigation', { name: 'Điều hướng cửa hàng' })
+    expect(await within(header).findByRole('link', { name: 'Khu vực nội bộ' })).toHaveAttribute('href', '/manager')
+    expect(within(header).queryByRole('link', { name: /^Giỏ hàng/ })).not.toBeInTheDocument()
   })
 })
