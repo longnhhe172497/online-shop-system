@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { getCart, removeCartItem, updateCartItem, type Cart, type CartLine } from './api/cart'
 import { getMe, type AuthUser } from './api/auth'
-import StoreHeader from './StoreHeader'
+import StoreLayout from './StoreLayout'
 import ProductImage from './ProductImage'
 import { formatVnd } from './formatMoney'
 import { getUiError } from './uiError'
@@ -48,40 +48,39 @@ export default function CartPage() {
 
   const flagged = cart?.items.some((line) => line.warning !== null) ?? false
 
-  return <div className="forme-page">
-    <StoreHeader />
-    <main className="shop-main">
-      <div className="shop-pagehead">
+  return <StoreLayout>
+    <main className="fs-shell">
+      <div className="fs-pagehead">
         <div>
-          <p className="shop-kicker">LỰA CHỌN CỦA BẠN</p>
+          <p className="fs-eyebrow">Lựa chọn của bạn</p>
           <h1>Giỏ hàng</h1>
         </div>
-        {cart && cart.items.length > 0 && <span>{cart.itemCount} sản phẩm</span>}
+        {cart && cart.items.length > 0 && <span className="fs-muted">{cart.itemCount} sản phẩm</span>}
       </div>
 
-      {!cart && !loadError && <p className="shop-state">Đang tải giỏ hàng…</p>}
-      {loadError && <p className="shop-state" role="alert">{loadError}</p>}
+      {!cart && !loadError && <p className="fs-state">Đang tải giỏ hàng…</p>}
+      {loadError && <p className="fs-state" role="alert">{loadError}</p>}
 
-      {cart && cart.items.length === 0 && <div className="shop-empty">
+      {cart && cart.items.length === 0 && <div className="fs-empty">
         <h3>Giỏ hàng đang trống.</h3>
         <p>Hãy chọn vài sản phẩm bạn thích.</p>
-        <Link className="shop-primary" to="/">TIẾP TỤC MUA SẮM</Link>
+        <Link className="fs-btn" to="/">Tiếp tục mua sắm</Link>
       </div>}
 
-      {cart && cart.items.length > 0 && <div className="shop-cart">
-        <ul className="shop-cart-lines">
+      {cart && cart.items.length > 0 && <div className="fs-aside-layout">
+        <ul className="fs-cart-lines">
           {cart.items.map((line) => {
             const busy = busyId === line.id
             const maxQuantity = Math.min(line.availableQuantity, MAX_LINE_QUANTITY)
-            return <li key={line.id} className={line.warning ? 'shop-cart-line flagged' : 'shop-cart-line'}>
+            return <li key={line.id} className={line.warning ? 'fs-card fs-cart-line flagged' : 'fs-card fs-cart-line'}>
               <Link to={`/products/${line.productId}`} tabIndex={-1} aria-hidden="true">
                 <ProductImage src={line.imageUrl} alt={line.name} />
               </Link>
-              <div className="shop-cart-info">
-                <Link to={`/products/${line.productId}`}><strong>{line.name}</strong></Link>
-                <small>Đơn giá {formatVnd(line.unitPrice)}</small>
-                {line.warning && <p className="shop-cart-warning" role="alert">{warningText(line)}</p>}
-                <div className="shop-qty" role="group" aria-label={`Số lượng ${line.name}`}>
+              <div className="fs-cart-info">
+                <h3><Link to={`/products/${line.productId}`}>{line.name}</Link></h3>
+                <p className="fs-muted">Đơn giá {formatVnd(line.unitPrice)}</p>
+                {line.warning && <p className="fs-cart-warning" role="alert">{warningText(line)}</p>}
+                <div className="fs-qty" role="group" aria-label={`Số lượng ${line.name}`}>
                   <button type="button" aria-label="Giảm số lượng" disabled={busy || line.quantity <= 1}
                     onClick={() => run(line.id, () => updateCartItem(line.id, line.quantity - 1))}>−</button>
                   <output>{line.quantity}</output>
@@ -90,39 +89,36 @@ export default function CartPage() {
                     onClick={() => run(line.id, () => updateCartItem(line.id, line.quantity + 1))}>+</button>
                 </div>
               </div>
-              <div className="shop-cart-side">
+              <div className="fs-cart-side">
                 <b>{formatVnd(line.lineTotal)}</b>
                 {confirmId === line.id
-                  ? <div className="shop-confirm" role="group" aria-label="Xác nhận xóa">
+                  ? <div className="fs-confirm" role="group" aria-label="Xác nhận xóa">
                       <span>Xóa sản phẩm này?</span>
-                      <button className="shop-secondary" type="button" disabled={busy}
+                      <button className="fs-btn sm" type="button" disabled={busy}
                         onClick={() => run(line.id, () => removeCartItem(line.id))}>Xóa</button>
-                      <button className="shop-secondary" type="button" onClick={() => setConfirmId(null)}>Hủy</button>
+                      <button className="fs-btn ghost sm" type="button" onClick={() => setConfirmId(null)}>Hủy</button>
                     </div>
-                  : <button className="shop-link" type="button" onClick={() => setConfirmId(line.id)}>Xóa</button>}
+                  : <button className="fs-btn ghost sm" type="button" onClick={() => setConfirmId(line.id)}>Xóa</button>}
               </div>
             </li>
           })}
         </ul>
 
-        <aside className="shop-summary" aria-label="Tóm tắt giỏ hàng">
+        <aside className="fs-panel fs-summary" aria-label="Tóm tắt giỏ hàng">
           <h2>Tóm tắt</h2>
-          <div className="shop-summary-row"><span>Tạm tính</span><b>{formatVnd(cart.subtotal)}</b></div>
-          <p className="shop-note">Phí giao hàng và mã giảm giá được áp dụng ở bước thanh toán.</p>
-          {actionError && <p className="shop-state" role="alert">{actionError}</p>}
-          {flagged && <p className="shop-note">Hãy điều chỉnh các sản phẩm được đánh dấu trước khi thanh toán.</p>}
+          <div className="fs-summary-row"><span>Tạm tính</span><b>{formatVnd(cart.subtotal)}</b></div>
+          <div className="fs-summary-row"><span>Phí giao hàng</span><span className="fs-muted">Tính khi thanh toán</span></div>
+          <p className="fs-muted">Mã giảm giá được áp dụng ở bước thanh toán.</p>
+          {actionError && <p className="fs-state" role="alert">{actionError}</p>}
+          {flagged && <p className="fs-cart-warning">Hãy điều chỉnh các sản phẩm được đánh dấu trước khi thanh toán.</p>}
           {!user
-            ? <Link className="shop-primary" to={`/auth?next=${CHECKOUT_PATH}`}>ĐĂNG NHẬP ĐỂ THANH TOÁN</Link>
+            ? <Link className="fs-btn orange block" to={`/auth?next=${CHECKOUT_PATH}`}>ĐĂNG NHẬP ĐỂ THANH TOÁN</Link>
             : flagged
-              ? <button className="shop-primary" type="button" disabled>THANH TOÁN</button>
-              : <Link className="shop-primary" to={CHECKOUT_PATH}>THANH TOÁN</Link>}
-          <Link className="shop-back" to="/">← Tiếp tục mua sắm</Link>
+              ? <button className="fs-btn orange block" type="button" disabled>THANH TOÁN</button>
+              : <Link className="fs-btn orange block" to={CHECKOUT_PATH}>THANH TOÁN</Link>}
+          <Link className="fs-back" to="/">← Tiếp tục mua sắm</Link>
         </aside>
       </div>}
     </main>
-    <footer className="forme-footer">
-      <strong>FORME</strong>
-      <span>Thời trang tối giản cho mỗi ngày.</span>
-    </footer>
-  </div>
+  </StoreLayout>
 }

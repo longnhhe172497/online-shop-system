@@ -2,8 +2,8 @@
    filters, primary buttons and modals reuse the admin-* / account-* / address-modal styles themed by mockup-theme.css. */
 .catalog-product { align-items: center; display: flex; gap: 10px; min-width: 190px; }
 .catalog-thumb { background: #f2e8c9; border-radius: 2px; flex: 0 0 45px; height: 58px; overflow: hidden; width: 45px; }
-.catalog-thumb .shop-image { aspect-ratio: auto; height: 100%; object-fit: cover; width: 100%; }
-.catalog-thumb .shop-image-placeholder { align-items: center; color: #b9a97b; display: flex; font-family: Georgia, serif; font-size: 20px;
+.catalog-thumb .fs-img { aspect-ratio: auto; height: 100%; object-fit: cover; width: 100%; }
+.catalog-thumb .fs-img-placeholder { align-items: center; color: #b9a97b; display: flex; font-family: Georgia, serif; font-size: 20px;
     font-weight: 800; justify-content: center; }
 .catalog-sku { color: #77736e; display: block; font-family: ui-monospace, Consolas, monospace; font-size: 12px; margin-top: 2px; }
 .catalog-stock { min-width: 110px; }
