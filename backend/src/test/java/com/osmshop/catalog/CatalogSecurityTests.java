@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
@@ -40,15 +41,21 @@ class CatalogSecurityTests {
         String manager = session("MANAGER");
         mvc.perform(get("/api/manager/products").header("Authorization", manager)).andExpect(status().isOk());
         mvc.perform(get("/api/manager/categories").header("Authorization", manager)).andExpect(status().isOk());
-        mvc.perform(get("/api/manager/reviews").header("Authorization", manager)).andExpect(status().isNotFound());
+        mvc.perform(get("/api/manager/reviews").header("Authorization", manager)).andExpect(status().isOk());
+        mvc.perform(get("/api/manager/reviews").header("Authorization", session("SUPPORT")))
+                .andExpect(status().isForbidden());
     }
 
     @Test
     void reviewRouteIsCustomerOnly() throws Exception {
-        mvc.perform(post("/api/order-items/1/review").header("Authorization", session("MANAGER")))
-                .andExpect(status().isForbidden());
-        mvc.perform(post("/api/order-items/1/review").header("Authorization", session("CUSTOMER")))
-                .andExpect(status().isNotFound());
+        String body = "{\"rating\":5}";
+        mvc.perform(post("/api/order-items/1/review")).andExpect(status().isUnauthorized());
+        mvc.perform(post("/api/order-items/1/review").header("Authorization", session("MANAGER"))
+                .contentType(MediaType.APPLICATION_JSON).content(body)).andExpect(status().isForbidden());
+        // Permitted, but the customer owns no such order item.
+        mvc.perform(post("/api/order-items/-1/review").header("Authorization", session("CUSTOMER"))
+                .contentType(MediaType.APPLICATION_JSON).content(body)).andExpect(status().isNotFound());
+        mvc.perform(get("/api/products/-1/reviews")).andExpect(status().isNotFound());
     }
 
     private String session(String role) {
