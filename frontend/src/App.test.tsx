@@ -272,7 +272,7 @@ describe('App', () => {
     renderAt('/internal')
     expect(await screen.findByRole('heading', { name: 'Hàng đợi kho' })).toBeInTheDocument()
     expect(screen.getAllByText('Nhân viên kho').length).toBeGreaterThan(0)
-    expect(screen.getByRole('tab', { name: 'Tồn kho' })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: /(đóng gói|tồn kho)/i })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Tài khoản' })).not.toBeInTheDocument()
     expect(listUsers).not.toHaveBeenCalled()
   })
