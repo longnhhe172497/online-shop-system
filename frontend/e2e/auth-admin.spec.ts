@@ -40,7 +40,7 @@ test('register, verify email, sign in with MFA, and invite internal staff', asyn
 
   await page.goto('/register')
   await page.getByLabel('HỌ VÀ TÊN').fill('Quản trị E2E')
-  await page.getByLabel('ĐỊA CHỈ EMAIL').fill(adminEmail)
+  await page.getByLabel('ĐỊA CHỈ EMAIL', { exact: true }).fill(adminEmail)
   await page.getByLabel('MẬT KHẨU', { exact: true }).fill(password)
   await page.getByLabel('NHẬP LẠI MẬT KHẨU').fill(password)
   await page.getByRole('button', { name: 'TẠO TÀI KHOẢN' }).click()
@@ -60,7 +60,7 @@ test('register, verify email, sign in with MFA, and invite internal staff', asyn
   } finally { await database.end() }
 
   await page.goto('/auth')
-  await page.getByLabel('ĐỊA CHỈ EMAIL').fill(adminEmail)
+  await page.getByLabel('ĐỊA CHỈ EMAIL', { exact: true }).fill(adminEmail)
   await page.getByLabel('MẬT KHẨU', { exact: true }).fill(password)
   await page.getByRole('button', { name: 'ĐĂNG NHẬP', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Tổng quan', exact: true })).toBeVisible()
@@ -91,7 +91,7 @@ test('register, verify email, sign in with MFA, and invite internal staff', asyn
   await expect(page.getByText('Mã khôi phục — chỉ hiển thị lần này')).toBeVisible()
 
   await page.goto('/auth')
-  await page.getByLabel('ĐỊA CHỈ EMAIL').fill(adminEmail)
+  await page.getByLabel('ĐỊA CHỈ EMAIL', { exact: true }).fill(adminEmail)
   await page.getByLabel('MẬT KHẨU', { exact: true }).fill(password)
   await page.getByRole('button', { name: 'ĐĂNG NHẬP', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Xác minh đăng nhập' })).toBeVisible()
@@ -106,7 +106,7 @@ test('register, verify email, sign in with MFA, and invite internal staff', asyn
   await page.getByRole('button', { name: '＋ Gửi lời mời' }).click()
   const dialog = page.getByRole('dialog', { name: 'Gửi lời mời' })
   await dialog.getByLabel('HỌ VÀ TÊN').fill('Nhân viên E2E')
-  await dialog.getByLabel('ĐỊA CHỈ EMAIL').fill(staffEmail)
+  await dialog.getByLabel('ĐỊA CHỈ EMAIL', { exact: true }).fill(staffEmail)
   await dialog.getByLabel('VAI TRÒ').selectOption('WAREHOUSE')
   await dialog.getByRole('button', { name: 'Gửi lời mời' }).click()
   await expect(page.getByText('Đã gửi lời mời qua email. Người nhận sẽ tự đặt mật khẩu.')).toBeVisible()
@@ -117,9 +117,10 @@ test('register, verify email, sign in with MFA, and invite internal staff', asyn
   await page.getByRole('button', { name: 'KÍCH HOẠT TÀI KHOẢN' }).click()
   await expect(page.getByText('Tài khoản đã được kích hoạt. Bạn có thể đăng nhập.')).toBeVisible()
   await page.goto('/auth')
-  await page.getByLabel('ĐỊA CHỈ EMAIL').fill(staffEmail)
+  await page.getByLabel('ĐỊA CHỈ EMAIL', { exact: true }).fill(staffEmail)
   await page.getByLabel('MẬT KHẨU', { exact: true }).fill(password)
   await page.getByRole('button', { name: 'ĐĂNG NHẬP', exact: true }).click()
-  await expect(page.getByRole('heading', { name: 'Tổng quan', exact: true })).toBeVisible()
+  await expect(page).toHaveURL(/\/warehouse$/)
+  await expect(page.getByRole('heading', { name: 'Hàng đợi kho', exact: true })).toBeVisible()
   await expect(page.getByText('Nhân viên kho').first()).toBeVisible()
 })

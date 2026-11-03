@@ -20,7 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class AdminService {
     private static final Set<String> ROLES = Set.of("CUSTOMER", "ADMIN", "MANAGER", "SUPPORT", "WAREHOUSE", "DELIVERY");
-    private static final Set<String> STATUSES = Set.of("ACTIVE", "INACTIVE", "LOCKED");
+    private static final Set<String> STATUSES = Set.of("PENDING_VERIFICATION", "ACTIVE", "INACTIVE", "LOCKED");
     private final JdbcTemplate jdbc;
     public AdminService(JdbcTemplate jdbc) {
         this.jdbc = jdbc;
@@ -94,6 +94,9 @@ public class AdminService {
             protectLastAdmin();
         if ("ACTIVE".equals(next) && previous.verifiedAt() == null)
             throw error(HttpStatus.CONFLICT, "EMAIL_NOT_VERIFIED", "Email not verified");
+        if ("PENDING_VERIFICATION".equals(next) && previous.verifiedAt() != null)
+            throw error(HttpStatus.CONFLICT, "INVALID_STATUS_TRANSITION",
+                    "A verified account cannot return to pending verification");
         jdbc.update("UPDATE users SET status=?,updated_at=now() WHERE id=?", next, id);
         if (!previous.status().equals(next)) jdbc.update("""
                 UPDATE user_sessions SET revoked_at=now() WHERE user_id=? AND revoked_at IS NULL

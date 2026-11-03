@@ -49,6 +49,9 @@ class ProfileFlowTests {
         long firstId = json.readTree(firstBody).get("id").asLong();
         mvc.perform(patch("/api/me/addresses/" + firstId).header("Authorization", owner.bearer())
                 .contentType(MediaType.APPLICATION_JSON).content(address("Home Updated", false)))
+                .andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("DEFAULT_ADDRESS_REQUIRED"));
+        mvc.perform(patch("/api/me/addresses/" + firstId).header("Authorization", owner.bearer())
+                .contentType(MediaType.APPLICATION_JSON).content(address("Home Updated", true)))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.recipientName").value("Home Updated"))
                 .andExpect(jsonPath("$.isDefault").value(true));
         String secondBody = mvc.perform(post("/api/me/addresses").header("Authorization", owner.bearer())

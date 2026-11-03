@@ -27,6 +27,8 @@ export function EmailChangePage() {
     <section className="account-card security-panel email-panel"><p className="card-eyebrow">ĐỊA CHỈ EMAIL</p>
       <h2>Xác nhận email mới</h2><p>Email hiện tại: <strong>{currentEmail || 'Đang tải…'}</strong></p>
       <p>Chúng tôi sẽ gửi liên kết xác nhận tới địa chỉ mới. Email hiện tại vẫn sử dụng được cho tới khi bạn xác nhận.</p>
+      <p>Sau khi đổi email, mọi thiết bị sẽ đăng xuất và liên kết Google cũ sẽ bị ngắt. Bạn có thể liên kết lại Google bằng email mới.</p>
+      <p>Nếu bạn chỉ từng đăng nhập bằng Google và chưa có mật khẩu FORME, hãy dùng “Quên mật khẩu” ở màn đăng nhập để đặt mật khẩu trước.</p>
       {sent ? <p className="auth-notice" role="status">Đã gửi liên kết tới {newEmail}. Hãy mở email trong vòng 30 phút.</p> :
         <form className="account-form" onSubmit={submit}>
           <label>EMAIL MỚI<input type="email" required autoComplete="email" value={newEmail}
@@ -55,7 +57,7 @@ export function EmailChangeConfirmPage() {
   }
   return <FormeLayout><section className="auth-card auth-card-wide auth-result-card">
     <p className="auth-kicker">BẢO MẬT TÀI KHOẢN</p><h1>Xác nhận email</h1>
-    {done ? <><p className="auth-notice" role="status">Email đăng nhập đã được đổi. Mọi thiết bị đã đăng xuất.</p>
+    {done ? <><p className="auth-notice" role="status">Email đăng nhập đã được đổi. Mọi thiết bị đã đăng xuất và liên kết Google cũ đã được ngắt.</p>
       <Link to="/auth">Đăng nhập bằng email mới →</Link></> : <>
         <p className="auth-lead">Xác nhận địa chỉ email mới để hoàn tất thay đổi.</p>
         {token ? <button className="auth-submit" disabled={busy} onClick={() => void confirm()}>

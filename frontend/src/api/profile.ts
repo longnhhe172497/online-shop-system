@@ -82,7 +82,8 @@ export async function confirmMfa(challengeToken: string, code: string) {
 }
 
 export async function startMfaStepUp(password: string) {
-  const { data } = await api.post<{ challengeToken: string; mfaMethod: 'EMAIL' | 'TOTP' }>(
+  const { data } = await api.post<{ challengeToken: string; mfaMethod: 'EMAIL' | 'TOTP';
+    emailDeliveryFailed: boolean }>(
     '/me/mfa/step-up/start', { password })
   return data
 }

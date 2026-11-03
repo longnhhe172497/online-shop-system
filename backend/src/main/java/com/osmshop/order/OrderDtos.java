@@ -41,6 +41,18 @@ public final class OrderDtos {
                               String simulationCode, OffsetDateTime expiresAt, OffsetDateTime paidAt,
                               boolean simulated) {}
 
+    /** One delivery attempt as the customer sees it; at most max_delivery_attempts per shipment. */
+    public record TrackingAttempt(int attemptNumber, String status, String failureReason,
+                                  OffsetDateTime startedAt, OffsetDateTime finishedAt) {}
+
+    /**
+     * Shipment of an order. status uses the shipments table values: READY, ASSIGNED, IN_TRANSIT,
+     * DELIVERED, DELIVERY_FAILED, RETURNED_TO_WAREHOUSE.
+     */
+    public record ShipmentTracking(long id, String trackingNumber, String status, String deliveryStaffName,
+                                   OffsetDateTime packedAt, OffsetDateTime assignedAt, BigDecimal codAmount,
+                                   OffsetDateTime codCollectedAt, List<TrackingAttempt> attempts) {}
+
     /** Refunds are simulated as well. */
     public record RefundView(BigDecimal amount, String status, String reason, boolean simulated) {}
 

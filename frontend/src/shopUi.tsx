@@ -49,7 +49,7 @@ export function ShopLayout({ children, minimal = false }: { children: ReactNode;
           <Link to="/me">Tài khoản</Link></nav>}
       <div className="shop-header-actions">
         <Link to="/me/orders" className="header-icon" aria-label="Đơn hàng của tôi"><Icon name="bag" /></Link>
-        <Link to="/checkout" className="header-icon" aria-label="Giỏ hàng"><Icon name="cart" /></Link>
+        <Link to="/cart" className="header-icon" aria-label="Giỏ hàng"><Icon name="cart" /></Link>
       </div>
     </div></header>
     <main className="shop-main">{children}</main>
@@ -71,7 +71,8 @@ export function CheckoutSteps({ current }: { current: 1 | 2 | 3 | 4 }) {
       const step = index + 1
       const state = step < current ? 'done' : step === current ? 'current' : 'todo'
       return <li key={label} className={state} aria-current={state === 'current' ? 'step' : undefined}>
-        <span className="step-dot">{state === 'done' ? <Icon name="check" size={14} /> : step}</span>{label}</li>
+        <span className="step-dot">{state === 'done' ? <Icon name="check" size={14} /> : step}</span>
+        {step === 1 && current < 4 ? <Link to="/cart">{label}</Link> : label}</li>
     })}
   </ol>
 }

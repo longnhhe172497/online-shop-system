@@ -1,6 +1,8 @@
 package com.osmshop.auth;
 
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.ArgumentMatchers.any;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -16,6 +18,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.mail.SimpleMailMessage;
+import org.springframework.mail.MailSendException;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -32,6 +35,45 @@ class AuthAdvancedFlowTests {
     @Autowired TotpService totp;
     @MockitoBean JavaMailSender mail;
     ObjectMapper json = new ObjectMapper();
+
+    @Test
+    void recoveryCodesStillWorkWhenEmailMfaDeliveryFails() throws Exception {
+        String email = "mail-fallback-" + UUID.randomUUID() + "@example.com";
+        String bearer = activeUser(email);
+        long userId = jdbc.queryForObject("SELECT id FROM users WHERE email=?", Long.class, email);
+        jdbc.update("UPDATE users SET mfa_enabled=true,mfa_method='EMAIL' WHERE id=?", userId);
+        String loginRecovery = "0123456789ABCDEF0123456789ABCDEF";
+        String stepUpRecovery = "ABCDEF0123456789ABCDEF0123456789";
+        jdbc.update("INSERT INTO mfa_recovery_codes(user_id,code_hash) VALUES (?,?)",
+                userId, AuthService.hash(loginRecovery));
+        jdbc.update("INSERT INTO mfa_recovery_codes(user_id,code_hash) VALUES (?,?)",
+                userId, AuthService.hash(stepUpRecovery));
+        doThrow(new MailSendException("SMTP unavailable")).when(mail).send(any(SimpleMailMessage.class));
+
+        String login = mvc.perform(post("/api/auth/browser-login").with(request -> {
+                    request.setRemoteAddr("mail-fallback-" + UUID.randomUUID()); return request; })
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json.writeValueAsString(java.util.Map.of("email", email, "password", "StrongPass123"))))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.mfaRequired").value(true))
+                .andExpect(jsonPath("$.emailDeliveryFailed").value(true))
+                .andReturn().getResponse().getContentAsString();
+        mvc.perform(post("/api/auth/browser-mfa/verify").contentType(MediaType.APPLICATION_JSON)
+                .content(json.writeValueAsString(java.util.Map.of(
+                        "challengeToken", json.readTree(login).get("challengeToken").asText(),
+                        "code", loginRecovery))))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.user.email").value(email));
+
+        String stepUp = mvc.perform(post("/api/me/mfa/step-up/start").header("Authorization", bearer)
+                .contentType(MediaType.APPLICATION_JSON).content("{\"password\":\"StrongPass123\"}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.emailDeliveryFailed").value(true))
+                .andReturn().getResponse().getContentAsString();
+        mvc.perform(post("/api/me/mfa/disable").header("Authorization", bearer)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json.writeValueAsString(java.util.Map.of("password", "StrongPass123",
+                        "challengeToken", json.readTree(stepUp).get("challengeToken").asText(),
+                        "code", stepUpRecovery))))
+                .andExpect(status().isNoContent());
+    }
 
     @Test
     void emailMfaCanBeEnabledAndIsRequiredAtNextLogin() throws Exception {

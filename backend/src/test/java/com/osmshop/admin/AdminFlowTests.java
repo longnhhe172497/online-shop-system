@@ -48,6 +48,38 @@ class AdminFlowTests {
         mvc.perform(get("/api/admin/users").header("Authorization", admin)).andExpect(status().isOk());
         mvc.perform(get("/api/admin/settings").header("Authorization", admin)).andExpect(status().isOk());
         mvc.perform(get("/api/admin/audit-logs").header("Authorization", admin)).andExpect(status().isOk());
+        mvc.perform(get("/api/warehouse/inventory").header("Authorization", admin))
+                .andExpect(status().isForbidden()); // Operational access requires the explicit permission.
+    }
+
+    @Test
+    void adminCanRestoreUnverifiedAccountToPendingBeforeEmailVerification() throws Exception {
+        String admin = session("ADMIN");
+        String email = "pending-" + UUID.randomUUID() + "@example.com";
+        long id = jdbc.queryForObject("""
+                INSERT INTO users(email,password_hash,full_name,role,status)
+                VALUES (?,?,'Pending Customer','CUSTOMER','PENDING_VERIFICATION') RETURNING id
+                """, Long.class, email, passwords.encode("Password123"));
+        String token = UUID.randomUUID().toString();
+        jdbc.update("""
+                INSERT INTO auth_tokens(user_id,token_hash,purpose,expires_at)
+                VALUES (?,?,'EMAIL_VERIFICATION',now()+interval '1 hour')
+                """, id, AuthService.hash(token));
+        mvc.perform(patch("/api/admin/users/" + id + "/status").header("Authorization", admin)
+                .contentType(MediaType.APPLICATION_JSON).content("{\"status\":\"LOCKED\"}"))
+                .andExpect(status().isOk());
+        mvc.perform(patch("/api/admin/users/" + id + "/status").header("Authorization", admin)
+                .contentType(MediaType.APPLICATION_JSON).content("{\"status\":\"ACTIVE\"}"))
+                .andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("EMAIL_NOT_VERIFIED"));
+        mvc.perform(patch("/api/admin/users/" + id + "/status").header("Authorization", admin)
+                .contentType(MediaType.APPLICATION_JSON).content("{\"status\":\"PENDING_VERIFICATION\"}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("PENDING_VERIFICATION"));
+        mvc.perform(post("/api/auth/verify").contentType(MediaType.APPLICATION_JSON)
+                .content(json.writeValueAsString(Map.of("token", token))))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.verified").value(true));
+        mvc.perform(patch("/api/admin/users/" + id + "/status").header("Authorization", admin)
+                .contentType(MediaType.APPLICATION_JSON).content("{\"status\":\"PENDING_VERIFICATION\"}"))
+                .andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("INVALID_STATUS_TRANSITION"));
     }
 
     @Test

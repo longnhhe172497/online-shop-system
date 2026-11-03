@@ -101,8 +101,16 @@ public class ProfileController {
         google.link(user.id(), request.password(), request.credential());
     }
 
+    @PostMapping("/google/unlink")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void unlinkGoogle(@AuthenticationPrincipal AuthPrincipal user,
+                             @Valid @RequestBody GoogleUnlinkRequest request) {
+        google.unlink(user.id(), request.password());
+    }
+
     public record GoogleLinkRequest(@jakarta.validation.constraints.NotBlank String password,
                                     @jakarta.validation.constraints.NotBlank String credential) {}
+    public record GoogleUnlinkRequest(@jakarta.validation.constraints.NotBlank String password) {}
 
     @PostMapping("/password")
     @ResponseStatus(HttpStatus.NO_CONTENT)

@@ -1,4 +1,4 @@
-import type { OrderStatus, Payment, PaymentMethod } from './api/orders'
+import type { OrderStatus, Payment, PaymentMethod, ShipmentStatusCode, TrackingAttempt } from './api/orders'
 
 export const SIMULATION_NOTICE = 'Thanh toán mô phỏng — không có tiền thật được chuyển.'
 
@@ -23,6 +23,16 @@ export const paymentMethodNames: Record<PaymentMethod, string> = {
 export const paymentStatusNames: Record<Payment['status'], string> = {
   PENDING: 'Chờ quét mã', UNPAID: 'Chưa thanh toán', PAID: 'Đã thanh toán', FAILED: 'Thất bại',
   EXPIRED: 'Hết hạn', CANCELLED: 'Đã hủy',
+}
+
+export const shipmentStatusNames: Record<ShipmentStatusCode, string> = {
+  READY: 'Đã đóng gói, chờ phân công', ASSIGNED: 'Đã giao cho nhân viên giao hàng', IN_TRANSIT: 'Đang giao',
+  DELIVERED: 'Đã giao thành công', DELIVERY_FAILED: 'Giao không thành công', RETURNED_TO_WAREHOUSE: 'Đã hoàn về kho',
+}
+
+export const attemptStatusNames: Record<TrackingAttempt['status'], string> = {
+  ASSIGNED: 'Đã phân công', IN_TRANSIT: 'Đang giao', DELIVERED: 'Giao thành công', FAILED: 'Giao thất bại',
+  RETURNED: 'Hoàn về kho',
 }
 
 export function statusTone(status: OrderStatus) {

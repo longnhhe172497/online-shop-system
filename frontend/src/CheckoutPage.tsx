@@ -161,7 +161,7 @@ export default function CheckoutPage() {
           {preview.discountAmount > 0 && <div className="discount"><dt>Giảm giá</dt><dd>− {formatVnd(preview.discountAmount)}</dd></div>}
           <div className="grand"><dt>Tổng cộng</dt><dd>{formatVnd(preview.totalAmount)}</dd></div>
         </dl>
-        {!preview.canPlaceOrder && <p className="field-error">Có sản phẩm không thể đặt. Hãy điều chỉnh giỏ hàng.</p>}
+        {!preview.canPlaceOrder && <p className="field-error">Có sản phẩm không thể đặt. <Link to="/cart">Điều chỉnh giỏ hàng</Link></p>}
         {!addressId && <p className="field-error">Hãy thêm địa chỉ nhận hàng.</p>}
         <button type="submit" className="shop-button block" aria-label="Đặt hàng"
           disabled={busy || !preview.canPlaceOrder || !addressId}>

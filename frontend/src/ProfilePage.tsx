@@ -29,6 +29,8 @@ export default function ProfilePage() {
   const [error, setError] = useState('')
   const [addressError, setAddressError] = useState('')
   const [notice, setNotice] = useState('')
+  const editingDefaultAddress = editingId !== null &&
+    addresses.some((address) => address.id === editingId && address.isDefault)
 
   useEffect(() => {
     let active = true
@@ -140,21 +142,25 @@ export default function ProfilePage() {
       {notice && <p className="auth-notice account-message" role="status">{notice}</p>}
       {!loading && !profile && <p className="account-message"><Link to="/auth">Đăng nhập để xem tài khoản</Link></p>}
       {profile && <div className="account-grid">
-        {!showAddresses && <section className="account-card personal-card" aria-labelledby="personal-title">
-          <div className="personal-intro"><div className="account-avatar" aria-hidden="true">
-            {profile.fullName.trim().charAt(0).toLocaleUpperCase('vi')}</div>
-            <div><p className="card-eyebrow">THÔNG TIN CÁ NHÂN</p><h2 id="personal-title">{profile.fullName}</h2>
-              <span className="role-pill">{({ CUSTOMER: 'Khách hàng', ADMIN: 'Quản trị viên', MANAGER: 'Quản lý', SUPPORT: 'Hỗ trợ', WAREHOUSE: 'Nhân viên kho', DELIVERY: 'Nhân viên giao hàng' } as Record<string, string>)[profile.role] ?? 'Vai trò khác'}</span></div></div>
-          <div className="account-readonly"><span>Email đăng nhập</span><strong>{profile.email}</strong>
-            <small>Email và vai trò không thể chỉnh sửa tại đây.</small></div>
-          <form className="account-form" onSubmit={saveProfile}>
-            <label>HỌ VÀ TÊN<input value={fullName} onChange={(event) => setFullName(event.target.value)}
-              required maxLength={150} autoComplete="name" /></label>
-            <label>SỐ ĐIỆN THOẠI<input value={phone} onChange={(event) => setPhone(event.target.value)}
-              maxLength={30} autoComplete="tel" placeholder="Thêm số điện thoại" /></label>
-            <button className="account-primary" type="submit" disabled={busy}>Lưu thay đổi</button>
-          </form>
-        </section>}
+        {!showAddresses && <div className="profile-layout">
+          <section className="account-card personal-card" aria-labelledby="personal-title">
+            <p className="card-eyebrow">THÔNG TIN CÁ NHÂN</p><h2 id="personal-title">Chỉnh sửa hồ sơ</h2>
+            <form className="account-form" onSubmit={saveProfile}>
+              <label>HỌ VÀ TÊN<input value={fullName} onChange={(event) => setFullName(event.target.value)}
+                required maxLength={150} autoComplete="name" /></label>
+              <label>EMAIL ĐĂNG NHẬP<input value={profile.email} disabled aria-describedby="profile-email-hint" /></label>
+              <label>SỐ ĐIỆN THOẠI<input value={phone} onChange={(event) => setPhone(event.target.value)}
+                maxLength={30} autoComplete="tel" placeholder="Thêm số điện thoại" /></label>
+              <p className="profile-field-note" id="profile-email-hint">Đổi email tại mục “Đổi email đăng nhập”.</p>
+              <button className="account-primary" type="submit" disabled={busy}>Lưu thay đổi</button>
+            </form>
+          </section>
+          <aside className="account-card profile-summary" aria-label="Tóm tắt tài khoản">
+            <div className="account-avatar" aria-hidden="true">{profile.fullName.trim().charAt(0).toLocaleUpperCase('vi')}</div>
+            <h2>{profile.fullName}</h2><p>{profile.email}</p>
+            <span className="role-pill">{({ CUSTOMER: 'Khách hàng', ADMIN: 'Quản trị viên', MANAGER: 'Quản lý', SUPPORT: 'Hỗ trợ', WAREHOUSE: 'Nhân viên kho', DELIVERY: 'Nhân viên giao hàng' } as Record<string, string>)[profile.role] ?? 'Vai trò khác'}</span>
+          </aside>
+        </div>}
 
         {showAddresses && profile.role !== 'CUSTOMER' && <section className="account-card addresses-card">
           <h2>Địa chỉ giao hàng</h2><p>Chỉ tài khoản khách hàng sử dụng sổ địa chỉ giao hàng.</p></section>}
@@ -214,8 +220,11 @@ export default function ProfilePage() {
             required maxLength={120} placeholder="Ví dụ: Hà Nội" /></label>
         </div>
         <label className="default-option"><input type="checkbox" checked={addressForm.isDefault}
+          disabled={editingDefaultAddress}
           onChange={(event) => updateAddressField('isDefault', event.target.checked)} />
-          <span><strong>Đặt làm địa chỉ mặc định</strong><small>Địa chỉ này sẽ được ưu tiên khi đặt hàng.</small></span></label>
+          <span><strong>Đặt làm địa chỉ mặc định</strong><small>{editingDefaultAddress
+            ? 'Muốn đổi mặc định, hãy chỉnh một địa chỉ khác và chọn làm mặc định.'
+            : 'Địa chỉ này sẽ được ưu tiên khi đặt hàng.'}</small></span></label>
         <div className="address-modal-actions"><button type="button" className="account-secondary"
           disabled={busy} onClick={() => setEditorOpen(false)}>Hủy</button>
           <button type="submit" className="account-primary" disabled={busy}>

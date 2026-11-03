@@ -1,0 +1,46 @@
+/* Support and Manager order screens. Builds on the lg-* staff styles from logistics.css. */
+.staff-orders { font-family: var(--lg-sans, "Segoe UI", Tahoma, Arial, sans-serif); color: var(--lg-ink, #1b1716); }
+.lg-msg-error { border-left-color: var(--lg-red, #b42318); background: #fdebed; }
+
+.staff-filter-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+.staff-filter-chips button { cursor: pointer; font: inherit; font-size: 12px; font-weight: 600; }
+.staff-search { border: 1px solid var(--lg-line, #dcd8d2); border-radius: 3px; flex: 1; font: inherit; max-width: 460px;
+  min-width: 220px; padding: 11px 13px; }
+
+.staff-order-card { padding: 0; }
+.staff-order-head { align-items: center; border-bottom: 1px solid var(--lg-line, #e6e2dc); display: flex; flex-wrap: wrap;
+  gap: 12px; padding: 16px 20px; }
+.staff-order-head > div { display: flex; flex-direction: column; }
+.staff-order-head strong { font-size: 15px; letter-spacing: .02em; }
+.staff-order-head small { color: var(--lg-muted, #77736e); font-size: 12px; }
+.staff-order-head .lg-btn { margin-left: auto; padding: 6px 11px; }
+.staff-order-total { font-size: 18px !important; margin-left: auto; }
+.staff-order-grid { display: grid; gap: 20px; grid-template-columns: minmax(240px, 1fr) minmax(0, 1.4fr); padding: 18px 20px; }
+.staff-order-info { display: grid; gap: 10px; margin: 0; }
+.staff-order-info dt { color: var(--lg-muted, #77736e); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; }
+.staff-order-info dd { font-size: 14px; margin: 2px 0 0; }
+.staff-order-info small { color: var(--lg-muted, #77736e); display: block; font-size: 12px; }
+.staff-order-actions { align-items: flex-end; border-top: 1px solid var(--lg-line, #e6e2dc); display: flex; flex-wrap: wrap;
+  gap: 14px; justify-content: space-between; padding: 14px 20px; }
+.staff-order-actions .lg-field { margin: 0; }
+.staff-order-actions input { border: 1px solid var(--lg-line, #dcd8d2); border-radius: 3px; font: inherit; padding: 10px 12px; }
+.staff-order-actions .lg-textarea { margin: 6px 0 0; min-height: 70px; }
+.staff-wide { flex: 1; max-width: 560px !important; }
+
+.staff-order-table tr.selected td { background: #f3f5ff; }
+.staff-order-table td:last-child { width: 1%; }
+.staff-order-detail { padding: 0; position: sticky; top: 16px; }
+.staff-order-detail > .staff-order-info, .staff-order-detail > .lg-tablewrap,
+.staff-order-detail > .lg-summary-row, .staff-order-detail > .staff-shipment,
+.staff-order-detail > .staff-assign { margin: 0; padding: 14px 20px; }
+.staff-shipment { background: #f7f8ff; }
+.staff-shipment h3 { font-size: 14px; margin: 0 0 6px; }
+.staff-shipment p { font-size: 13px; margin: 0; }
+.staff-shipment ul { font-size: 13px; margin: 8px 0 0; padding-left: 18px; }
+.staff-assign { border-top: 1px solid var(--lg-line, #e6e2dc); display: grid; gap: 10px; }
+.staff-assign select { border: 1px solid var(--lg-line, #dcd8d2); border-radius: 3px; font: inherit; padding: 10px 12px; }
+
+@media (max-width: 900px) {
+  .staff-order-grid { grid-template-columns: 1fr; }
+  .staff-order-detail { position: static; }
+}
