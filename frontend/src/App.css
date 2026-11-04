@@ -1724,4 +1724,3 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
     .auth-main-split { padding: 44px 20px 70px; } .auth-card-wide { flex-basis: 100%; }
     .auth-result-card { padding: 26px; } .session-row { align-items: flex-start; flex-wrap: wrap; }
     .session-row .security-state, .session-row .admin-link { margin-left: 60px; } }
-
