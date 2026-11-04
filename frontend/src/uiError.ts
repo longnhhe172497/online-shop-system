@@ -82,6 +82,10 @@ const messages: Record<string, string> = {
   CATEGORY_NAME_EXISTS: 'Tên danh mục đã tồn tại.',
   CATEGORY_HAS_PRODUCTS: 'Danh mục vẫn còn sản phẩm. Hãy chuyển hoặc lưu trữ các sản phẩm trước.',
   CATEGORY_NOT_FOUND: 'Không tìm thấy danh mục. Hãy tải lại trang.',
+  REVIEW_NOT_ALLOWED: 'Bạn chỉ có thể đánh giá sản phẩm trong đơn hàng đã giao.',
+  REVIEW_ALREADY_EXISTS: 'Bạn đã đánh giá sản phẩm này cho đơn hàng này. Hãy sửa đánh giá hiện có.',
+  REVIEW_NOT_FOUND: 'Không tìm thấy đánh giá. Hãy tải lại trang.',
+  ORDER_ITEM_NOT_FOUND: 'Không tìm thấy sản phẩm trong đơn hàng.',
 }
 
 export function getUiError(error: unknown) {

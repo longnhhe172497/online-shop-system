@@ -12,6 +12,7 @@ export default function AccountLayout({ title, intro, children }: { title: strin
     </div><nav className="account-nav-panel" aria-label="Điều hướng tài khoản">
         <NavLink to="/me" end>Hồ sơ cá nhân <span>→</span></NavLink>
         <NavLink to="/me/orders">Đơn hàng của tôi <span>→</span></NavLink>
+        <NavLink to="/me/support">Hỗ trợ khách hàng <span>→</span></NavLink>
         <NavLink to="/me/addresses">Địa chỉ giao hàng <span>→</span></NavLink>
         <NavLink to="/me/security">Bảo mật tài khoản <span>→</span></NavLink>
         <NavLink to="/me/email">Đổi email đăng nhập <span>→</span></NavLink>
