@@ -83,6 +83,10 @@ class AdminBoundaryTests {
         mvc.perform(patch("/api/admin/users/" + target).header("Authorization", admin)
                 .contentType(MediaType.APPLICATION_JSON).content("{\"fullName\":\"\"}"))
                 .andExpect(status().isBadRequest());
+        mvc.perform(patch("/api/admin/users/" + target).header("Authorization", admin)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"fullName\":\"After 123@@\",\"phone\":\"09012abc@@\"}"))
+                .andExpect(status().isBadRequest());
         mvc.perform(patch("/api/admin/users/" + target + "/role").header("Authorization", admin)
                 .contentType(MediaType.APPLICATION_JSON).content("{\"role\":\"UNKNOWN\"}"))
                 .andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("INVALID_ROLE"));
@@ -119,6 +123,11 @@ class AdminBoundaryTests {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"email\":\"" + email + "\",\"fullName\":\"Person\",\"role\":\"CUSTOMER\"}"))
                 .andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("INVALID_ROLE"));
+        mvc.perform(post("/api/admin/invitations").header("Authorization", admin)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"email\":\"new-" + email + "\",\"fullName\":\"Person 123@@\","
+                        + "\"phone\":\"09012abc@@\",\"role\":\"SUPPORT\"}"))
+                .andExpect(status().isBadRequest());
         verify(mail, never()).send(org.mockito.ArgumentMatchers.any(SimpleMailMessage.class));
         user(email, "Existing", "SUPPORT");
         mvc.perform(post("/api/admin/invitations").header("Authorization", admin)

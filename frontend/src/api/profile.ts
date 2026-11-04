@@ -45,7 +45,7 @@ export async function getAccountLimits() {
 }
 
 export async function getSecurity() {
-  const { data } = await api.get<{ mfaEnabled: boolean; mfaMethod: 'EMAIL' | 'TOTP';
+  const { data } = await api.get<{ mfaEnabled: boolean; mfaMethod: 'EMAIL' | 'TOTP' | 'BOTH';
     recoveryCodesRemaining: number }>('/me/security')
   return data
 }

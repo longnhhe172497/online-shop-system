@@ -5,11 +5,13 @@ import { getUiError } from './uiError'
 import { getInternalHome, isInternalRole } from './internalAccess'
 import FormeLayout from './FormeLayout'
 import GoogleButton from './GoogleButton'
+import { personNameError } from './inputValidation'
 
 export default function AuthPage() {
   const location = useLocation()
   const mode = location.pathname === '/register' ? 'register' : 'login'
   const [fullName, setFullName] = useState('')
+  const [fullNameError, setFullNameError] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
@@ -24,6 +26,11 @@ export default function AuthPage() {
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setError('')
+    if (mode === 'register') {
+      const validation = personNameError(fullName)
+      setFullNameError(validation)
+      if (validation) return
+    }
     if (mode === 'register' && password !== confirmPassword) {
       setError('Mật khẩu nhập lại không khớp.')
       return
@@ -31,7 +38,7 @@ export default function AuthPage() {
     setBusy(true)
     try {
       if (mode === 'register') {
-        const result = await registerAccount({ fullName, email, password, confirmPassword })
+        const result = await registerAccount({ fullName: fullName.trim(), email, password, confirmPassword })
         setPassword(''); setConfirmPassword('')
         navigate(`/registration-sent?email=${encodeURIComponent(email)}${result.emailSent ? '' : '&delivery=failed'}`)
       } else {
@@ -81,7 +88,10 @@ export default function AuthPage() {
       <p className="auth-notice" role="status">{location.state.notice}</p>}
     <form onSubmit={submit}>
       {mode === 'register' && <label>HỌ VÀ TÊN<input value={fullName}
-        onChange={(event) => setFullName(event.target.value)} required maxLength={150} autoComplete="name" /></label>}
+        onChange={(event) => { setFullName(event.target.value)
+          setFullNameError(personNameError(event.target.value)) }} required maxLength={150} autoComplete="name"
+        aria-invalid={Boolean(fullNameError)} />
+        {fullNameError && <span className="field-error" role="alert">{fullNameError}</span>}</label>}
       <label>ĐỊA CHỈ EMAIL<input type="email" value={email} onChange={(event) => setEmail(event.target.value)}
         required autoComplete="email" /></label>
       <label htmlFor="auth-password">MẬT KHẨU</label>

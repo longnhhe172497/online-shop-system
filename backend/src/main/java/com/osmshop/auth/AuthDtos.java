@@ -1,7 +1,9 @@
 package com.osmshop.auth;
 
+import com.osmshop.validation.UserInputRules;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import java.time.Instant;
 import java.util.List;
@@ -10,11 +12,16 @@ public final class AuthDtos {
     private AuthDtos() {}
 
     public record RegisterRequest(
-            @NotBlank @Size(max = 150) String fullName,
+            @NotBlank @Size(max = 150)
+            @Pattern(regexp = UserInputRules.PERSON_NAME,
+                    message = "Họ và tên chỉ được chứa chữ cái và khoảng trắng")
+            String fullName,
             @NotBlank @Email @Size(max = 255) String email,
             @NotBlank @Size(min = 8, max = 72) String password,
             @NotBlank @Size(min = 8, max = 72) String confirmPassword,
-            @Size(max = 30) String phone) {}
+            @Pattern(regexp = UserInputRules.OPTIONAL_PHONE,
+                    message = "Số điện thoại phải gồm đúng 10 chữ số")
+            String phone) {}
 
     public record RegisterResponse(long userId, boolean verificationRequired, boolean emailSent) {}
     public record VerifyRequest(@NotBlank String token) {}
@@ -33,6 +40,7 @@ public final class AuthDtos {
     public record BrowserLoginResponse(UserResponse user, boolean mfaRequired, String challengeToken,
                                        String mfaMethod, boolean emailDeliveryFailed) {}
     public record MfaVerifyRequest(@NotBlank String challengeToken, @NotBlank String code) {}
+    public record MfaMethodRequest(@NotBlank String challengeToken, @NotBlank String method) {}
     public record MfaDisableRequest(@NotBlank String password) {}
     public record MfaSensitiveRequest(@NotBlank String password, @NotBlank String challengeToken,
                                       @NotBlank String code) {}

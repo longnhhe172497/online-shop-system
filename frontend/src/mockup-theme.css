@@ -184,6 +184,19 @@
   outline: 2px solid #dce2ff;
 }
 .auth-card input:disabled, .account-form input:disabled { background: #f4f1ec; color: var(--forme-muted); }
+.account-form input[aria-invalid="true"], .address-form-grid input[aria-invalid="true"],
+.auth-card input[aria-invalid="true"] {
+  border-color: #b42318;
+}
+.account-form .field-error, .address-form-grid .field-error, .auth-card .field-error {
+  color: #b42318;
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0;
+  margin-top: 6px;
+  text-transform: none;
+}
 .auth-card-wide form label { margin-bottom: 7px; }
 .auth-card-wide form > label:has(input) { margin-bottom: 18px; }
 .auth-submit, .account-primary, .auth-cta-link {
@@ -201,6 +214,20 @@
 .auth-submit:hover:not(:disabled), .account-primary:hover:not(:disabled) {
   background: #263aa6;
   border-color: #263aa6;
+}
+.mfa-method-options { display: grid; gap: 12px; margin: 18px 0 22px; }
+.mfa-method-options .auth-submit, .mfa-method-options .auth-secondary { width: 100%; }
+.auth-secondary {
+  background: #fff;
+  border: 1px solid var(--forme-blue);
+  border-radius: 3px;
+  color: var(--forme-blue);
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  min-height: 45px;
+  padding: 11px 18px;
 }
 .account-secondary, .google-button-placeholder {
   background: #fff;

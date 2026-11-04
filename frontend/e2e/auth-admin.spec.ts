@@ -39,7 +39,7 @@ test('register, verify email, sign in with MFA, and invite internal staff', asyn
   const password = 'LocalE2ePassword123!'
 
   await page.goto('/register')
-  await page.getByLabel('HỌ VÀ TÊN').fill('Quản trị E2E')
+  await page.getByLabel('HỌ VÀ TÊN').fill('Quản trị kiểm thử')
   await page.getByLabel('ĐỊA CHỈ EMAIL', { exact: true }).fill(adminEmail)
   await page.getByLabel('MẬT KHẨU', { exact: true }).fill(password)
   await page.getByLabel('NHẬP LẠI MẬT KHẨU').fill(password)
@@ -105,7 +105,7 @@ test('register, verify email, sign in with MFA, and invite internal staff', asyn
   await page.goto('/internal/invitations')
   await page.getByRole('button', { name: '＋ Gửi lời mời' }).click()
   const dialog = page.getByRole('dialog', { name: 'Gửi lời mời' })
-  await dialog.getByLabel('HỌ VÀ TÊN').fill('Nhân viên E2E')
+  await dialog.getByLabel('HỌ VÀ TÊN').fill('Nhân viên kiểm thử')
   await dialog.getByLabel('ĐỊA CHỈ EMAIL', { exact: true }).fill(staffEmail)
   await dialog.getByLabel('VAI TRÒ').selectOption('WAREHOUSE')
   await dialog.getByRole('button', { name: 'Gửi lời mời' }).click()

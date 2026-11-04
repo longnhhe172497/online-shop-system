@@ -36,7 +36,7 @@ function linkFrom(body: string, path: string) {
 
 async function registerAndVerify(page: Page, request: APIRequestContext, email: string) {
   await page.goto('/register')
-  await page.getByLabel('HỌ VÀ TÊN').fill('Khách hàng E2E')
+  await page.getByLabel('HỌ VÀ TÊN').fill('Khách hàng kiểm thử')
   await page.getByLabel('ĐỊA CHỈ EMAIL', { exact: true }).fill(email)
   await page.getByLabel('MẬT KHẨU', { exact: true }).fill(password)
   await page.getByLabel('NHẬP LẠI MẬT KHẨU').fill(password)
@@ -81,7 +81,7 @@ test('resend verification, sign out, and reject an account that an administrator
   async ({ page, request }) => {
     const email = `status-${Date.now()}-${Math.floor(Math.random() * 100_000)}@example.test`
     await page.goto('/register')
-    await page.getByLabel('HỌ VÀ TÊN').fill('Khách hàng trạng thái E2E')
+    await page.getByLabel('HỌ VÀ TÊN').fill('Khách hàng trạng thái')
     await page.getByLabel('ĐỊA CHỈ EMAIL', { exact: true }).fill(email)
     await page.getByLabel('MẬT KHẨU', { exact: true }).fill(password)
     await page.getByLabel('NHẬP LẠI MẬT KHẨU').fill(password)
@@ -124,6 +124,7 @@ test('resend verification, sign out, and reject an account that an administrator
     await page.getByLabel('ĐỊA CHỈ EMAIL', { exact: true }).fill(email)
     await page.getByLabel('MẬT KHẨU', { exact: true }).fill(password)
     await page.getByRole('button', { name: 'ĐĂNG NHẬP', exact: true }).click()
-    // The UI deliberately keeps the reason generic so an attacker cannot enumerate account status.
-    await expect(page.getByRole('alert')).toHaveText('Email hoặc mật khẩu không đúng.')
+    // Product requirement: explain that an administrator disabled the account and how to recover access.
+    await expect(page.getByRole('alert')).toHaveText(
+      'Tài khoản đã bị khóa hoặc ngừng hoạt động. Vui lòng liên hệ quản trị viên để được mở lại.')
   })

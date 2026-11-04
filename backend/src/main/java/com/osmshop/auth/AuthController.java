@@ -10,6 +10,7 @@ import com.osmshop.auth.AuthDtos.RegisterResponse;
 import com.osmshop.auth.AuthDtos.VerifyRequest;
 import com.osmshop.auth.AuthDtos.VerifyResponse;
 import com.osmshop.auth.AuthDtos.MfaVerifyRequest;
+import com.osmshop.auth.AuthDtos.MfaMethodRequest;
 import com.osmshop.auth.AuthDtos.BrowserLoginResponse;
 import com.osmshop.cart.CartService;
 import com.osmshop.cart.GuestCartCookie;
@@ -105,6 +106,11 @@ public class AuthController {
     }
 
     public record GoogleCredentialRequest(@jakarta.validation.constraints.NotBlank String credential) {}
+
+    @PostMapping("/browser-mfa/select")
+    public BrowserLoginResponse selectBrowserMfa(@Valid @RequestBody MfaMethodRequest request) {
+        return browserResult(auth.selectLoginMfa(request.challengeToken(), request.method()));
+    }
 
     @PostMapping("/mfa/verify")
     public ResponseEntity<LoginResponse> verifyMfa(@Valid @RequestBody MfaVerifyRequest request,

@@ -8,7 +8,7 @@ export interface AuthUser {
 }
 
 export interface LoginResult { user: AuthUser | null; mfaRequired: boolean;
-  challengeToken: string | null; mfaMethod?: 'EMAIL' | 'TOTP' | null;
+  challengeToken: string | null; mfaMethod?: 'EMAIL' | 'TOTP' | 'BOTH' | null;
   emailDeliveryFailed?: boolean }
 
 export async function registerAccount(input: {
@@ -70,6 +70,11 @@ export async function unlinkGoogle(password: string) {
 
 export async function verifyMfa(challengeToken: string, code: string) {
   const { data } = await api.post<LoginResult>('/auth/browser-mfa/verify', { challengeToken, code })
+  return data
+}
+
+export async function selectMfaMethod(challengeToken: string, method: 'EMAIL' | 'TOTP') {
+  const { data } = await api.post<LoginResult>('/auth/browser-mfa/select', { challengeToken, method })
   return data
 }
 
