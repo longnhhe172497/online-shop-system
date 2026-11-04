@@ -1,9 +1,11 @@
 package com.osmshop.admin;
 
 import com.osmshop.auth.AuthPrincipal;
+import com.osmshop.validation.UserInputRules;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -49,8 +51,13 @@ public class InvitationController {
     public void accept(@Valid @RequestBody AcceptRequest request) { invitations.accept(request); }
 
     public record InviteRequest(@NotBlank @Email String email,
-                                @NotBlank @Size(max = 150) String fullName,
-                                @Size(max = 30) String phone,
+                                @NotBlank @Size(max = 150)
+                                @Pattern(regexp = UserInputRules.PERSON_NAME,
+                                        message = "Họ và tên chỉ được chứa chữ cái và khoảng trắng")
+                                String fullName,
+                                @Pattern(regexp = UserInputRules.OPTIONAL_PHONE,
+                                        message = "Số điện thoại phải gồm đúng 10 chữ số")
+                                String phone,
                                 @NotBlank String role) {}
     public record AcceptRequest(@NotBlank String token,
                                 @NotBlank @Size(min = 8, max = 72) String password,

@@ -4,7 +4,7 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import AdminPage from './AdminPage'
 import { getProfile } from './api/profile'
 import {
-  changeRole, changeSetting, listAudit, listInvitations, listSettings, listUsers,
+  changeRole, changeSetting, listAudit, listInvitations, listSettings, listUsers, updateUser,
   revokeInvitation, type Invitation, type ManagedUser, type Setting
 } from './api/admin'
 
@@ -79,6 +79,22 @@ it('requires confirmation before changing a staff role', async () => {
   fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Xác nhận' }))
   await waitFor(() => expect(changeRole).toHaveBeenCalledWith(4, 'WAREHOUSE'))
   expect(await screen.findByRole('status')).toHaveTextContent('Đã cập nhật quyền truy cập.')
+})
+
+it('rejects invalid names and phone numbers in the Admin user editor', async () => {
+  openPage('/admin/users')
+  fireEvent.click(await screen.findByRole('button', { name: 'Chỉnh sửa' }))
+  const dialog = screen.getByRole('dialog', { name: 'Chỉnh sửa tài khoản' })
+  fireEvent.change(within(dialog).getByLabelText('HỌ VÀ TÊN'), { target: { value: 'Staff 123@@' } })
+  fireEvent.change(within(dialog).getByLabelText('SỐ ĐIỆN THOẠI'), { target: { value: '0901abc@@' } })
+  fireEvent.submit(within(dialog).getByRole('button', { name: 'Lưu thay đổi' }).closest('form')!)
+  expect(within(dialog).getByRole('alert')).toHaveTextContent('Họ và tên chỉ được chứa chữ cái')
+  expect(updateUser).not.toHaveBeenCalled()
+
+  fireEvent.change(within(dialog).getByLabelText('HỌ VÀ TÊN'), { target: { value: 'Nhân viên' } })
+  fireEvent.submit(within(dialog).getByRole('button', { name: 'Lưu thay đổi' }).closest('form')!)
+  expect(within(dialog).getByRole('alert')).toHaveTextContent('Số điện thoại phải gồm đúng 10 chữ số')
+  expect(updateUser).not.toHaveBeenCalled()
 })
 
 it('saves a changed setting but not an unchanged value', async () => {

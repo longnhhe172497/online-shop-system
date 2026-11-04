@@ -4,9 +4,17 @@ import { createAddress, deleteAddress, getAccountLimits, getProfile, listAddress
   type Address, type AddressInput, type Profile } from './api/profile'
 import { getUiError } from './uiError'
 import AccountLayout from './AccountLayout'
+import { personNameError, phoneDigits, phoneError, requiredTextError } from './inputValidation'
 
 const emptyAddress: AddressInput = {
   recipientName: '', phone: '', addressLine: '', ward: '', district: '', province: '', isDefault: false,
+}
+
+function validateProfile(fullName: string, phone: string) {
+  return {
+    name: personNameError(fullName),
+    phone: phoneError(phone, false),
+  }
 }
 
 function formatAddress(address: Address) {
@@ -19,6 +27,7 @@ export default function ProfilePage() {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [fullName, setFullName] = useState('')
   const [phone, setPhone] = useState('')
+  const [profileErrors, setProfileErrors] = useState({ name: '', phone: '' })
   const [addresses, setAddresses] = useState<Address[]>([])
   const [maxSavedAddresses, setMaxSavedAddresses] = useState<number | null>(null)
   const [addressForm, setAddressForm] = useState<AddressInput>(emptyAddress)
@@ -28,6 +37,9 @@ export default function ProfilePage() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [addressError, setAddressError] = useState('')
+  const [addressFieldErrors, setAddressFieldErrors] = useState({
+    name: '', phone: '', addressLine: '', province: '',
+  })
   const [notice, setNotice] = useState('')
   const editingDefaultAddress = editingId !== null &&
     addresses.some((address) => address.id === editingId && address.isDefault)
@@ -68,9 +80,16 @@ export default function ProfilePage() {
     event.preventDefault()
     setError('')
     setNotice('')
+    const normalizedName = fullName.trim()
+    const validation = validateProfile(normalizedName, phone)
+    setProfileErrors(validation)
+    if (validation.name || validation.phone) return
     setBusy(true)
     try {
-      setProfile(await updateProfile({ fullName, phone }))
+      const updated = await updateProfile({ fullName: normalizedName, phone })
+      setProfile(updated)
+      setFullName(updated.fullName)
+      setPhone(updated.phone ?? '')
       setNotice('Đã cập nhật hồ sơ cá nhân.')
     } catch (failure) {
       setError(getUiError(failure))
@@ -83,10 +102,26 @@ export default function ProfilePage() {
     event.preventDefault()
     setAddressError('')
     setNotice('')
+    const validation = {
+      name: personNameError(addressForm.recipientName, 'Họ tên người nhận'),
+      phone: phoneError(addressForm.phone, true),
+      addressLine: requiredTextError(addressForm.addressLine, 'Địa chỉ cụ thể'),
+      province: requiredTextError(addressForm.province, 'Tỉnh / Thành phố'),
+    }
+    setAddressFieldErrors(validation)
+    if (Object.values(validation).some(Boolean)) return
+    const normalizedAddress = {
+      ...addressForm,
+      recipientName: addressForm.recipientName.trim(),
+      addressLine: addressForm.addressLine.trim(),
+      ward: addressForm.ward.trim(),
+      district: addressForm.district.trim(),
+      province: addressForm.province.trim(),
+    }
     setBusy(true)
     try {
-      if (editingId === null) await createAddress(addressForm)
-      else await updateAddress(editingId, addressForm)
+      if (editingId === null) await createAddress(normalizedAddress)
+      else await updateAddress(editingId, normalizedAddress)
       setAddresses(await listAddresses())
       setAddressForm(emptyAddress)
       setEditingId(null)
@@ -119,6 +154,7 @@ export default function ProfilePage() {
     setEditingId(null)
     setAddressForm(emptyAddress)
     setAddressError('')
+    setAddressFieldErrors({ name: '', phone: '', addressLine: '', province: '' })
     setEditorOpen(true)
   }
 
@@ -128,6 +164,7 @@ export default function ProfilePage() {
       addressLine: address.addressLine, ward: address.ward ?? '', district: address.district ?? '',
       province: address.province, isDefault: address.isDefault })
     setAddressError('')
+    setAddressFieldErrors({ name: '', phone: '', addressLine: '', province: '' })
     setEditorOpen(true)
   }
 
@@ -146,11 +183,27 @@ export default function ProfilePage() {
           <section className="account-card personal-card" aria-labelledby="personal-title">
             <p className="card-eyebrow">THÔNG TIN CÁ NHÂN</p><h2 id="personal-title">Chỉnh sửa hồ sơ</h2>
             <form className="account-form" onSubmit={saveProfile}>
-              <label>HỌ VÀ TÊN<input value={fullName} onChange={(event) => setFullName(event.target.value)}
-                required maxLength={150} autoComplete="name" /></label>
+              <label>HỌ VÀ TÊN<input value={fullName} onChange={(event) => {
+                const value = event.target.value
+                setFullName(value)
+                setProfileErrors((current) => ({ ...current,
+                  name: personNameError(value) }))
+              }} required maxLength={150} autoComplete="name" aria-invalid={Boolean(profileErrors.name)}
+                aria-describedby={profileErrors.name ? 'profile-name-error' : undefined} />
+                {profileErrors.name && <span className="field-error" id="profile-name-error"
+                  role="alert">{profileErrors.name}</span>}</label>
               <label>EMAIL ĐĂNG NHẬP<input value={profile.email} disabled aria-describedby="profile-email-hint" /></label>
-              <label>SỐ ĐIỆN THOẠI<input value={phone} onChange={(event) => setPhone(event.target.value)}
-                maxLength={30} autoComplete="tel" placeholder="Thêm số điện thoại" /></label>
+              <label>SỐ ĐIỆN THOẠI<input value={phone} onChange={(event) => {
+                const digits = phoneDigits(event.target.value)
+                setPhone(digits)
+                setProfileErrors((current) => ({ ...current,
+                  phone: digits && digits.length !== 10
+                    ? 'Số điện thoại phải gồm đúng 10 chữ số.' : '' }))
+              }} maxLength={10} inputMode="numeric" autoComplete="tel" placeholder="Ví dụ: 0901234567"
+                pattern="[0-9]{10}" aria-invalid={Boolean(profileErrors.phone)}
+                aria-describedby={profileErrors.phone ? 'profile-phone-error' : undefined} />
+                {profileErrors.phone && <span className="field-error" id="profile-phone-error"
+                  role="alert">{profileErrors.phone}</span>}</label>
               <p className="profile-field-note" id="profile-email-hint">Đổi email tại mục “Đổi email đăng nhập”.</p>
               <button className="account-primary" type="submit" disabled={busy}>Lưu thay đổi</button>
             </form>
@@ -203,21 +256,41 @@ export default function ProfilePage() {
         {addressError && <p className="auth-error" role="alert">{addressError}</p>}
         <div className="address-form-grid">
           <label>HỌ TÊN NGƯỜI NHẬN<input value={addressForm.recipientName} autoFocus
-            onChange={(event) => updateAddressField('recipientName', event.target.value)}
-            required maxLength={150} placeholder="Ví dụ: Nguyễn Văn A" /></label>
+            onChange={(event) => { updateAddressField('recipientName', event.target.value)
+              setAddressFieldErrors((current) => ({ ...current,
+                name: personNameError(event.target.value, 'Họ tên người nhận') })) }}
+            required maxLength={150} placeholder="Ví dụ: Nguyễn Văn A"
+            aria-invalid={Boolean(addressFieldErrors.name)} />
+            {addressFieldErrors.name && <span className="field-error" role="alert">
+              {addressFieldErrors.name}</span>}</label>
           <label>SỐ ĐIỆN THOẠI<input value={addressForm.phone}
-            onChange={(event) => updateAddressField('phone', event.target.value)}
-            required maxLength={30} autoComplete="tel" placeholder="Số điện thoại nhận hàng" /></label>
+            onChange={(event) => { const digits = phoneDigits(event.target.value)
+              updateAddressField('phone', digits)
+              setAddressFieldErrors((current) => ({ ...current, phone: phoneError(digits, true) })) }}
+            required maxLength={10} inputMode="numeric" pattern="[0-9]{10}" autoComplete="tel"
+            placeholder="Số điện thoại nhận hàng" aria-invalid={Boolean(addressFieldErrors.phone)} />
+            {addressFieldErrors.phone && <span className="field-error" role="alert">
+              {addressFieldErrors.phone}</span>}</label>
           <label className="form-span-2">ĐỊA CHỈ CỤ THỂ<input value={addressForm.addressLine}
-            onChange={(event) => updateAddressField('addressLine', event.target.value)}
-            required maxLength={300} placeholder="Số nhà, tên đường, tòa nhà…" /></label>
+            onChange={(event) => { updateAddressField('addressLine', event.target.value)
+              setAddressFieldErrors((current) => ({ ...current,
+                addressLine: requiredTextError(event.target.value, 'Địa chỉ cụ thể') })) }}
+            required maxLength={300} placeholder="Số nhà, tên đường, tòa nhà…"
+            aria-invalid={Boolean(addressFieldErrors.addressLine)} />
+            {addressFieldErrors.addressLine && <span className="field-error" role="alert">
+              {addressFieldErrors.addressLine}</span>}</label>
           <label>PHƯỜNG / XÃ<input value={addressForm.ward}
             onChange={(event) => updateAddressField('ward', event.target.value)} maxLength={120} /></label>
           <label>QUẬN / HUYỆN<input value={addressForm.district}
             onChange={(event) => updateAddressField('district', event.target.value)} maxLength={120} /></label>
           <label className="form-span-2">TỈNH / THÀNH PHỐ<input value={addressForm.province}
-            onChange={(event) => updateAddressField('province', event.target.value)}
-            required maxLength={120} placeholder="Ví dụ: Hà Nội" /></label>
+            onChange={(event) => { updateAddressField('province', event.target.value)
+              setAddressFieldErrors((current) => ({ ...current,
+                province: requiredTextError(event.target.value, 'Tỉnh / Thành phố') })) }}
+            required maxLength={120} placeholder="Ví dụ: Hà Nội"
+            aria-invalid={Boolean(addressFieldErrors.province)} />
+            {addressFieldErrors.province && <span className="field-error" role="alert">
+              {addressFieldErrors.province}</span>}</label>
         </div>
         <label className="default-option"><input type="checkbox" checked={addressForm.isDefault}
           disabled={editingDefaultAddress}

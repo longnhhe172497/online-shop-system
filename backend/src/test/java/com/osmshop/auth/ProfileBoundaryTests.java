@@ -36,9 +36,24 @@ class ProfileBoundaryTests {
         mvc.perform(patch("/api/me").header("Authorization", customer.bearer())
                 .contentType(MediaType.APPLICATION_JSON).content("{\"fullName\":\"\"}"))
                 .andExpect(status().isBadRequest());
+        mvc.perform(patch("/api/me").header("Authorization", customer.bearer())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"fullName\":\"Long 123@@\",\"phone\":\"09012abc@@\"}"))
+                .andExpect(status().isBadRequest());
+        mvc.perform(patch("/api/me").header("Authorization", customer.bearer())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"fullName\":\"Nguyễn Hoàng Long\",\"phone\":\"0901234567\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.fullName").value("Nguyễn Hoàng Long"))
+                .andExpect(jsonPath("$.phone").value("0901234567"));
         mvc.perform(post("/api/me/addresses").header("Authorization", customer.bearer())
                 .contentType(MediaType.APPLICATION_JSON).content("{\"recipientName\":\"Person\","
                         + "\"phone\":\"\",\"addressLine\":\"Street\",\"province\":\"Hanoi\"}"))
+                .andExpect(status().isBadRequest());
+        mvc.perform(post("/api/me/addresses").header("Authorization", customer.bearer())
+                .contentType(MediaType.APPLICATION_JSON).content("{\"recipientName\":\"Long 123@@\","
+                        + "\"phone\":\"09012abc@@\",\"addressLine\":\"Street\","
+                        + "\"province\":\"Hanoi\",\"isDefault\":false}"))
                 .andExpect(status().isBadRequest());
         mvc.perform(get("/api/me/addresses").header("Authorization", customer.bearer()))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(0));

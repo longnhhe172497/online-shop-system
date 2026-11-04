@@ -132,7 +132,7 @@ class AuthServiceUnitTests {
 
         assertEquals(HttpStatus.UNAUTHORIZED, error.status());
         assertEquals("INVALID_CREDENTIALS", error.code());
-        verify(limits).check("login-email", "long@example.com", 10, 900);
+        verify(limits).check("login-email", "long@example.com", 5, 900);
         verify(limits).check("login-ip", "127.0.0.1", 100, 900);
         verify(jdbc).update(anyString(), eq(null), eq("127.0.0.1"));
     }
@@ -171,6 +171,24 @@ class AuthServiceUnitTests {
     }
 
     @Test
+    void login_whenBothMfaMethodsEnabled_requiresMethodSelectionBeforeSendingCode() throws Exception {
+        stubStoredUser("long@example.com");
+        when(passwords.matches("correct", "hash")).thenReturn(true);
+        when(jdbc.queryForObject(anyString(), eq(Boolean.class), eq(7L))).thenReturn(true);
+        when(jdbc.queryForObject(anyString(), eq(String.class), eq(7L))).thenReturn("BOTH");
+
+        var result = service.login(new LoginRequest("long@example.com", "correct"),
+                "127.0.0.1", "agent");
+
+        assertEquals(true, result.mfaRequired());
+        assertEquals("BOTH", result.mfaMethod());
+        assertEquals(true, !result.challengeToken().isBlank());
+        verify(mail, never()).send(any(SimpleMailMessage.class));
+        verify(jdbc).update(org.mockito.ArgumentMatchers.contains("LOGIN_SELECTION"),
+                eq(7L), anyString(), anyString(), any());
+    }
+
+    @Test
     void login_whenPasswordWrong_recordsKnownAccountFailure() throws Exception {
         stubStoredUser("long@example.com");
         when(passwords.matches("wrong", "hash")).thenReturn(false);
@@ -193,7 +211,7 @@ class AuthServiceUnitTests {
                 () -> service.login(new LoginRequest("long@example.com", "correct"),
                         "127.0.0.1", "agent"));
 
-        assertEquals("INVALID_CREDENTIALS", error.code());
+        assertEquals("ACCOUNT_LOCKED", error.code());
     }
 
     @Test
@@ -205,7 +223,7 @@ class AuthServiceUnitTests {
                 () -> service.login(new LoginRequest("long@example.com", "correct"),
                         "127.0.0.1", "agent"));
 
-        assertEquals("INVALID_CREDENTIALS", error.code());
+        assertEquals("EMAIL_NOT_VERIFIED", error.code());
     }
 
     @Test
@@ -402,7 +420,7 @@ class AuthServiceUnitTests {
 
         assertEquals(true, !challenge.isBlank());
         verify(jdbc).update(org.mockito.ArgumentMatchers.contains("INSERT INTO email_mfa_challenges"),
-                eq(7L), anyString(), anyString(), eq("ENROLL"), any());
+                eq(7L), anyString(), anyString(), eq("ENROLL"), eq("EMAIL"), any());
         verify(mail).send(any(SimpleMailMessage.class));
     }
 
@@ -446,7 +464,7 @@ class AuthServiceUnitTests {
         var codes = service.finishMfaEnrollment(7L, "challenge", "123456");
 
         assertEquals(8, codes.size());
-        verify(jdbc).update(org.mockito.ArgumentMatchers.contains("mfa_enabled=true"), eq(7L));
+        verify(jdbc).update(org.mockito.ArgumentMatchers.contains("mfa_enabled=true"), eq("EMAIL"), eq(7L));
         verify(jdbc, org.mockito.Mockito.times(8)).update(
                 org.mockito.ArgumentMatchers.contains("INSERT INTO mfa_recovery_codes"), eq(7L), anyString());
         verify(mail).send(any(SimpleMailMessage.class));
@@ -657,16 +675,20 @@ class AuthServiceUnitTests {
     }
 
     @Test
-    void startTotpEnrollment_whenEmailMfaAlreadyEnabled_rejects() {
-        when(jdbc.queryForObject(anyString(), eq(String.class), eq(7L))).thenReturn("hash");
+    void startTotpEnrollment_whenEmailMfaAlreadyEnabled_allowsAddingSecondMethod() {
+        when(jdbc.queryForObject(anyString(), eq(String.class), eq(7L)))
+                .thenReturn("hash", "EMAIL", "long@example.com");
         when(passwords.matches("correct", "hash")).thenReturn(true);
         when(jdbc.queryForObject(anyString(), eq(Boolean.class), eq(7L))).thenReturn(true);
+        when(totp.newSecret()).thenReturn("SECRET");
+        when(totp.encrypt("SECRET")).thenReturn("encrypted");
+        when(totp.otpauthUri("long@example.com", "SECRET")).thenReturn("otpauth://totp/FORME");
 
-        AuthApiException error = assertThrows(AuthApiException.class,
-                () -> service.startTotpEnrollment(7L, "correct"));
+        var result = service.startTotpEnrollment(7L, "correct");
 
-        assertEquals("MFA_ALREADY_ENABLED", error.code());
-        verify(totp, never()).newSecret();
+        assertEquals("SECRET", result.secret());
+        verify(jdbc).update(org.mockito.ArgumentMatchers.contains("INSERT INTO totp_credentials"),
+                eq(7L), eq("encrypted"));
     }
 
     @Test

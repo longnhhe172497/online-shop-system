@@ -46,6 +46,11 @@ class AuthBoundaryTests {
                 .content("{\"fullName\":\"Another\",\"email\":\"" + email + "\","
                         + "\"password\":\"Password123\",\"confirmPassword\":\"Password123\"}"))
                 .andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("EMAIL_ALREADY_REGISTERED"));
+        mvc.perform(post("/api/auth/register").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"fullName\":\"User 123@@\",\"email\":\"valid@example.com\","
+                        + "\"password\":\"Password123\",\"confirmPassword\":\"Password123\","
+                        + "\"phone\":\"09012abc@@\"}"))
+                .andExpect(status().isBadRequest());
         verify(mail, never()).send(any(SimpleMailMessage.class));
     }
 
@@ -112,6 +117,6 @@ class AuthBoundaryTests {
                 + "VALUES (?,?,?,'CUSTOMER','LOCKED',now())", email, passwords.encode("Password123"), "Locked");
         mvc.perform(post("/api/auth/login").contentType(MediaType.APPLICATION_JSON)
                 .content("{\"email\":\"" + email + "\",\"password\":\"Password123\"}"))
-                .andExpect(status().isUnauthorized()).andExpect(jsonPath("$.code").value("INVALID_CREDENTIALS"));
+                .andExpect(status().isUnauthorized()).andExpect(jsonPath("$.code").value("ACCOUNT_LOCKED"));
     }
 }

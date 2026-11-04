@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { acceptInvitation } from './api/admin'
-import { resendVerification, verifyMfa } from './api/auth'
+import { resendVerification, selectMfaMethod, verifyMfa } from './api/auth'
 import { getInternalHome, isInternalRole } from './internalAccess'
 import { getUiError } from './uiError'
 import FormeLayout from './FormeLayout'
@@ -64,28 +64,50 @@ export function MfaLoginPage() {
   const navigate = useNavigate()
   const location = useLocation()
   const state = location.state as { challengeToken?: string; email?: string; next?: string;
-    mfaMethod?: 'EMAIL' | 'TOTP'; emailDeliveryFailed?: boolean } | null
-  const useAuthenticator = state?.mfaMethod === 'TOTP'
+    mfaMethod?: 'EMAIL' | 'TOTP' | 'BOTH'; emailDeliveryFailed?: boolean } | null
+  const [challengeToken, setChallengeToken] = useState(state?.challengeToken ?? '')
+  const [mfaMethod, setMfaMethod] = useState(state?.mfaMethod)
+  const [emailDeliveryFailed, setEmailDeliveryFailed] = useState(Boolean(state?.emailDeliveryFailed))
+  const useAuthenticator = mfaMethod === 'TOTP'
+  const selectingMethod = mfaMethod === 'BOTH'
   const [code, setCode] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   async function submit(event: FormEvent) {
     event.preventDefault()
-    if (!state?.challengeToken) return
+    if (!challengeToken || selectingMethod) return
     setBusy(true); setError('')
-    try { const session = await verifyMfa(state.challengeToken, code)
+    try { const session = await verifyMfa(challengeToken, code)
       if (session.user) navigate(isInternalRole(session.user.role) ? getInternalHome(session.user.role) : (state?.next ?? '/'), { replace: true }) }
     catch (failure) { setError(getUiError(failure)) }
     finally { setBusy(false) }
   }
+  async function chooseMethod(method: 'EMAIL' | 'TOTP') {
+    if (!challengeToken) return
+    setBusy(true); setError('')
+    try {
+      const result = await selectMfaMethod(challengeToken, method)
+      setChallengeToken(result.challengeToken ?? '')
+      setMfaMethod(method)
+      setEmailDeliveryFailed(Boolean(result.emailDeliveryFailed))
+    } catch (failure) { setError(getUiError(failure)) }
+    finally { setBusy(false) }
+  }
   return <AuthCard kicker="BẢO MẬT HAI BƯỚC" title="Xác minh đăng nhập">
-    <p className="auth-lead">{state?.emailDeliveryFailed && !useAuthenticator
+    {selectingMethod ? <><p className="auth-lead">Tài khoản đang bật cả xác minh qua email và ứng dụng xác thực.
+      Hãy chọn một phương thức để tiếp tục đăng nhập.</p>
+      <div className="mfa-method-options" role="group" aria-label="Chọn phương thức xác minh">
+        <button type="button" className="auth-submit" disabled={busy}
+          onClick={() => void chooseMethod('TOTP')}>DÙNG ỨNG DỤNG XÁC THỰC</button>
+        <button type="button" className="auth-secondary" disabled={busy}
+          onClick={() => void chooseMethod('EMAIL')}>NHẬN MÃ QUA EMAIL</button>
+      </div></> : <p className="auth-lead">{emailDeliveryFailed && !useAuthenticator
       ? 'Hiện không gửi được mã qua email. Bạn vẫn có thể đăng nhập bằng một mã khôi phục đã lưu; nếu không còn mã, hãy liên hệ quản trị viên.' : useAuthenticator
-      ? 'Tài khoản này đang dùng ứng dụng xác thực. Mở Google Authenticator hoặc ứng dụng bạn đã thiết lập, tìm FORME và lấy mã 6 số đang hiển thị.'
-      : `Tài khoản này đang dùng mã qua email. Lấy mã 6 số đã gửi tới ${state?.email ?? 'email của bạn'}.`}</p>
-    <p className="auth-notice">Nếu không lấy được mã {useAuthenticator ? 'từ ứng dụng' : 'từ email'},
-      bạn có thể nhập một mã khôi phục đã lưu. Mỗi mã khôi phục chỉ dùng được một lần.</p>
-    {!state?.challengeToken ? <p className="auth-error">Phiên xác minh đã mất. Hãy đăng nhập lại.</p> :
+      ? 'Bạn đã chọn ứng dụng xác thực. Hệ thống không gửi mã qua email. Mở Google Authenticator hoặc ứng dụng bạn đã thiết lập, tìm FORME và lấy mã 6 số đang hiển thị.'
+      : `Bạn đã chọn xác minh qua email. Mã 6 số đã được gửi tới ${state?.email ?? 'email đăng ký của bạn'}. Hãy kiểm tra cả Hộp thư đến và Thư rác.`}</p>}
+    {!selectingMethod && <p className="auth-notice">Nếu không lấy được mã {useAuthenticator ? 'từ ứng dụng' : 'từ email'},
+      bạn có thể nhập một mã khôi phục đã lưu. Mỗi mã khôi phục chỉ dùng được một lần.</p>}
+    {!challengeToken ? <p className="auth-error">Phiên xác minh đã mất. Hãy đăng nhập lại.</p> : !selectingMethod &&
       <form onSubmit={submit}><label>{useAuthenticator ? 'MÃ 6 SỐ TỪ ỨNG DỤNG HOẶC MÃ KHÔI PHỤC' :
         'MÃ 6 SỐ QUA EMAIL HOẶC MÃ KHÔI PHỤC'}<input maxLength={35}
         autoComplete="one-time-code" required value={code} onChange={(event) => setCode(event.target.value)} /></label>

@@ -58,6 +58,7 @@ public class SecurityConfig {
                                 "/api/auth/password-reset/request",
                                 "/api/auth/password-reset/confirm", "/api/auth/verification/resend",
                                 "/api/auth/mfa/verify", "/api/auth/browser-mfa/verify",
+                                "/api/auth/browser-mfa/select",
                                 "/api/auth/email-change/confirm", "/api/invitations/accept")
                         .permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/auth/csrf", "/api/auth/google/config").permitAll()

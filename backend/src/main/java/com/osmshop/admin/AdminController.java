@@ -2,8 +2,10 @@ package com.osmshop.admin;
 
 import com.osmshop.api.PageResponse;
 import com.osmshop.auth.AuthPrincipal;
+import com.osmshop.validation.UserInputRules;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import java.time.LocalDate;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -68,7 +70,14 @@ public class AdminController {
         return service.audit(page, size, actor, action, from, to);
     }
 
-    public record UpdateUser(@NotBlank @Size(max = 150) String fullName, @Size(max = 30) String phone) {}
+    public record UpdateUser(
+            @NotBlank @Size(max = 150)
+            @Pattern(regexp = UserInputRules.PERSON_NAME,
+                    message = "Họ và tên chỉ được chứa chữ cái và khoảng trắng")
+            String fullName,
+            @Pattern(regexp = UserInputRules.OPTIONAL_PHONE,
+                    message = "Số điện thoại phải gồm đúng 10 chữ số")
+            String phone) {}
     public record RoleChange(@NotBlank String role) {}
     public record StatusChange(@NotBlank String status) {}
     public record SettingChange(@NotBlank String value) {}

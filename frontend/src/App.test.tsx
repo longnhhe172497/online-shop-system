@@ -7,7 +7,7 @@ import { listCategories } from './api/catalog'
 import { getCart } from './api/cart'
 import {
   confirmPasswordReset, getGoogleConfig, getGoogleLinkStatus, getMe, login, loginWithGoogle,
-  registerAccount, requestPasswordReset,
+  registerAccount, requestPasswordReset, selectMfaMethod,
   resendVerification, verifyMfa
 } from './api/auth'
 import {
@@ -26,6 +26,7 @@ vi.mock('./api/cart', () => ({ getCart: vi.fn(), addCartItem: vi.fn(), updateCar
 vi.mock('./api/auth', () => ({
   login: vi.fn(), registerAccount: vi.fn(), getMe: vi.fn(), logout: vi.fn(), verifyAccount: vi.fn(),
   requestPasswordReset: vi.fn(), confirmPasswordReset: vi.fn(), resendVerification: vi.fn(), verifyMfa: vi.fn(),
+  selectMfaMethod: vi.fn(),
   getGoogleConfig: vi.fn().mockResolvedValue({ enabled: false, clientId: '' }),
   getGoogleLinkStatus: vi.fn().mockResolvedValue({ linked: false }),
   loginWithGoogle: vi.fn(), linkGoogle: vi.fn(),
@@ -151,6 +152,17 @@ describe('App', () => {
     fireEvent.change(screen.getByLabelText('NHẬP LẠI MẬT KHẨU'), { target: { value: 'different123' } })
     fireEvent.click(screen.getByRole('button', { name: 'TẠO TÀI KHOẢN' }))
     expect(screen.getByRole('alert')).toHaveTextContent('Mật khẩu nhập lại không khớp.')
+    expect(registerAccount).not.toHaveBeenCalled()
+  })
+
+  it('does not submit registration when the customer name contains special characters', () => {
+    renderAt('/register')
+    fireEvent.change(screen.getByLabelText('HỌ VÀ TÊN'), { target: { value: 'Test 123@@' } })
+    fireEvent.change(screen.getByLabelText('ĐỊA CHỈ EMAIL'), { target: { value: 'test@example.com' } })
+    fireEvent.change(screen.getByLabelText('MẬT KHẨU'), { target: { value: 'password123' } })
+    fireEvent.change(screen.getByLabelText('NHẬP LẠI MẬT KHẨU'), { target: { value: 'password123' } })
+    fireEvent.click(screen.getByRole('button', { name: 'TẠO TÀI KHOẢN' }))
+    expect(screen.getByText('Họ và tên chỉ được chứa chữ cái và khoảng trắng.')).toBeInTheDocument()
     expect(registerAccount).not.toHaveBeenCalled()
   })
 
@@ -342,6 +354,29 @@ describe('App', () => {
     expect(screen.getByLabelText('MÃ 6 SỐ TỪ ỨNG DỤNG HOẶC MÃ KHÔI PHỤC'))
       .toBeInTheDocument()
     expect(screen.getByText(/Mỗi mã khôi phục chỉ dùng được một lần/)).toBeInTheDocument()
+  })
+
+  it('lets a user with both MFA methods choose email before a code is sent', async () => {
+    vi.mocked(login).mockResolvedValue({
+      user: null, mfaRequired: true,
+      challengeToken: 'selection-token', mfaMethod: 'BOTH'
+    })
+    vi.mocked(selectMfaMethod).mockResolvedValue({
+      user: null, mfaRequired: true, challengeToken: 'email-challenge',
+      mfaMethod: 'EMAIL', emailDeliveryFailed: false
+    })
+    renderAt('/auth')
+    fireEvent.change(screen.getByLabelText('ĐỊA CHỈ EMAIL'),
+      { target: { value: 'test@example.com' } })
+    fireEvent.change(screen.getByLabelText('MẬT KHẨU'),
+      { target: { value: 'StrongPass123' } })
+    fireEvent.click(screen.getByRole('button', { name: 'ĐĂNG NHẬP' }))
+
+    expect(await screen.findByText(/đang bật cả xác minh qua email và ứng dụng xác thực/))
+      .toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'NHẬN MÃ QUA EMAIL' }))
+    expect(await screen.findByText(/Mã 6 số đã được gửi tới test@example.com/)).toBeInTheDocument()
+    expect(selectMfaMethod).toHaveBeenCalledWith('selection-token', 'EMAIL')
   })
 
   it('lets a signed-in user change password and returns to login', async () => {

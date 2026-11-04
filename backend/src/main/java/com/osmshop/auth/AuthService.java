@@ -140,9 +140,8 @@ public class AuthService {
                         rs.getString("password_hash"), rs.getString("full_name"),
                         rs.getString("role"), rs.getString("status"),
                         rs.getTimestamp("verified_at") != null), email);
-        if (matches.isEmpty() || !passwords.matches(request.password(), matches.getFirst().passwordHash())
-                || !"ACTIVE".equals(matches.getFirst().status()) || !matches.getFirst().verified()) {
-            limits.check("login-email", email, 10, 900);
+        if (matches.isEmpty() || !passwords.matches(request.password(), matches.getFirst().passwordHash())) {
+            limits.check("login-email", email, 5, 900);
             limits.check("login-ip", ipAddress, 100, 900);
             jdbc.update("""
                     INSERT INTO audit_logs(action,entity_type,entity_id,details)
@@ -150,8 +149,9 @@ public class AuthService {
                     """, matches.isEmpty() ? null : Long.toString(matches.getFirst().id()),
                     safeLength(ipAddress, 64));
             throw new AuthApiException(HttpStatus.UNAUTHORIZED, "INVALID_CREDENTIALS",
-                    "Email hoặc mật khẩu không đúng, hoặc tài khoản chưa thể đăng nhập.");
+                    "Email hoặc mật khẩu không đúng.");
         }
+        requireLoginAvailable(matches.getFirst());
         return beginLogin(matches.getFirst(), ipAddress, userAgent);
     }
 
@@ -164,16 +164,36 @@ public class AuthService {
                 rs.getString("password_hash"), rs.getString("full_name"),
                 rs.getString("role"), rs.getString("status"),
                 rs.getTimestamp("verified_at") != null), userId);
-        if (matches.isEmpty() || !"ACTIVE".equals(matches.getFirst().status()) || !matches.getFirst().verified())
+        if (matches.isEmpty())
             throw new AuthApiException(HttpStatus.FORBIDDEN, "ACCOUNT_UNAVAILABLE",
                     "Tài khoản không thể đăng nhập.");
+        requireLoginAvailable(matches.getFirst());
         return beginLogin(matches.getFirst(), ipAddress, userAgent);
+    }
+
+    private void requireLoginAvailable(StoredUser user) {
+        if ("PENDING_VERIFICATION".equals(user.status()) || !user.verified()) {
+            throw new AuthApiException(HttpStatus.UNAUTHORIZED, "EMAIL_NOT_VERIFIED",
+                    "Tài khoản chưa xác minh email. Vui lòng gửi lại email xác minh để tiếp tục.");
+        }
+        if ("LOCKED".equals(user.status()) || "INACTIVE".equals(user.status())) {
+            throw new AuthApiException(HttpStatus.UNAUTHORIZED, "ACCOUNT_LOCKED",
+                    "Tài khoản đã bị khóa hoặc ngừng hoạt động. Vui lòng liên hệ quản trị viên để được mở lại.");
+        }
+        if (!"ACTIVE".equals(user.status())) {
+            throw new AuthApiException(HttpStatus.FORBIDDEN, "ACCOUNT_UNAVAILABLE",
+                    "Tài khoản hiện không thể đăng nhập.");
+        }
     }
 
     private LoginResponse beginLogin(StoredUser user, String ipAddress, String userAgent) {
         Boolean mfaEnabled = jdbc.queryForObject("SELECT mfa_enabled FROM users WHERE id=?", Boolean.class, user.id());
         if (Boolean.TRUE.equals(mfaEnabled)) {
             String method = mfaMethod(user.id());
+            if ("BOTH".equals(method)) {
+                return new LoginResponse(null, null, null, true,
+                        createMfaSelection(user.id()), "BOTH", false);
+            }
             MfaChallengeStart challenge = "TOTP".equals(method)
                     ? new MfaChallengeStart(createTotpChallenge(user.id(), "LOGIN"), true)
                     : createMfaChallenge(user.id(), user.email(), "LOGIN");
@@ -181,6 +201,30 @@ public class AuthService {
                     !challenge.emailSent());
         }
         return createSession(user, ipAddress, userAgent);
+    }
+
+    @Transactional
+    public LoginResponse selectLoginMfa(String selectionToken, String requestedMethod) {
+        String method = requestedMethod == null ? "" : requestedMethod.trim().toUpperCase(Locale.ROOT);
+        if (!List.of("EMAIL", "TOTP").contains(method)) {
+            throw new AuthApiException(HttpStatus.BAD_REQUEST, "INVALID_MFA_METHOD",
+                    "Phương thức xác minh không hợp lệ.");
+        }
+        List<Long> users = jdbc.query("""
+                UPDATE email_mfa_challenges SET used_at=now()
+                WHERE challenge_hash=? AND purpose='LOGIN_SELECTION' AND used_at IS NULL AND expires_at>now()
+                RETURNING user_id
+                """, (rs, row) -> rs.getLong(1), hash(selectionToken));
+        if (users.isEmpty() || !"BOTH".equals(mfaMethod(users.getFirst()))) {
+            throw new AuthApiException(HttpStatus.BAD_REQUEST, "INVALID_MFA_CHALLENGE",
+                    "Phiên chọn phương thức đã hết hạn. Hãy đăng nhập lại.");
+        }
+        long userId = users.getFirst();
+        MfaChallengeStart challenge = "TOTP".equals(method)
+                ? new MfaChallengeStart(createTotpChallenge(userId, "LOGIN"), true)
+                : createMfaChallenge(userId, userEmail(userId), "LOGIN");
+        return new LoginResponse(null, null, null, true, challenge.token(), method,
+                !challenge.emailSent());
     }
 
     private LoginResponse createSession(StoredUser user, String ipAddress, String userAgent) {
@@ -371,9 +415,10 @@ public class AuthService {
 
     @Transactional
     public String startMfaEnrollment(long userId) {
-        Boolean enabled = jdbc.queryForObject("SELECT mfa_enabled FROM users WHERE id=?", Boolean.class, userId);
-        if (Boolean.TRUE.equals(enabled)) {
-            throw new AuthApiException(HttpStatus.CONFLICT, "MFA_ALREADY_ENABLED", "Xác minh hai bước đã được bật.");
+        String currentMethod = mfaMethod(userId);
+        if (mfaEnabled(userId) && !"TOTP".equals(currentMethod)) {
+            throw new AuthApiException(HttpStatus.CONFLICT, "MFA_ALREADY_ENABLED",
+                    "Xác minh qua email đã được bật.");
         }
         String email = jdbc.queryForObject("SELECT email FROM users WHERE id=?", String.class, userId);
         return createMfaChallenge(userId, email, "ENROLL").token();
@@ -381,11 +426,14 @@ public class AuthService {
 
     @Transactional(noRollbackFor = AuthApiException.class)
     public List<String> finishMfaEnrollment(long userId, String challengeToken, String code) {
-        if (mfaEnabled(userId)) throw new AuthApiException(HttpStatus.CONFLICT, "MFA_ALREADY_ENABLED",
-                "Xác minh hai bước đã được bật.");
+        String currentMethod = mfaMethod(userId);
+        if (mfaEnabled(userId) && !"TOTP".equals(currentMethod)) throw new AuthApiException(
+                HttpStatus.CONFLICT, "MFA_ALREADY_ENABLED", "Xác minh qua email đã được bật.");
         consumeMfaChallenge(challengeToken, code, "ENROLL", userId);
-        jdbc.update("UPDATE users SET mfa_enabled=true,mfa_method='EMAIL',updated_at=now() WHERE id=?", userId);
-        List<String> codes = issueRecoveryCodes(userId);
+        boolean addingSecondMethod = mfaEnabled(userId) && "TOTP".equals(currentMethod);
+        jdbc.update("UPDATE users SET mfa_enabled=true,mfa_method=?,updated_at=now() WHERE id=?",
+                addingSecondMethod ? "BOTH" : "EMAIL", userId);
+        List<String> codes = addingSecondMethod ? List.of() : issueRecoveryCodes(userId);
         auditMfa(userId, "MFA_EMAIL_ENABLED");
         notifyMfaChange(userId, "Đã bật mã xác minh qua email");
         return codes;
@@ -450,7 +498,8 @@ public class AuthService {
         requireCurrentPassword(userId, password);
         if (!mfaEnabled(userId)) throw new AuthApiException(HttpStatus.CONFLICT, "MFA_NOT_ENABLED",
                 "Xác minh hai bước chưa được bật.");
-        String method = mfaMethod(userId);
+        String configuredMethod = mfaMethod(userId);
+        String method = "BOTH".equals(configuredMethod) ? "TOTP" : configuredMethod;
         MfaChallengeStart challenge = "TOTP".equals(method)
                 ? new MfaChallengeStart(createTotpChallenge(userId, "STEP_UP"), true)
                 : createMfaChallenge(userId, userEmail(userId), "STEP_UP");
@@ -460,8 +509,9 @@ public class AuthService {
     @Transactional
     public TotpStartResponse startTotpEnrollment(long userId, String password) {
         requireCurrentPassword(userId, password);
-        if (mfaEnabled(userId)) throw new AuthApiException(HttpStatus.CONFLICT, "MFA_ALREADY_ENABLED",
-                "Hãy tắt phương thức xác minh hiện tại trước khi bật ứng dụng xác thực.");
+        String currentMethod = mfaMethod(userId);
+        if (mfaEnabled(userId) && !"EMAIL".equals(currentMethod)) throw new AuthApiException(
+                HttpStatus.CONFLICT, "MFA_ALREADY_ENABLED", "Ứng dụng xác thực đã được bật.");
         String secret = totp.newSecret();
         jdbc.update("""
                 INSERT INTO totp_credentials(user_id,pending_secret,pending_expires_at)
@@ -479,7 +529,8 @@ public class AuthService {
                 SELECT pending_secret FROM totp_credentials
                 WHERE user_id=? AND pending_secret IS NOT NULL AND pending_expires_at>now() FOR UPDATE
                 """, (rs, row) -> rs.getString(1), userId);
-        if (pending.isEmpty() || mfaEnabled(userId)) throw new AuthApiException(HttpStatus.BAD_REQUEST,
+        String currentMethod = mfaMethod(userId);
+        if (pending.isEmpty() || (mfaEnabled(userId) && !"EMAIL".equals(currentMethod))) throw new AuthApiException(HttpStatus.BAD_REQUEST,
                 "INVALID_TOTP_ENROLLMENT", "Thiết lập ứng dụng xác thực đã hết hạn. Hãy bắt đầu lại.");
         String secret = totp.decrypt(pending.getFirst());
         long step = totp.validStep(secret, code, Instant.now(), null);
@@ -489,8 +540,10 @@ public class AuthService {
                 UPDATE totp_credentials SET encrypted_secret=pending_secret,pending_secret=NULL,
                     pending_expires_at=NULL,last_used_step=?,updated_at=now() WHERE user_id=?
                 """, step, userId);
-        jdbc.update("UPDATE users SET mfa_enabled=true,mfa_method='TOTP',updated_at=now() WHERE id=?", userId);
-        List<String> codes = issueRecoveryCodes(userId);
+        boolean addingSecondMethod = mfaEnabled(userId) && "EMAIL".equals(currentMethod);
+        jdbc.update("UPDATE users SET mfa_enabled=true,mfa_method=?,updated_at=now() WHERE id=?",
+                addingSecondMethod ? "BOTH" : "TOTP", userId);
+        List<String> codes = addingSecondMethod ? List.of() : issueRecoveryCodes(userId);
         auditMfa(userId, "MFA_TOTP_ENABLED");
         notifyMfaChange(userId, "Đã bật xác minh bằng ứng dụng xác thực");
         return codes;
@@ -545,9 +598,9 @@ public class AuthService {
         String challenge = newToken();
         String code = String.format(Locale.ROOT, "%06d", RANDOM.nextInt(1_000_000));
         jdbc.update("""
-                INSERT INTO email_mfa_challenges(user_id,challenge_hash,code_hash,purpose,expires_at)
-                VALUES (?,?,?,?,?)
-                """, userId, hash(challenge), hash(challenge + ":" + code), purpose,
+                INSERT INTO email_mfa_challenges(user_id,challenge_hash,code_hash,purpose,method,expires_at)
+                VALUES (?,?,?,?,?,?)
+                """, userId, hash(challenge), hash(challenge + ":" + code), purpose, "EMAIL",
                 Timestamp.from(Instant.now().plus(10, ChronoUnit.MINUTES)));
         SimpleMailMessage message = new SimpleMailMessage();
         message.setFrom(mailFrom);
@@ -570,9 +623,19 @@ public class AuthService {
     private String createTotpChallenge(long userId, String purpose) {
         String challenge = newToken();
         jdbc.update("""
+                INSERT INTO email_mfa_challenges(user_id,challenge_hash,code_hash,purpose,method,expires_at)
+                VALUES (?,?,?,?,?,?)
+                """, userId, hash(challenge), hash(challenge + ":totp"), purpose, "TOTP",
+                Timestamp.from(Instant.now().plus(10, ChronoUnit.MINUTES)));
+        return challenge;
+    }
+
+    private String createMfaSelection(long userId) {
+        String challenge = newToken();
+        jdbc.update("""
                 INSERT INTO email_mfa_challenges(user_id,challenge_hash,code_hash,purpose,expires_at)
-                VALUES (?,?,?,?,?)
-                """, userId, hash(challenge), hash(challenge + ":totp"), purpose,
+                VALUES (?,?,?,'LOGIN_SELECTION',?)
+                """, userId, hash(challenge), hash(challenge + ":selection"),
                 Timestamp.from(Instant.now().plus(10, ChronoUnit.MINUTES)));
         return challenge;
     }
@@ -580,16 +643,19 @@ public class AuthService {
     private long consumeMfaChallenge(String challengeToken, String code, String purpose, Long ownerId) {
         limits.check("mfa-challenge", challengeToken, 8, 900);
         List<MfaChallenge> matches = jdbc.query("""
-                SELECT user_id,code_hash,attempts FROM email_mfa_challenges
+                SELECT user_id,code_hash,attempts,method FROM email_mfa_challenges
                 WHERE challenge_hash=? AND purpose=? AND used_at IS NULL AND expires_at>now()
                 FOR UPDATE
-                """, (rs, row) -> new MfaChallenge(rs.getLong(1), rs.getString(2), rs.getInt(3)),
+                """, (rs, row) -> new MfaChallenge(rs.getLong(1), rs.getString(2), rs.getInt(3),
+                        rs.getString(4)),
                 hash(challengeToken), purpose);
         if (matches.isEmpty() || (ownerId != null && matches.getFirst().userId() != ownerId)) {
             throw new AuthApiException(HttpStatus.BAD_REQUEST, "INVALID_MFA_CHALLENGE", "Mã xác minh không hợp lệ hoặc đã hết hạn.");
         }
         MfaChallenge match = matches.getFirst();
-        String method = "ENROLL".equals(purpose) ? "EMAIL" : mfaMethod(match.userId());
+        String method = match.method() == null
+                ? ("ENROLL".equals(purpose) ? "EMAIL" : mfaMethod(match.userId()))
+                : match.method();
         boolean emailCodeValid = "EMAIL".equals(method) && MessageDigest.isEqual(
                 match.codeHash().getBytes(StandardCharsets.UTF_8),
                 hash(challengeToken + ":" + code).getBytes(StandardCharsets.UTF_8));
@@ -639,7 +705,7 @@ public class AuthService {
     }
 
     private record MfaChallengeStart(String token, boolean emailSent) {}
-    private record MfaChallenge(long userId, String codeHash, int attempts) {}
+    private record MfaChallenge(long userId, String codeHash, int attempts, String method) {}
     private record TotpCredential(String encryptedSecret, Long lastUsedStep) {}
 
     public static String hash(String value) {

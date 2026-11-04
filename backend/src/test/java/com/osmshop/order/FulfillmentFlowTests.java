@@ -199,6 +199,9 @@ class FulfillmentFlowTests extends OrderTestSupport {
 
     @Test
     void managerAssignmentRulesAreEnforced() throws Exception {
+        // This scenario requires one retry after the first failed delivery and must not depend on
+        // a mutable value left in the developer database by an administrator.
+        jdbc.update("UPDATE system_settings SET value_text='2' WHERE setting_key='max_delivery_attempts'");
         Session customer = session("CUSTOMER");
         Session support = session("SUPPORT");
         Session manager = session("MANAGER");

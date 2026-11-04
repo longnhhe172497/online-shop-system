@@ -15,6 +15,7 @@ import ManagerOrdersPage from './ManagerOrdersPage'
 import SupportOrdersPage from './SupportOrdersPage'
 import ManagerProductsPage from './ManagerProductsPage'
 import ManagerCategoriesPage from './ManagerCategoriesPage'
+import { personNameError, phoneDigits, phoneError } from './inputValidation'
 
 const roles: Record<string, string> = {
   CUSTOMER: 'Khách hàng', ADMIN: 'Quản trị viên',
@@ -132,6 +133,7 @@ export default function AdminPage() {
   const [detail, setDetail] = useState<UserDetail | null>(null)
   const [invitations, setInvitations] = useState<Invitation[]>([])
   const [editor, setEditor] = useState<Editor | null>(null)
+  const [editorError, setEditorError] = useState('')
   const [inviteEditor, setInviteEditor] = useState<InviteEditor | null>(null)
   const [inviteError, setInviteError] = useState('')
   const [pendingRevokeInvitation, setPendingRevokeInvitation] = useState<Invitation | null>(null)
@@ -203,8 +205,11 @@ export default function AdminPage() {
   async function saveUser(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (!editor) return
+    const validation = personNameError(editor.fullName) || phoneError(editor.phone, false)
+    setEditorError(validation)
+    if (validation) return
     await perform(async () => {
-      await updateUser(editor.id, { fullName: editor.fullName, phone: editor.phone })
+      await updateUser(editor.id, { fullName: editor.fullName.trim(), phone: editor.phone })
       setEditor(null)
     }, 'Đã cập nhật tài khoản.')
     if (detailId) { try { setDetail(await getUserDetail(detailId)) } catch { /* Page can be refreshed. */ } }
@@ -231,6 +236,9 @@ export default function AdminPage() {
   async function sendInvite(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (!inviteEditor) return
+    const validation = personNameError(inviteEditor.fullName) || phoneError(inviteEditor.phone, false)
+    setInviteError(validation)
+    if (validation) return
     setBusy(true); setError(''); setInviteError(''); setNotice('')
     try {
       await inviteStaff(inviteEditor)
@@ -270,11 +278,11 @@ export default function AdminPage() {
         <button className="admin-link" onClick={() => navigate('/admin/users')}>← Danh sách tài khoản</button>
         <div className="admin-section-head"><div><p className="card-eyebrow">HỒ SƠ TÀI KHOẢN</p>
           <h2>{detail.user.fullName}</h2><p>{detail.user.email}</p></div>
-          <button className="account-secondary" onClick={() => setEditor({
+          <button className="account-secondary" onClick={() => { setEditorError(''); setEditor({
             id: detail.user.id,
             email: detail.user.email, fullName: detail.user.fullName, phone: detail.user.phone ?? '',
             role: detail.user.role
-          })}>Chỉnh sửa hồ sơ</button></div>
+          }) }}>Chỉnh sửa hồ sơ</button></div>
         <div className="dashboard-metrics">
           <div className="dashboard-metric"><span>Vai trò</span><strong>{roles[detail.user.role] ?? detail.user.role}</strong></div>
           <div className="dashboard-metric"><span>Trạng thái</span><strong>{statuses[detail.user.status] ?? detail.user.status}</strong></div>
@@ -328,10 +336,10 @@ export default function AdminPage() {
                 {Object.entries(statuses).map(([key, label]) => <option key={key} value={key}
                   disabled={key === 'PENDING_VERIFICATION' && user.verifiedAt !== null}>{label}</option>)}</select></td>
               <td><button className="admin-link" onClick={() => navigate(`/admin/users/${user.id}`)}>Chi tiết</button>
-                <button className="admin-link" onClick={() => setEditor({
+                <button className="admin-link" onClick={() => { setEditorError(''); setEditor({
                   id: user.id, email: user.email,
                   fullName: user.fullName, phone: user.phone ?? '', role: user.role
-                })}>Chỉnh sửa</button></td>
+                }) }}>Chỉnh sửa</button></td>
             </tr>)}</tbody></table>{!tabLoading && !error && users.length === 0 &&
               <p className="admin-empty">Không tìm thấy tài khoản.</p>}</div>
         <div className="admin-pagination"><button disabled={page === 0} onClick={() => setPage(page - 1)}>← Trước</button>
@@ -407,11 +415,13 @@ export default function AdminPage() {
       aria-modal="true" aria-labelledby="admin-editor-title"><div className="address-modal-head"><div>
         <p className="card-eyebrow">TÀI KHOẢN</p><h2 id="admin-editor-title">Chỉnh sửa tài khoản</h2></div>
         <button className="modal-close" aria-label="Đóng" onClick={() => setEditor(null)}>×</button></div>
-      <form onSubmit={saveUser}><div className="address-form-grid">
+      <form onSubmit={saveUser}>{editorError && <p className="auth-error" role="alert">{editorError}</p>}
+        <div className="address-form-grid">
         <label>HỌ VÀ TÊN<input required maxLength={150} value={editor.fullName}
-          onChange={(e) => setEditor({ ...editor, fullName: e.target.value })} /></label>
-        <label>SỐ ĐIỆN THOẠI<input maxLength={30} value={editor.phone}
-          onChange={(e) => setEditor({ ...editor, phone: e.target.value })} /></label>
+          onChange={(e) => { setEditor({ ...editor, fullName: e.target.value }); setEditorError('') }} /></label>
+        <label>SỐ ĐIỆN THOẠI<input maxLength={10} inputMode="numeric" pattern="[0-9]{10}"
+          value={editor.phone} onChange={(e) => { setEditor({ ...editor, phone: phoneDigits(e.target.value) })
+            setEditorError('') }} /></label>
         <label>ĐỊA CHỈ EMAIL<input type="email" disabled value={editor.email} /></label>
       </div><div className="address-modal-actions"><button type="button" className="account-secondary"
         onClick={() => setEditor(null)}>Hủy</button><button className="account-primary" disabled={busy} type="submit">
@@ -424,11 +434,12 @@ export default function AdminPage() {
       <form onSubmit={sendInvite}>{inviteError && <p className="auth-error" role="alert">{inviteError}</p>}
         <div className="address-form-grid">
           <label>HỌ VÀ TÊN<input required maxLength={150} value={inviteEditor.fullName}
-            onChange={(e) => setInviteEditor({ ...inviteEditor, fullName: e.target.value })} /></label>
+            onChange={(e) => { setInviteEditor({ ...inviteEditor, fullName: e.target.value }); setInviteError('') }} /></label>
           <label>ĐỊA CHỈ EMAIL<input type="email" required value={inviteEditor.email}
             onChange={(e) => setInviteEditor({ ...inviteEditor, email: e.target.value })} /></label>
-          <label>SỐ ĐIỆN THOẠI<input maxLength={30} value={inviteEditor.phone}
-            onChange={(e) => setInviteEditor({ ...inviteEditor, phone: e.target.value })} /></label>
+          <label>SỐ ĐIỆN THOẠI<input maxLength={10} inputMode="numeric" pattern="[0-9]{10}"
+            value={inviteEditor.phone} onChange={(e) => { setInviteEditor({ ...inviteEditor,
+              phone: phoneDigits(e.target.value) }); setInviteError('') }} /></label>
           <label>VAI TRÒ<select value={inviteEditor.role} onChange={(e) => setInviteEditor({
             ...inviteEditor,
             role: e.target.value

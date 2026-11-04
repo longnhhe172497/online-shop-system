@@ -2,6 +2,7 @@ package com.osmshop.auth;
 
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.never;
 import static org.mockito.ArgumentMatchers.any;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -138,6 +139,39 @@ class AuthAdvancedFlowTests {
                         "challengeToken", json.readTree(nextLogin).get("challengeToken").asText(),
                         "code", recoveryCode))))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void bothMfaMethodsRequireAChoiceAndEmailIsSentOnlyAfterEmailIsSelected() throws Exception {
+        String email = "dual-mfa-" + UUID.randomUUID() + "@example.com";
+        activeUser(email);
+        long userId = jdbc.queryForObject("SELECT id FROM users WHERE email=?", Long.class, email);
+        jdbc.update("UPDATE users SET mfa_enabled=true,mfa_method='BOTH' WHERE id=?", userId);
+
+        String login = mvc.perform(post("/api/auth/browser-login").with(request -> {
+                    request.setRemoteAddr("dual-mfa-" + UUID.randomUUID()); return request; })
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json.writeValueAsString(java.util.Map.of("email", email, "password", "StrongPass123"))))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.mfaRequired").value(true))
+                .andExpect(jsonPath("$.mfaMethod").value("BOTH"))
+                .andReturn().getResponse().getContentAsString();
+        verify(mail, never()).send(any(SimpleMailMessage.class));
+
+        String selected = mvc.perform(post("/api/auth/browser-mfa/select")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json.writeValueAsString(java.util.Map.of(
+                        "challengeToken", json.readTree(login).get("challengeToken").asText(),
+                        "method", "EMAIL"))))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.mfaMethod").value("EMAIL"))
+                .andReturn().getResponse().getContentAsString();
+        ArgumentCaptor<SimpleMailMessage> sent = ArgumentCaptor.forClass(SimpleMailMessage.class);
+        verify(mail).send(sent.capture());
+        String code = sent.getValue().getText().replaceAll("(?s).*?([0-9]{6}).*", "$1");
+        mvc.perform(post("/api/auth/browser-mfa/verify").contentType(MediaType.APPLICATION_JSON)
+                .content(json.writeValueAsString(java.util.Map.of(
+                        "challengeToken", json.readTree(selected).get("challengeToken").asText(),
+                        "code", code))))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.user.email").value(email));
     }
 
     @Test
