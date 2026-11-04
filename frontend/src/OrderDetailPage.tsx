@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { cancelOrder, getOrder, getShipment, retryPayment, simulatePayment, type OrderDetail,
-  type ShipmentTracking } from './api/orders'
+import { cancelOrder, getOrder, getShipment, retryPayment, simulatePayment, type OrderDetail, type ShipmentTracking } from './api/orders'
+import { createReturnRequest } from './api/afterSales'
 import { attemptStatusNames, formatDateTime, formatVnd, orderStatusNames, paymentMethodNames, paymentStatusNames,
   shipmentStatusNames,
   SIMULATION_NOTICE, statusTone } from './orderFormat'
@@ -122,6 +122,12 @@ export default function OrderDetailPage() {
   const [copied, setCopied] = useState(false)
   const [cancelOpen, setCancelOpen] = useState(false)
   const [reason, setReason] = useState('')
+  const [returnReason, setReturnReason] = useState('')
+  const [returnType, setReturnType] = useState<'REFUND_ONLY' | 'RETURN_AND_REFUND'>('RETURN_AND_REFUND')
+  const [returnQuantities, setReturnQuantities] = useState<Record<number, string>>({})
+  const [returnBusy, setReturnBusy] = useState(false)
+  const [returnNotice, setReturnNotice] = useState('')
+  const [returnError, setReturnError] = useState('')
   // Length of the current QR window, captured the first time a code is shown; drives the progress bar.
   const [qrWindow, setQrWindow] = useState<{ expiresAt: string | null; seconds: number }>({ expiresAt: null, seconds: 0 })
 
@@ -154,6 +160,25 @@ export default function OrderDetailPage() {
   async function copyCode(code: string) {
     try { await navigator.clipboard.writeText(code); setCopied(true); window.setTimeout(() => setCopied(false), 1500) }
     catch { /* clipboard unavailable */ }
+  }
+
+  async function submitReturn(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (!order) return
+    const items = order.items.map((item) => ({ orderItemId: item.id, quantity: Number(returnQuantities[item.id] || 0) }))
+      .filter((item) => item.quantity > 0)
+    if (!items.length || items.some((item) => !Number.isInteger(item.quantity)
+      || item.quantity > (order.items.find((line) => line.id === item.orderItemId)?.quantity ?? 0))) {
+      setReturnError('Hãy chọn số lượng hợp lệ cho ít nhất một sản phẩm.')
+      return
+    }
+    setReturnBusy(true); setReturnError(''); setReturnNotice('')
+    try {
+      const result = await createReturnRequest(order.id, { requestType: returnType, reason: returnReason.trim(), items })
+      setReturnNotice(`Đã gửi yêu cầu hậu mãi #${result.id}. Cửa hàng sẽ xem xét yêu cầu của bạn.`)
+      setReturnReason(''); setReturnQuantities({})
+    } catch (failure) { setReturnError(getUiError(failure)) }
+    finally { setReturnBusy(false) }
   }
 
   if (loading) return <ShopLayout><div className="order-page"><div className="checkout-skeleton" role="status">Đang tải đơn hàng…</div></div></ShopLayout>
@@ -272,6 +297,27 @@ export default function OrderDetailPage() {
           <Link className="shop-button ghost block" to="/">Tiếp tục mua sắm</Link></section>
       </aside>
     </div>
+
+    {order.status === 'DELIVERED' && <section className="shop-card" style={{ marginTop: 24 }}>
+      <h2>Yêu cầu trả hàng / hoàn tiền</h2>
+      <p className="side-text muted">Chọn sản phẩm và số lượng muốn yêu cầu. Yêu cầu sẽ được cửa hàng xem xét trước khi xử lý.</p>
+      {returnError && <p className="auth-error" role="alert">{returnError}</p>}
+      {returnNotice && <p className="auth-notice" role="status">{returnNotice}</p>}
+      <form onSubmit={submitReturn}>
+        <label className="cancel-reason">Loại yêu cầu
+          <select value={returnType} onChange={(e) => setReturnType(e.target.value as 'REFUND_ONLY' | 'RETURN_AND_REFUND')}>
+            <option value="RETURN_AND_REFUND">Trả hàng và hoàn tiền</option><option value="REFUND_ONLY">Chỉ hoàn tiền</option>
+          </select></label>
+        <ul className="line-list">{order.items.map((item) => <li key={item.id}>
+          <div className="line-info"><strong>{item.name}</strong><span className="muted">Đã mua: {item.quantity}</span></div>
+          <label>Số lượng<input aria-label={`Số lượng trả ${item.name}`} type="number" min="0" max={item.quantity}
+            value={returnQuantities[item.id] ?? ''} onChange={(e) => setReturnQuantities({ ...returnQuantities, [item.id]: e.target.value })} /></label>
+        </li>)}</ul>
+        <label className="cancel-reason">Lý do yêu cầu<textarea required maxLength={2000} value={returnReason}
+          onChange={(e) => setReturnReason(e.target.value)} /></label>
+        <button type="submit" className="shop-button" disabled={returnBusy}>{returnBusy ? 'Đang gửi…' : 'Gửi yêu cầu'}</button>
+      </form>
+    </section>}
 
     {cancelOpen && <div className="address-modal-backdrop"><section className="address-modal confirm-modal"
       role="dialog" aria-modal="true" aria-labelledby="cancel-order-title">

@@ -5,6 +5,9 @@ import PasswordResetPage from './PasswordResetPage'
 import ProfilePage from './ProfilePage'
 import AdminPage from './AdminPage'
 import WarehousePage from './WarehousePage'
+import ManagerAfterSalesPage from './ManagerAfterSalesPage'
+import CustomerSupportPage from './CustomerSupportPage'
+import SupportTicketsPage from './SupportTicketsPage'
 import DeliveryPage from './DeliveryPage'
 import InternalEntryRedirect from './InternalEntryRedirect'
 import InternalRoleRoute from './InternalRoleRoute'
@@ -43,11 +46,14 @@ export default function App() {
     <Route path="/me/sessions" element={<AccountSessionsPage />} />
     <Route path="/me/email" element={<EmailChangePage />} />
     <Route path="/me/orders" element={<OrdersPage />} />
+    <Route path="/me/support" element={<CustomerSupportPage />} />
     <Route path="/me/orders/:id" element={<OrderDetailPage />} />
     <Route path="/checkout" element={<CheckoutPage />} />
     <Route path="/email-change/confirm" element={<EmailChangeConfirmPage />} />
     <Route path="/admin/*" element={<AdminPage />} />
+    <Route path="/manager/after-sales" element={<InternalRoleRoute role="MANAGER"><ManagerAfterSalesPage /></InternalRoleRoute>} />
     <Route path="/manager/*" element={<AdminPage />} />
+    <Route path="/support/tickets" element={<InternalRoleRoute role="SUPPORT"><SupportTicketsPage /></InternalRoleRoute>} />
     <Route path="/support/*" element={<AdminPage />} />
     <Route path="/warehouse/*" element={<InternalRoleRoute role="WAREHOUSE"><WarehousePage /></InternalRoleRoute>} />
     <Route path="/delivery/*" element={<InternalRoleRoute role="DELIVERY"><DeliveryPage /></InternalRoleRoute>} />

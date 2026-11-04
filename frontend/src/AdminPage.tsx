@@ -466,7 +466,9 @@ function Dashboard({ isAdmin, roleName, onNavigate }: {
     <div className="dashboard-intro"><div><span className="dashboard-tag">BẢN XEM TRƯỚC</span>
       <h2>Chào mừng đến với khu nội bộ</h2>
       <p>Đây là bố cục tổng quan tĩnh. Các chỉ số sẽ lấy dữ liệu thật khi những phần đơn hàng, kho và báo cáo được triển khai.</p></div>
-      {isAdmin && <button type="button" className="account-primary" onClick={() => onNavigate('users')}>Quản lý tài khoản →</button>}</div>
+      {isAdmin && <button type="button" className="account-primary" onClick={() => onNavigate('users')}>Quản lý tài khoản →</button>}
+      {!isAdmin && roleName === 'Quản lý' && <Link className="account-primary" to="/manager/after-sales">Hậu mãi & báo cáo →</Link>}
+      {!isAdmin && roleName === 'Nhân viên hỗ trợ' && <Link className="account-primary" to="/support/tickets">Hàng đợi ticket →</Link>}</div>
     <div className="dashboard-metrics" aria-label="Chỉ số dự kiến">
       {[['Tài khoản', 'Sẽ cập nhật', 'Thông tin người dùng'],
       ['Đơn hàng', 'Sẽ cập nhật', 'Tình trạng xử lý'],
