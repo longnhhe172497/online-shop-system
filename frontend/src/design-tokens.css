@@ -1,0 +1,58 @@
+:root {
+  --forme-bg: #faf8f3;
+  --forme-paper: #ffffff;
+  --forme-ink: #332d29;
+  --forme-muted: #766f69;
+  --forme-line: #ddd7cf;
+  --forme-line-strong: #c8c0b7;
+  --forme-blue: #344bc5;
+  --forme-blue-dark: #263aa6;
+  --forme-blue-soft: #e9edff;
+  --forme-orange: #d75227;
+  --forme-orange-soft: #fff0e8;
+  --forme-green: #267c5b;
+  --forme-green-soft: #e5f4ed;
+  --forme-navy: #282b52;
+  --forme-cream: #f2e8c9;
+  --forme-red: #ba3341;
+  --forme-red-soft: #fdebed;
+  --forme-shadow-sm: 0 4px 14px rgba(45, 39, 33, .06);
+  --forme-shadow: 0 12px 32px rgba(45, 39, 33, .08);
+  --forme-radius-sm: 3px;
+  --forme-radius: 5px;
+  --forme-radius-lg: 10px;
+  --forme-serif: 'Playfair Display', Georgia, 'Times New Roman', serif;
+  --forme-sans: Manrope, 'Segoe UI', Arial, sans-serif;
+
+  /* Backwards-compatible storefront aliases while all screens move to one system. */
+  --fs-bg: var(--forme-bg);
+  --fs-paper: var(--forme-paper);
+  --fs-ink: var(--forme-ink);
+  --fs-muted: var(--forme-muted);
+  --fs-line: var(--forme-line);
+  --fs-blue: var(--forme-blue);
+  --fs-orange: var(--forme-orange);
+  --fs-green: var(--forme-green);
+  --fs-navy: var(--forme-navy);
+  --fs-cream: var(--forme-cream);
+  --fs-red: var(--forme-red);
+  --fs-serif: var(--forme-serif);
+  --fs-sans: var(--forme-sans);
+}
+
+html {
+  background: var(--forme-bg);
+  color: var(--forme-ink);
+  font-family: var(--forme-sans);
+}
+
+body {
+  background: var(--forme-bg);
+  color: var(--forme-ink);
+}
+
+::selection {
+  background: var(--forme-blue);
+  color: #fff;
+}
+

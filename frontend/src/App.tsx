@@ -23,6 +23,8 @@ import OrderDetailPage from './OrderDetailPage'
 import StorefrontPage from './StorefrontPage'
 import ProductDetailPage from './ProductDetailPage'
 import CartPage from './CartPage'
+import './storeFonts'
+import './design-tokens.css'
 import './App.css'
 import './mockup-theme.css'
 

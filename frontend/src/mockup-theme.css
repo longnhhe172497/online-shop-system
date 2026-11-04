@@ -1,27 +1,12 @@
-/* The account/auth/internal surfaces follow forme-html-mockups/css/site.css.
-   Noto Serif covers Vietnamese headings; the FORME wordmark retains DM Serif. */
-@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Manrope:wght@400;500;600;700;800&family=Noto+Serif:wght@400;500;600;700&display=swap');
-
-:root {
-  --forme-bg: #faf8f3;
-  --forme-paper: #fff;
-  --forme-ink: #332d29;
-  --forme-muted: #766f69;
-  --forme-line: #ddd7cf;
-  --forme-blue: #344bc5;
-  --forme-orange: #d75227;
-  --forme-green: #267c5b;
-  --forme-navy: #282b52;
-  --forme-red: #ba3341;
-  --forme-shadow: 0 12px 32px rgba(45, 39, 33, .08);
-}
+/* Account, authentication and internal surfaces follow forme-html-mockups/css/site.css.
+   Shared tokens and Vietnamese-capable local fonts live in design-tokens.css. */
 
 .forme-page,
 .internal-shell,
 .internal-access {
   background: var(--forme-bg);
   color: var(--forme-ink);
-  font-family: Manrope, 'Segoe UI', Arial, sans-serif;
+  font-family: var(--forme-sans);
   font-size: 14px;
 }
 
@@ -81,7 +66,7 @@
 
 .forme-header .brand, .internal-logo, .forme-footer strong {
   color: var(--forme-ink);
-  font-family: 'DM Serif Display', Georgia, serif;
+  font-family: var(--forme-serif);
   font-weight: 400;
   letter-spacing: 0;
 }
@@ -129,7 +114,7 @@
 .auth-card-wide { align-self: flex-start; }
 .auth-card h1, .verify-card h1 {
   color: var(--forme-ink);
-  font-family: 'Noto Serif', Georgia, serif;
+  font-family: var(--forme-serif);
   font-size: clamp(36px, 4vw, 46px);
   font-weight: 500;
   letter-spacing: -.03em;
