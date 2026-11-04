@@ -110,6 +110,7 @@ it('saves a changed setting but not an unchanged value', async () => {
 
 it('applies audit filters only when the filter form is submitted', async () => {
   openPage('/admin/audit')
+  await waitFor(() => expect(listAudit).toHaveBeenCalledTimes(1))
   await screen.findByText('Chưa có nhật ký.')
   fireEvent.change(screen.getByRole('textbox', { name: 'Lọc theo email người thực hiện' }),
     { target: { value: 'admin@example.com' } })
