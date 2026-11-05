@@ -28,6 +28,7 @@ import './design-tokens.css'
 import './App.css'
 import './mockup-theme.css'
 import './account-theme.css'
+import './internal-theme.css'
 
 export default function App() {
   return <><SessionIdleNotice /><Routes>

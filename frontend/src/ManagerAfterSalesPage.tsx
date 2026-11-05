@@ -19,7 +19,9 @@ const weekAgo = () => { const d = new Date(); d.setDate(d.getDate() - 6); return
 
 export default function ManagerAfterSalesPage() {
   const [tab, setTab] = useState<Tab>('returns')
-  return <StaffLayout eyebrow="Quản lý vận hành" title="Hậu mãi & báo cáo" roleName="Quản lý"
+  return <StaffLayout eyebrow="Quản lý vận hành" title="Hậu mãi & báo cáo"
+    subtitle="Duyệt yêu cầu trả hàng, kiểm soát hoàn tiền và đối soát giao dịch."
+    roleName="Quản lý"
     tabs={NAV} active={tab} onNavigate={setTab}>
     {tab === 'returns' ? <ReturnsPanel /> : tab === 'refunds' ? <RefundsPanel /> : <ReportsPanel />}
   </StaffLayout>

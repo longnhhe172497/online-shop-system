@@ -6,7 +6,7 @@ import { formatDateTime } from './logisticsUi'
 import './logistics.css'
 
 type Tab='queue'; const NAV:StaffTab<Tab>[]=[{id:'queue',label:'Ticket hỗ trợ'}]
-export default function SupportTicketsPage(){return <StaffLayout eyebrow="Chăm sóc khách hàng" title="Hỗ trợ khách hàng" roleName="Nhân viên hỗ trợ" tabs={NAV} active="queue" onNavigate={()=>{}}><Queue/></StaffLayout>}
+export default function SupportTicketsPage(){return <StaffLayout eyebrow="Chăm sóc khách hàng" title="Hỗ trợ khách hàng" subtitle="Tiếp nhận, phản hồi và theo dõi yêu cầu hỗ trợ của khách hàng." roleName="Nhân viên hỗ trợ" tabs={NAV} active="queue" onNavigate={()=>{}}><Queue/></StaffLayout>}
 function Queue(){
  const [rows,setRows]=useState<SupportTicket[]>([]);const [drafts,setDrafts]=useState<Record<number,string>>({});const [error,setError]=useState('');const [busy,setBusy]=useState<number|null>(null)
  const load=useCallback(async()=>{try{setRows((await listTicketQueue()).items);setError('')}catch(e){setError(errorMessage(e))}},[])

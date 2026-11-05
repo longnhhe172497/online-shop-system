@@ -198,6 +198,7 @@ export default function DeliveryPage() {
     <StaffLayout
       eyebrow="Giao vận"
       title="Hàng đợi giao hàng"
+      subtitle="Nhận đơn giao, cập nhật kết quả và theo dõi các lần giao chưa thành công."
       roleName="Nhân viên giao hàng"
       tabs={NAV}
       active={tab}
