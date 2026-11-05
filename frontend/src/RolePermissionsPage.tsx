@@ -78,7 +78,7 @@ export default function RolePermissionsPage() {
       <div className="permission-role-tabs" role="tablist" aria-label="Chọn vai trò">
         {matrix.roles.map((item) => <button key={item.role} type="button" role="tab"
           aria-selected={role === item.role} className={role === item.role ? 'active' : ''}
-          onClick={() => selectRole(item.role)}>{roleNames[item.role] ?? item.role}
+          onClick={() => selectRole(item.role)}>{roleNames[item.role] ?? 'Vai trò chưa xác định'}
           <span>{item.permissions.length} quyền</span></button>)}
       </div>
       <div className="permission-summary"><strong>{roleNames[role]}</strong>

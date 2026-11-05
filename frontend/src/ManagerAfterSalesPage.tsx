@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState } from 'react'
 import StaffLayout, { type StaffTab } from './StaffLayout'
 import { formatDateTime, formatVnd } from './logisticsUi'
 import { errorMessage } from './api/warehouseDelivery'
+import { inspectionResultLabel, refundMethodLabel, refundReasonLabel, refundStatusLabel, refundStatusTone,
+  returnStatusLabel, returnStatusTone } from './afterSalesUi'
 import {
   completeRefund, decideReturn, downloadTransactionReport, getTransactionReport,
   listRefunds, listReturns, type Refund, type ReportSummary, type ReturnRequest,
@@ -43,20 +45,22 @@ function ReturnsPanel() {
   }
   return <section>
     {error && <div className="lg-msg err" role="alert">{error}</div>}
-    <div className="lg-toolbar"><span>{rows.length} yêu cầu trong danh sách</span><button className="lg-btn ghost" onClick={() => void load()}>Làm mới</button></div>
+    <div className="lg-toolbar"><span>{rows.length} yêu cầu trong danh sách</span><button type="button" className="lg-btn ghost" onClick={() => void load()}>Làm mới</button></div>
     {loading ? <div className="lg-empty">Đang tải yêu cầu…</div> : rows.length === 0 ? <div className="lg-empty">Chưa có yêu cầu trả hàng.</div> : rows.map((r) => <article className="lg-panel" key={r.id}>
-      <div className="lg-toolbar"><strong>#{r.id} · {r.orderCode}</strong><span className="lg-chip lg-info">{r.status}</span><span>{formatDateTime(r.createdAt)}</span></div>
+      <div className="lg-toolbar"><strong>#{r.id} · {r.orderCode}</strong>
+        <span className={`lg-chip ${returnStatusTone(r.status)}`}>{returnStatusLabel(r.status)}</span>
+        <span>{formatDateTime(r.createdAt)}</span></div>
       <p><strong>{r.customerName}</strong> · {r.requestType === 'REFUND_ONLY' ? 'Chỉ hoàn tiền' : 'Trả hàng và hoàn tiền'}</p>
       <p>{r.reason}</p>
       {r.evidenceUrl && <p><a href={r.evidenceUrl} target="_blank" rel="noreferrer">Xem minh chứng</a></p>}
       <ul>{r.items.map((i) => <li key={i.id}>{i.productName} ({i.sku}) × {i.requestedQuantity} · {formatVnd(i.refundAmount)}
-        {i.inspectionResult && <small>Kiểm tra: {i.inspectionResult}; nhận {i.receivedQuantity}; nhập kho {i.restockQuantity}</small>}</li>)}</ul>
+        {i.inspectionResult && <small>Kiểm tra: {inspectionResultLabel(i.inspectionResult)}; nhận {i.receivedQuantity}; nhập kho {i.restockQuantity}</small>}</li>)}</ul>
       {r.decisionNote && <p><small>Ghi chú: {r.decisionNote}</small></p>}
       {(r.status === 'REQUESTED' || r.status === 'UNDER_REVIEW' || r.status === 'INSPECTED') && <div className="lg-actions">
-        <button className="lg-btn primary" disabled={busy === r.id} onClick={() => void decide(r, true)}>
+        <button type="button" className="lg-btn primary" disabled={busy === r.id} onClick={() => void decide(r, true)}>
           {r.requestType === 'RETURN_AND_REFUND' && r.status !== 'INSPECTED' ? 'Cho phép trả hàng' : 'Duyệt hoàn tiền'}
         </button>
-        <button className="lg-btn danger" disabled={busy === r.id} onClick={() => void decide(r, false)}>Từ chối</button>
+        <button type="button" className="lg-btn danger" disabled={busy === r.id} onClick={() => void decide(r, false)}>Từ chối</button>
       </div>}
     </article>)}
   </section>
@@ -76,8 +80,11 @@ function RefundsPanel() {
     <div className="lg-msg">Thanh toán của dự án hiện đang mô phỏng. Nút xác nhận chỉ ghi nhận hoàn tiền đã được xử lý bên ngoài; hệ thống không chuyển tiền thật.</div>
     {error && <div className="lg-msg err" role="alert">{error}</div>}
     <div className="lg-tablewrap"><table className="lg-table"><thead><tr><th>Mã hoàn tiền</th><th>Đơn hàng</th><th>Lý do</th><th>Phương thức</th><th className="num">Số tiền</th><th>Trạng thái</th><th /></tr></thead>
-      <tbody>{rows.map((r) => <tr key={r.id}><td>#{r.id}</td><td>{r.orderCode}</td><td>{r.reason}</td><td>{r.method}</td><td className="num">{formatVnd(r.amount)}</td><td>{r.status}</td>
-        <td><button className="lg-btn primary" disabled={busy === r.id} onClick={() => void complete(r.id)}>Ghi nhận hoàn tất</button></td></tr>)}</tbody></table>
+      <tbody>{rows.map((r) => <tr key={r.id}><td>#{r.id}</td><td>{r.orderCode}</td><td>{refundReasonLabel(r.reason)}</td>
+        <td>{refundMethodLabel(r.method)}</td><td className="num">{formatVnd(r.amount)}</td>
+        <td><span className={`lg-chip ${refundStatusTone(r.status)}`}>{refundStatusLabel(r.status)}</span></td>
+        <td><button type="button" className="lg-btn primary" disabled={busy === r.id}
+          onClick={() => void complete(r.id)}>Ghi nhận hoàn tất</button></td></tr>)}</tbody></table>
       {rows.length === 0 && <div className="lg-empty">Không có khoản hoàn tiền đang chờ.</div>}</div>
   </section>
 }
@@ -96,8 +103,9 @@ function ReportsPanel() {
   return <section>
     <div className="lg-toolbar"><label>Từ ngày <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} /></label>
       <label>Đến ngày <input type="date" value={to} onChange={(e) => setTo(e.target.value)} /></label>
-      <button className="lg-btn ghost" onClick={() => void load()}>Xem báo cáo</button>
-      <button className="lg-btn primary" disabled={!data} onClick={() => void downloadTransactionReport(from, to)}>Xuất CSV</button></div>
+      <button type="button" className="lg-btn ghost" onClick={() => void load()}>Xem báo cáo</button>
+      <button type="button" className="lg-btn primary" disabled={!data}
+        onClick={() => void downloadTransactionReport(from, to)}>Xuất CSV</button></div>
     {error && <div className="lg-msg err" role="alert">{error}</div>}
     {loading ? <div className="lg-empty">Đang tổng hợp giao dịch…</div> : data && <>
       <div className="lg-split">
@@ -108,7 +116,7 @@ function ReportsPanel() {
           <div className="lg-summary-row"><strong>Đã hoàn tiền</strong><b>{formatVnd(data.refundedAmount)}</b></div>
           <div className="lg-summary-row"><strong>Số lần hoàn tiền</strong><b>{data.refundCount}</b></div>
         </div>
-        <div className="lg-panel"><h3>Định nghĩa số liệu</h3><p>Số đơn được nhóm theo ngày tạo đơn. Doanh thu đã thu và số đơn thanh toán được nhóm theo thời điểm QR thanh toán thành công hoặc COD được thu. Hoàn tiền chỉ tính bản ghi COMPLETED.</p><p>Thời gian báo cáo: Asia/Ho_Chi_Minh.</p></div>
+        <div className="lg-panel"><h3>Định nghĩa số liệu</h3><p>Số đơn được nhóm theo ngày tạo đơn. Doanh thu đã thu và số đơn thanh toán được nhóm theo thời điểm QR thanh toán thành công hoặc COD được thu. Hoàn tiền chỉ tính các giao dịch đã hoàn tất.</p><p>Múi giờ báo cáo: Việt Nam (UTC+7).</p></div>
       </div>
       <div className="lg-tablewrap"><table className="lg-table"><thead><tr><th>Ngày</th><th className="num">Đơn</th><th className="num">Đã thanh toán</th><th className="num">Doanh thu đã thu</th><th className="num">Hoàn tiền</th><th className="num">Lượt hoàn</th></tr></thead>
         <tbody>{data.daily.map((d) => <tr key={d.date}><td>{d.date}</td><td className="num">{d.orderCount}</td><td className="num">{d.paidOrderCount}</td><td className="num">{formatVnd(d.grossRevenue)}</td><td className="num">{formatVnd(d.refundedAmount)}</td><td className="num">{d.refundCount}</td></tr>)}</tbody></table></div>

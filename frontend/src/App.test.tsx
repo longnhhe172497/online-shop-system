@@ -107,6 +107,12 @@ describe('App', () => {
     expect(await screen.findByText('Sample product')).toBeInTheDocument()
   })
 
+  it('renders a localized recovery page for an unknown route', () => {
+    renderAt('/duong-dan-khong-ton-tai')
+    expect(screen.getByRole('heading', { name: 'Trang không tồn tại' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'VỀ TRANG SẢN PHẨM' })).toHaveAttribute('href', '/')
+  })
+
   it('switches from sign in to registration', () => {
     renderAt('/auth')
     fireEvent.click(screen.getByRole('tab', { name: 'ĐĂNG KÝ' }))
@@ -266,7 +272,7 @@ describe('App', () => {
     vi.mocked(listAudit).mockResolvedValue({ items: [], page: 0, size: 20, totalItems: 0, totalPages: 0 })
     renderAt('/internal')
     expect(await screen.findByRole('heading', { name: 'Tổng quan' })).toBeInTheDocument()
-    expect(screen.getByText('BẢN XEM TRƯỚC')).toBeInTheDocument()
+    expect(screen.getByText('TRUNG TÂM VẬN HÀNH')).toBeInTheDocument()
     expect(listUsers).not.toHaveBeenCalled()
     fireEvent.click(within(screen.getByRole('navigation', { name: 'Điều hướng nội bộ' }))
       .getByRole('button', { name: 'Tài khoản' }))

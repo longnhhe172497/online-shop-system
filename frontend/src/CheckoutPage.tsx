@@ -85,7 +85,7 @@ export default function CheckoutPage() {
       <Link className="shop-button" to="/">Về cửa hàng</Link></section>}
     {!loading && loadProblem === 'failed' && <section className="shop-card empty-state"><Icon name="x" size={36} />
       <h2>Không tải được giỏ hàng</h2>
-      <p>Máy chủ chưa phản hồi đúng. Hãy kiểm tra backend đang chạy bản mới nhất rồi thử lại.</p>
+      <p>Kết nối đang bị gián đoạn. Vui lòng thử lại sau ít phút.</p>
       <button type="button" className="shop-button" onClick={() => void load()}>Thử lại</button></section>}
     {empty && <section className="shop-card empty-state"><Icon name="cart" size={40} />
       <h2>Giỏ hàng đang trống</h2><p>Hãy thêm sản phẩm vào giỏ trước khi thanh toán.</p>

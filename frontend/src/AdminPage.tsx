@@ -82,7 +82,7 @@ const pageTitles: Record<Tab, string> = {
   products: 'Quản lý sản phẩm', categories: 'Quản lý danh mục', orders: 'Đơn hàng', reviews: 'Đánh giá sản phẩm'
 }
 const pageDescriptions: Record<Tab, string> = {
-  dashboard: 'Một nơi theo dõi hoạt động của hệ thống khi các tính năng được hoàn thiện.',
+  dashboard: 'Truy cập nhanh các khu vực vận hành và theo dõi hoạt động của hệ thống.',
   users: 'Quản lý tài khoản, vai trò và trạng thái truy cập.',
   invitations: 'Mời thành viên mới và theo dõi lời mời đã gửi.',
   permissions: 'Kiểm soát các thao tác mà mỗi vai trò nội bộ được phép thực hiện.',
@@ -287,8 +287,8 @@ export default function AdminPage() {
             role: detail.user.role
           }) }}>Chỉnh sửa hồ sơ</button></div>
         <div className="dashboard-metrics">
-          <div className="dashboard-metric"><span>Vai trò</span><strong>{roles[detail.user.role] ?? detail.user.role}</strong></div>
-          <div className="dashboard-metric"><span>Trạng thái</span><strong>{statuses[detail.user.status] ?? detail.user.status}</strong></div>
+          <div className="dashboard-metric"><span>Vai trò</span><strong>{roles[detail.user.role] ?? 'Chưa xác định'}</strong></div>
+          <div className="dashboard-metric"><span>Trạng thái</span><strong>{statuses[detail.user.status] ?? 'Chưa xác định'}</strong></div>
           <div className="dashboard-metric"><span>Phiên đang hoạt động</span><strong>{detail.sessions.length}</strong></div>
           <div className="dashboard-metric"><span>Ngày tạo</span>
             <strong>{new Date(detail.user.createdAt).toLocaleDateString('vi-VN')}</strong></div></div>
@@ -356,8 +356,8 @@ export default function AdminPage() {
         <div className="admin-table-wrap"><table className="address-table admin-table"><thead><tr>
           <th>NGƯỜI ĐƯỢC MỜI</th><th>VAI TRÒ</th><th>GỬI LÚC</th><th>TRẠNG THÁI</th><th>THAO TÁC</th></tr></thead><tbody>
             {invitations.map((item) => <tr key={item.id}><td><strong>{item.fullName}</strong><span>{item.email}</span></td>
-              <td>{roles[item.role] ?? item.role}</td><td>{new Date(item.createdAt).toLocaleString('vi-VN')}</td>
-              <td>{invitationStatuses[item.status] ?? item.status}
+              <td>{roles[item.role] ?? 'Chưa xác định'}</td><td>{new Date(item.createdAt).toLocaleString('vi-VN')}</td>
+              <td>{invitationStatuses[item.status] ?? 'Đang cập nhật'}
                 {item.status === 'SENT' && ` · Hết hạn ${new Date(item.expiresAt).toLocaleString('vi-VN')}`}</td>
               <td>{(item.status === 'FAILED' || item.status === 'EXPIRED' || item.status === 'STALLED') &&
                 <button className="admin-link" disabled={busy} onClick={() => void changeInvitation(item.id, 'resend')}>
@@ -474,17 +474,17 @@ function Dashboard({ isAdmin, roleName, onNavigate }: {
   onNavigate: (tab: Tab) => void
 }) {
   return <div className="internal-dashboard">
-    <div className="dashboard-intro"><div><span className="dashboard-tag">BẢN XEM TRƯỚC</span>
-      <h2>Chào mừng đến với khu nội bộ</h2>
-      <p>Đây là bố cục tổng quan tĩnh. Các chỉ số sẽ lấy dữ liệu thật khi những phần đơn hàng, kho và báo cáo được triển khai.</p></div>
+    <div className="dashboard-intro"><div><span className="dashboard-tag">TRUNG TÂM VẬN HÀNH</span>
+      <h2>Chào mừng trở lại</h2>
+      <p>Chọn khu vực cần xử lý hoặc dùng các lối tắt để tiếp tục công việc của bạn.</p></div>
       {isAdmin && <button type="button" className="account-primary" onClick={() => onNavigate('users')}>Quản lý tài khoản →</button>}
       {!isAdmin && roleName === 'Quản lý' && <Link className="account-primary" to="/manager/after-sales">Hậu mãi & báo cáo →</Link>}
-      {!isAdmin && roleName === 'Nhân viên hỗ trợ' && <Link className="account-primary" to="/support/tickets">Hàng đợi ticket →</Link>}</div>
-    <div className="dashboard-metrics" aria-label="Chỉ số dự kiến">
-      {[['Tài khoản', 'Sẽ cập nhật', 'Thông tin người dùng'],
-      ['Đơn hàng', 'Sẽ cập nhật', 'Tình trạng xử lý'],
-      ['Sản phẩm', 'Sẽ cập nhật', 'Danh mục đang bán'],
-      ['Doanh thu', 'Sẽ cập nhật', 'Tổng hợp theo kỳ']].map(([name, value, description]) =>
+      {!isAdmin && roleName === 'Nhân viên hỗ trợ' && <Link className="account-primary" to="/support/tickets">Hàng đợi hỗ trợ →</Link>}</div>
+    <div className="dashboard-metrics" aria-label="Khu vực nghiệp vụ">
+      {[['Tài khoản', 'Quản lý', 'Vai trò và trạng thái'],
+      ['Đơn hàng', 'Theo dõi', 'Tình trạng xử lý'],
+      ['Sản phẩm', 'Danh mục', 'Nội dung đang bán'],
+      ['Doanh thu', 'Báo cáo', 'Tổng hợp theo kỳ']].map(([name, value, description]) =>
         <div className="dashboard-metric" key={name}><span>{name}</span><strong>{value}</strong>
           <small>{description}</small></div>)}
     </div>
@@ -492,11 +492,11 @@ function Dashboard({ isAdmin, roleName, onNavigate }: {
       <div><p className="card-eyebrow">THEO DÕI HOẠT ĐỘNG</p><h3>Hoạt động gần đây</h3></div>
       {isAdmin && <button type="button" onClick={() => onNavigate('audit')}>Xem nhật ký →</button>}</div>
       <div className="dashboard-placeholder"><span aria-hidden="true">◷</span>
-        <strong>Chưa có dữ liệu tổng quan</strong><p>Nhật ký và các sự kiện mới sẽ xuất hiện tại đây sau khi kết nối dashboard.</p></div>
+        <strong>Chưa có hoạt động mới</strong><p>Những thay đổi và thao tác quản trị gần đây sẽ được ghi nhận trong nhật ký hệ thống.</p></div>
     </section><section className="dashboard-panel"><div className="dashboard-panel-head">
       <div><p className="card-eyebrow">KHÔNG GIAN LÀM VIỆC</p><h3>{isAdmin ? 'Công cụ quản trị' : 'Công việc của bạn'}</h3></div></div>
         {!isAdmin && <div className="dashboard-placeholder"><strong>{roleName}</strong>
-          <p>Các chức năng nghiệp vụ dành cho vai trò này sẽ được bổ sung khi nhóm triển khai phần tương ứng.</p></div>}
+          <p>Dùng thanh điều hướng phía trên để mở các chức năng được cấp cho vai trò của bạn.</p></div>}
         {isAdmin && <>
           <button type="button" className="dashboard-quick-link" onClick={() => onNavigate('users')}>
             <span>01</span><div><strong>Tài khoản</strong><small>Thêm, sửa vai trò và trạng thái</small></div><b>→</b></button>
