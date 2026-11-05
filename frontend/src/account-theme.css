@@ -1,0 +1,195 @@
+/* Phase 2: authentication and customer-account surfaces on the shared FORME foundation. */
+.auth-layout, .account-layout {
+  background: var(--forme-bg);
+  color: var(--forme-ink);
+  font-family: var(--forme-sans);
+  min-height: 100vh;
+}
+
+.auth-layout .auth-main {
+  background:
+    radial-gradient(circle at 8% 22%, rgba(242, 232, 201, .72) 0 110px, transparent 111px),
+    radial-gradient(circle at 91% 76%, rgba(233, 237, 255, .8) 0 150px, transparent 151px),
+    var(--forme-bg);
+  min-height: 680px;
+  padding: 64px 20px 96px;
+}
+
+.auth-layout .auth-card,
+.auth-layout .verify-card,
+.auth-layout .auth-result-card {
+  border-radius: var(--forme-radius);
+  box-shadow: var(--forme-shadow);
+  max-width: 500px;
+  padding: 34px;
+}
+
+.auth-layout .auth-card h1,
+.auth-layout .verify-card h1 {
+  font-family: var(--forme-serif);
+  font-size: clamp(40px, 5vw, 54px);
+  font-weight: 500;
+  line-height: 1.08;
+}
+
+.auth-layout .auth-tabs { margin: -8px 0 28px; }
+.auth-layout .auth-tabs button { background: transparent; border-left: 0; border-right: 0; border-top: 0; }
+.auth-layout .auth-lead { font-size: 14px; line-height: 1.65; }
+.auth-layout .auth-card form { display: grid; gap: 17px; }
+.auth-layout .auth-card form > label { margin: 0; }
+.auth-layout .auth-card input { padding: 11px 13px; width: 100%; }
+.auth-layout .password-input { position: relative; }
+.auth-layout .password-input input { padding-right: 62px; }
+.auth-layout .password-input button {
+  background: transparent;
+  border: 0;
+  bottom: 0;
+  color: var(--forme-blue);
+  font-size: 11px;
+  font-weight: 800;
+  padding: 0 14px;
+  position: absolute;
+  right: 0;
+  top: 0;
+}
+.auth-layout .password-hint { color: var(--forme-muted); font-size: 12px; line-height: 1.55; margin: -7px 0 0; }
+.auth-layout .auth-submit,
+.auth-layout .auth-cta-link {
+  color: #fff;
+  justify-content: center;
+  text-align: center;
+  transition: background .18s ease, border-color .18s ease, transform .18s ease;
+  width: 100%;
+}
+.auth-layout .auth-submit:hover:not(:disabled), .auth-layout .auth-cta-link:hover {
+  background: var(--forme-blue-dark);
+  border-color: var(--forme-blue-dark);
+  color: #fff;
+  transform: translateY(-1px);
+}
+.auth-layout .auth-secondary { color: var(--forme-blue); }
+.auth-layout .auth-divider { margin: 22px 0; }
+.auth-layout .google-login-note { color: var(--forme-muted); font-size: 11px; line-height: 1.5; text-align: center; }
+.auth-layout .auth-links { border-top: 1px solid var(--forme-line); margin-top: 24px; padding-top: 18px; }
+.auth-layout .auth-help { margin: 20px 0 0; text-align: center; }
+.auth-layout .auth-error, .auth-layout .auth-notice {
+  border-radius: var(--forme-radius-sm);
+  font-size: 13px;
+  line-height: 1.55;
+  margin: 16px 0;
+  padding: 12px 14px;
+}
+.auth-layout .auth-error { background: var(--forme-red-soft); border-left: 3px solid var(--forme-red); }
+.auth-layout .auth-step-list { border-color: var(--forme-line); }
+
+.account-layout .account-workspace {
+  margin: 0 auto;
+  max-width: 1450px;
+  padding: 52px 32px 96px;
+  width: 100%;
+}
+.account-layout .account-workspace-content { min-width: 0; width: 100%; }
+.account-layout .account-heading { display: flex; justify-content: space-between; margin-bottom: 25px; }
+.account-layout .account-heading h1 {
+  font-family: var(--forme-serif);
+  font-size: clamp(40px, 5vw, 58px);
+  font-weight: 500;
+  margin: 5px 0 8px;
+}
+.account-layout .account-heading p { line-height: 1.6; margin: 0; }
+.account-layout .account-nav-panel {
+  scrollbar-color: var(--forme-line-strong) transparent;
+  scrollbar-width: thin;
+}
+.account-layout .account-nav-panel a { color: var(--forme-muted); }
+.account-layout .account-nav-panel a.active,
+.account-layout .account-nav-panel a:hover { color: var(--forme-blue); }
+.account-layout .account-card {
+  border-radius: var(--forme-radius);
+  box-shadow: var(--forme-shadow-sm);
+  padding: 26px;
+}
+.account-layout .account-card h2 {
+  font-family: var(--forme-serif);
+  font-size: 28px;
+  font-weight: 500;
+}
+.account-layout .account-primary {
+  background: var(--forme-blue);
+  border-color: var(--forme-blue);
+  color: #fff;
+  transition: background .18s ease, transform .18s ease;
+}
+.account-layout .account-primary:hover:not(:disabled) {
+  background: var(--forme-blue-dark);
+  border-color: var(--forme-blue-dark);
+  color: #fff;
+  transform: translateY(-1px);
+}
+.account-layout .account-secondary {
+  border: 1px solid var(--forme-line);
+  border-radius: var(--forme-radius-sm);
+  color: var(--forme-ink);
+  min-height: 42px;
+  padding: 10px 15px;
+}
+.account-layout .account-secondary:hover:not(:disabled) { border-color: var(--forme-ink); }
+.account-layout .account-form input,
+.account-layout .address-form-grid input,
+.account-layout .cancel-reason textarea { border-radius: var(--forme-radius-sm); }
+.account-layout .account-form input:focus,
+.account-layout .address-form-grid input:focus { box-shadow: 0 0 0 3px rgba(52, 75, 197, .1); }
+.account-layout .auth-error, .account-layout .auth-notice {
+  border-radius: var(--forme-radius-sm);
+  font-size: 13px;
+  line-height: 1.55;
+  padding: 12px 14px;
+}
+.account-layout .auth-error { background: var(--forme-red-soft); border-left: 3px solid var(--forme-red); }
+.account-layout .profile-summary { box-shadow: var(--forme-shadow-sm); }
+.account-layout .profile-summary .account-avatar { font-family: var(--forme-sans); }
+.account-layout .security-grid { align-items: start; }
+.account-layout .security-panel > p:not(.card-eyebrow) { color: var(--forme-muted); line-height: 1.7; }
+.account-layout .security-panel .account-form {
+  border-top: 1px solid var(--forme-line);
+  margin-top: 22px;
+  padding-top: 20px;
+}
+.account-layout .mfa-recovery-panel { background: var(--forme-orange-soft); border: 1px solid #f4cfbd; }
+.account-layout .totp-secret { background: #f6f3ee; border: 1px solid var(--forme-line); overflow-wrap: anywhere; }
+.account-layout .session-row { border-color: var(--forme-line); }
+.account-layout .session-icon {
+  align-items: center;
+  background: var(--forme-blue-soft);
+  border-radius: var(--forme-radius);
+  color: var(--forme-blue);
+  display: flex;
+  flex: 0 0 auto;
+  height: 42px;
+  justify-content: center;
+  width: 42px;
+}
+.account-layout .session-icon svg { fill: none; height: 21px; stroke: currentColor; stroke-width: 1.7; width: 21px; }
+.account-layout .address-table-wrap { border: 1px solid var(--forme-line); border-radius: var(--forme-radius); overflow-x: auto; }
+.account-layout .address-table tbody tr { transition: background .15s ease; }
+.account-layout .address-table tbody tr:hover { background: #fcfbf8; }
+.account-layout .address-modal { border-radius: var(--forme-radius); max-height: calc(100vh - 40px); overflow-y: auto; }
+.account-layout .account-footer-actions { border-top: 1px solid var(--forme-line); padding-top: 24px; }
+
+@media (max-width: 900px) {
+  .account-layout .profile-layout { grid-template-columns: 1fr; }
+  .account-layout .security-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 600px) {
+  .auth-layout .auth-main { min-height: 0; padding: 32px 14px 64px; }
+  .auth-layout .auth-card, .auth-layout .verify-card, .auth-layout .auth-result-card { padding: 23px 20px; }
+  .auth-layout .auth-card h1, .auth-layout .verify-card h1 { font-size: 40px; }
+  .auth-layout .auth-links { align-items: flex-start; flex-direction: column; }
+  .account-layout .account-workspace { padding: 34px 16px 64px; }
+  .account-layout .account-heading h1 { font-size: 40px; }
+  .account-layout .account-card { padding: 20px; }
+  .account-layout .account-nav-panel { margin-left: -16px; margin-right: -16px; padding-left: 16px; }
+  .account-layout .personal-card .account-form { grid-template-columns: 1fr; }
+  .account-layout .session-row { align-items: flex-start; }
+}

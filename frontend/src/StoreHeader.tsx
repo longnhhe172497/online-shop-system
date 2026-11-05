@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
 import { Link, NavLink } from 'react-router-dom'
-import { getMe, logout, type AuthUser } from './api/auth'
+import { getMe, type AuthUser } from './api/auth'
 import { getCart } from './api/cart'
 import { CART_EVENT } from './cartEvents'
 import { getInternalHome, isInternalRole } from './internalAccess'
+import SignOutButton from './SignOutButton'
 
 function Icon({ name }: { name: 'user' | 'bag' | 'menu' }) {
   return <svg className="fs-icon" viewBox="0 0 24 24" aria-hidden="true">
@@ -38,20 +39,13 @@ export default function StoreHeader() {
     return () => window.removeEventListener('keydown', close)
   }, [menuOpen])
 
-  async function signOut() {
-    await logout().catch(() => {})
-    setUser(null)
-    setCount(0)
-    setMenuOpen(false)
-  }
-
   const staff = user !== null && isInternalRole(user.role)
   const links = <>
     <NavLink to="/" end>Sản phẩm</NavLink>
     {user?.role === 'CUSTOMER' && <NavLink to="/me/orders">Đơn hàng</NavLink>}
     {staff && user && <NavLink to={getInternalHome(user.role)}>Khu vực nội bộ</NavLink>}
     {user && <NavLink to="/me">Hồ sơ của tôi</NavLink>}
-    {user && <button type="button" onClick={signOut}>Đăng xuất</button>}
+    {user && <SignOutButton />}
   </>
 
   return <>

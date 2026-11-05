@@ -115,15 +115,16 @@ describe('App', () => {
     expect(screen.getByLabelText('NHẬP LẠI MẬT KHẨU')).toBeInTheDocument()
   })
 
-  it('renders the mockup navigation, account tabs before the title, and the full footer', () => {
+  it('renders the shared store navigation, account tabs before the title, and footer', () => {
     renderAt('/auth')
     const tabs = screen.getByRole('tablist', { name: 'Thao tác tài khoản' })
     const title = screen.getByRole('heading', { name: 'Đăng nhập' })
     expect(tabs.compareDocumentPosition(title) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
-    expect(screen.getByRole('navigation', { name: 'Điều hướng chính' })).toHaveTextContent('TÀI KHOẢN CỦA TÔI')
-    expect(screen.getByRole('link', { name: 'Mở giỏ hàng' })).toHaveAttribute('href', '/checkout')
-    expect(screen.getByText('BẢN TIN MÀU SẮC')).toBeInTheDocument()
-    expect(screen.getByLabelText('Địa chỉ email nhận bản tin')).toBeInTheDocument()
+    expect(screen.getByRole('navigation', { name: 'Điều hướng cửa hàng' })).toHaveTextContent('Sản phẩm')
+    expect(screen.getByRole('link', { name: 'Đăng nhập' })).toHaveAttribute('href', '/auth')
+    expect(screen.getByRole('link', { name: 'Giỏ hàng' })).toHaveAttribute('href', '/cart')
+    expect(screen.getByText('© 2026 FORME')).toBeInTheDocument()
+    expect(screen.getByText('Mua sắm an toàn · Đổi trả trong 7 ngày')).toBeInTheDocument()
   })
 
   it('registers then directs the user to verify email', async () => {
