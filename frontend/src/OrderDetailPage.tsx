@@ -298,7 +298,7 @@ export default function OrderDetailPage() {
       </aside>
     </div>
 
-    {order.status === 'DELIVERED' && <section className="shop-card" style={{ marginTop: 24 }}>
+    {order.status === 'DELIVERED' && <section className="shop-card order-return-card">
       <h2>Yêu cầu trả hàng / hoàn tiền</h2>
       <p className="side-text muted">Chọn sản phẩm và số lượng muốn yêu cầu. Yêu cầu sẽ được cửa hàng xem xét trước khi xử lý.</p>
       {returnError && <p className="auth-error" role="alert">{returnError}</p>}

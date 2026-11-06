@@ -49,7 +49,7 @@ export default function DailyReportPanel({ team }: { team: DailyReportTeam }) {
         <textarea className="lg-textarea" rows={9} maxLength={4000} aria-label="Nội dung báo cáo"
           placeholder="Hôm nay bạn đã xử lý những việc gì?" value={content}
           onChange={(e) => setContent(e.target.value)} />
-        <button type="submit" className="lg-btn primary" style={{ marginTop: 10 }} disabled={saving}>
+        <button type="submit" className="lg-btn primary lg-submit-spacing" disabled={saving}>
           {saving ? 'Đang gửi…' : 'Gửi báo cáo'}</button>
       </form>
       <div className="lg-panel">

@@ -59,7 +59,7 @@ it('keeps non-admin staff on the shared dashboard without loading Admin tools', 
     phone: null, role: 'SUPPORT'
   })
   openPage('/support/settings')
-  expect(await screen.findByText('Chào mừng đến với khu nội bộ')).toBeInTheDocument()
+  expect(await screen.findByText('Chào mừng trở lại')).toBeInTheDocument()
   const navigation = screen.getByRole('navigation', { name: 'Điều hướng nội bộ' })
   expect(within(navigation).queryByRole('button', { name: 'Tài khoản' })).not.toBeInTheDocument()
   expect(listSettings).not.toHaveBeenCalled()

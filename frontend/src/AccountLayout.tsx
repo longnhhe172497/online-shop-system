@@ -5,7 +5,7 @@ import { FormeFooter, FormeHeader } from './FormeLayout'
 
 export default function AccountLayout({ title, intro, children }: { title: string; intro: string;
   children: ReactNode }) {
-  return <div className="forme-page account-layout">
+  return <div className="fs forme-page account-layout">
     <FormeHeader />
     <main className="account-workspace"><div className="account-workspace-content"><div className="account-heading">
       <div><p className="auth-kicker">FORME · TÀI KHOẢN</p><h1>{title}</h1><p>{intro}</p></div>

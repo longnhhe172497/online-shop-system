@@ -3,22 +3,7 @@
  * Everything is scoped under .fs and prefixed fs- so it cannot change other teams' pages.
  * Headings use Playfair Display instead of the mock-up's DM Serif Display, which has no Vietnamese glyphs.
  */
-/* Colour and font tokens: the storefront (.fs) and the Manager catalog panels share them. */
-.fs, .catalog-panel {
-    --fs-bg: #faf8f3;
-    --fs-paper: #fff;
-    --fs-ink: #332d29;
-    --fs-muted: #766f69;
-    --fs-line: #ddd7cf;
-    --fs-blue: #344bc5;
-    --fs-orange: #d75227;
-    --fs-green: #267c5b;
-    --fs-navy: #282b52;
-    --fs-cream: #f2e8c9;
-    --fs-red: #ba3341;
-    --fs-serif: 'Playfair Display', Georgia, 'Times New Roman', serif;
-    --fs-sans: Manrope, 'Segoe UI', Arial, sans-serif;
-}
+/* Colour and typography tokens are shared by every surface in design-tokens.css. */
 .fs {
     background: var(--fs-bg);
     color: var(--fs-ink);
@@ -58,28 +43,34 @@
 .fs-navlinks { align-items: center; display: flex; gap: 25px; margin-left: 22px; }
 .fs-navlinks a, .fs-navlinks button { background: none; border: 0; font-size: 11px; font-weight: 800; letter-spacing: .12em;
     padding: 0; text-transform: uppercase; }
-.fs-navlinks a:hover, .fs-navlinks button:hover { color: var(--fs-blue); }
+.fs-navlinks a, .fs-navlinks button { position: relative; }
+.fs-navlinks a:hover, .fs-navlinks button:hover, .fs-navlinks a.active { color: var(--fs-blue); }
+.fs-navlinks a.active::after { background: var(--fs-blue); bottom: -12px; content: ''; height: 2px; left: 0; position: absolute; right: 0; }
 .fs-navicons { align-items: center; display: flex; gap: 10px; margin-left: auto; }
 .fs-user { color: var(--fs-muted); font-size: 12px; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .fs-iconbtn { align-items: center; background: var(--fs-paper); border: 1px solid var(--fs-line); border-radius: 4px; display: grid;
     height: 40px; place-items: center; position: relative; width: 40px; }
-.fs-iconbtn:hover { border-color: var(--fs-ink); }
+.fs-iconbtn { transition: background .18s ease, border-color .18s ease, transform .18s ease; }
+.fs-iconbtn:hover { background: #f3f0ea; border-color: var(--fs-ink); transform: translateY(-1px); }
 .fs-icon { fill: none; height: 18px; stroke: currentColor; stroke-width: 1.8; width: 18px; }
 .fs-count { background: var(--fs-orange); border-radius: 99px; color: #fff; font-size: 10px; font-weight: 800; line-height: 18px;
     min-width: 18px; padding: 0 5px; position: absolute; right: -7px; text-align: center; top: -7px; }
 .fs-mobile-only { display: none !important; }
 .fs-menu { background: var(--fs-paper); border-bottom: 1px solid var(--fs-line); display: flex; flex-direction: column; gap: 4px;
     padding: 12px 18px 18px; }
-.fs-menu a, .fs-menu button { background: none; border: 0; border-bottom: 1px solid #efebe5; font-size: 12px; font-weight: 800;
+.fs-menu a, .fs-menu button { background: none; border: 0; border-bottom: 1px solid #efebe5; color: var(--fs-ink); font-size: 12px; font-weight: 800;
     letter-spacing: .1em; padding: 12px 0; text-align: left; text-transform: uppercase; }
+.fs-menu a.active { color: var(--fs-blue); }
 .fs-footer { background: var(--fs-navy); color: #fff; margin-top: auto; padding: 56px 32px; }
 .fs-footer-inner { display: grid; gap: 30px; grid-template-columns: 2fr 1fr 1fr; margin: auto; max-width: 1400px; }
-.fs-footer h2 { font-size: 46px; }
+.fs-footer-brand { display: inline-block; font-family: var(--fs-serif); font-size: 46px; font-weight: 500; line-height: 1; }
 .fs-footer p { color: #d9d9e8; line-height: 1.7; margin: 10px 0 0; max-width: 360px; }
 .fs-footer ul { list-style: none; margin: 14px 0 0; padding: 0; }
 .fs-footer li { margin-bottom: 10px; }
 .fs-footer li a { color: #d9d9e8; }
 .fs-footer li a:hover { color: #fff; }
+.fs-footer-bottom { border-top: 1px solid rgba(255, 255, 255, .14); color: #bfc0d3; display: flex; font-size: 11px;
+    justify-content: space-between; margin: 42px auto 0; max-width: 1400px; padding-top: 20px; }
 
 /* ---------- Layout ---------- */
 .fs-shell { margin: auto; max-width: 1450px; padding: 46px 32px; width: 100%; }
@@ -95,8 +86,8 @@
 /* ---------- Controls ---------- */
 .fs-btn { align-items: center; background: var(--fs-blue); border: 1px solid var(--fs-blue); border-radius: 3px; color: #fff;
     display: inline-flex; font-size: 11px; font-weight: 800; gap: 8px; justify-content: center; letter-spacing: .1em;
-    min-height: 45px; padding: 13px 20px; text-transform: uppercase; }
-.fs-btn:hover { filter: brightness(.94); }
+    min-height: 45px; padding: 13px 20px; text-transform: uppercase; transition: background .18s ease, border-color .18s ease, transform .18s ease; }
+.fs-btn:hover { filter: brightness(.94); transform: translateY(-1px); }
 .fs-btn.orange { background: var(--fs-orange); border-color: var(--fs-orange); }
 .fs-btn.alt { background: transparent; border-color: var(--fs-ink); color: var(--fs-ink); }
 .fs-btn.ghost { background: var(--fs-paper); border-color: var(--fs-line); color: var(--fs-ink); }
@@ -151,9 +142,11 @@
 .fs-search .fs-field { flex: 1; }
 .fs-grid { display: grid; gap: 22px; grid-template-columns: repeat(4, minmax(0, 1fr)); list-style: none; margin: 0; padding: 0; }
 .fs-product { display: block; }
-.fs-product-media { position: relative; }
+.fs-product-media { background: var(--fs-cream); overflow: hidden; position: relative; }
 .fs-product-media .fs-chip { left: 10px; position: absolute; top: 10px; }
-.fs-product:hover .fs-product-title { text-decoration: underline; }
+.fs-product .fs-img { transition: transform .35s ease; }
+.fs-product:hover .fs-img { transform: scale(1.025); }
+.fs-product:hover .fs-product-title { color: var(--fs-blue); }
 .fs-product-meta { display: flex; gap: 12px; justify-content: space-between; padding: 12px 2px; }
 .fs-product-meta > div { min-width: 0; }
 .fs-product-title { display: block; font-weight: 700; }
@@ -236,6 +229,8 @@
     .fs-filters > * { grid-column: auto !important; }
     .fs-pagehead { align-items: start; flex-direction: column; gap: 10px; }
     .fs-footer-inner { grid-template-columns: 1fr; }
+    .fs-footer { padding: 44px 20px 28px; }
+    .fs-footer-bottom { align-items: flex-start; flex-direction: column; gap: 8px; }
     .fs-nav { height: 62px; }
     .fs-brand { font-size: 29px; }
     .fs-cart-line { grid-template-columns: 76px minmax(0, 1fr); }

@@ -1,9 +1,8 @@
-/* Lấy nguyên token và kiểu từ css/site.css của mockup Forme / Staff (đặt tiền tố lg- để không đụng CSS khác). */
-@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Manrope:wght@400;500;600;700;800&display=swap');
+/* Token và kiểu từ mockup FORME / Staff, dùng font cục bộ chung của dự án. */
 :root {
   --lg-paper: #fff; --lg-ink: #332d29; --lg-muted: #766f69; --lg-line: #ddd7cf;
   --lg-blue: #344bc5; --lg-orange: #d75227; --lg-green: #267c5b; --lg-red: #ba3341;
-  --lg-serif: 'DM Serif Display', serif; --lg-sans: Manrope, Arial, sans-serif;
+  --lg-serif: var(--forme-serif); --lg-sans: var(--forme-sans);
 }
 .lg-toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 22px; font-family: var(--lg-sans); font-size: 14px; color: var(--lg-ink); }
 .lg-toolbar input[type='search'], .lg-toolbar select, .lg-field input, .lg-field textarea {

@@ -3,6 +3,11 @@ import { listSessions, revokeOtherSessions, revokeSession, type Session } from '
 import { getUiError } from './uiError'
 import AccountLayout from './AccountLayout'
 
+function DeviceIcon() {
+  return <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="13" rx="2" />
+    <path d="M8 21h8M12 17v4" /></svg>
+}
+
 export default function AccountSessionsPage() {
   const [sessions, setSessions] = useState<Session[]>([])
   const [loading, setLoading] = useState(true)
@@ -40,7 +45,7 @@ export default function AccountSessionsPage() {
       {loading ? <p>Đang tải danh sách thiết bị…</p> : sessions.length === 0 ?
         <p>Không có phiên đăng nhập nào đang hoạt động.</p> :
         <div className="session-list">{sessions.map((item) => <article className="session-row" key={item.id}>
-          <div className="session-icon" aria-hidden="true">⌁</div><div><strong>{item.userAgent?.slice(0, 80) || 'Trình duyệt không xác định'}</strong>
+          <div className="session-icon"><DeviceIcon /></div><div><strong>{item.userAgent?.slice(0, 80) || 'Trình duyệt không xác định'}</strong>
             <p>{item.ipAddress || 'Không rõ IP'} · Đăng nhập {new Date(item.createdAt).toLocaleString('vi-VN')}</p>
             <small>Hoạt động gần nhất {new Date(item.lastSeenAt ?? item.createdAt).toLocaleString('vi-VN')}
               {' · '}Hết hạn {new Date(item.expiresAt).toLocaleString('vi-VN')}</small></div>

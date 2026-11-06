@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
+import StoreHeader from './StoreHeader'
+import { StoreFooter } from './StoreLayout'
 
 export type IconName = 'cart' | 'bag' | 'truck' | 'shield' | 'qr' | 'cash' | 'ticket' | 'check' | 'pin' | 'clock'
   | 'return' | 'box' | 'lock' | 'x' | 'arrow'
@@ -40,27 +42,15 @@ export function ProductThumb({ name, sku, size = 64 }: { name: string; sku: stri
 }
 
 export function ShopLayout({ children, minimal = false }: { children: ReactNode; minimal?: boolean }) {
-  return <div className="forme-page shop-page">
-    <div className="announcement">ĐỔI TRẢ TRONG 7 NGÀY · GIAO HÀNG TOÀN QUỐC</div>
-    <header className="shop-header"><div className="shop-header-inner">
-      <Link to="/" className="brand">FORME</Link>
-      {minimal ? <span className="secure-note"><Icon name="lock" size={16} /> Thanh toán an toàn</span>
-        : <nav aria-label="Điều hướng cửa hàng"><Link to="/">Cửa hàng</Link><Link to="/me/orders">Đơn hàng</Link>
-          <Link to="/me">Tài khoản</Link></nav>}
-      <div className="shop-header-actions">
-        <Link to="/me/orders" className="header-icon" aria-label="Đơn hàng của tôi"><Icon name="bag" /></Link>
-        <Link to="/cart" className="header-icon" aria-label="Giỏ hàng"><Icon name="cart" /></Link>
-      </div>
-    </div></header>
+  return <div className="fs forme-page shop-page">
+    {minimal ? <><div className="fs-topbar">THANH TOÁN ĐƯỢC BẢO VỆ · THÔNG TIN CỦA BẠN LUÔN AN TOÀN</div>
+      <header className="checkout-header"><div className="checkout-header-inner">
+        <Link to="/" className="fs-brand" aria-label="FORME - Trang chủ">FORME</Link>
+        <span className="secure-note"><Icon name="lock" size={16} /> Thanh toán an toàn</span>
+        <Link to="/cart" className="checkout-back">← Quay lại giỏ hàng</Link>
+      </div></header></> : <StoreHeader />}
     <main className="shop-main">{children}</main>
-    <footer className="shop-footer"><div className="shop-footer-inner">
-      <div><strong className="brand">FORME</strong><p>Cửa hàng trực tuyến · Bản chạy trên máy cá nhân</p></div>
-      <ul>
-        <li><Icon name="truck" size={18} /> Giao hàng toàn quốc</li>
-        <li><Icon name="return" size={18} /> Đổi trả trong 7 ngày</li>
-        <li><Icon name="shield" size={18} /> Thanh toán mô phỏng an toàn</li>
-      </ul>
-    </div></footer>
+    <StoreFooter />
   </div>
 }
 

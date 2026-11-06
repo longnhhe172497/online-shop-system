@@ -23,8 +23,14 @@ import OrderDetailPage from './OrderDetailPage'
 import StorefrontPage from './StorefrontPage'
 import ProductDetailPage from './ProductDetailPage'
 import CartPage from './CartPage'
+import NotFoundPage from './NotFoundPage'
+import './storeFonts'
+import './design-tokens.css'
 import './App.css'
 import './mockup-theme.css'
+import './account-theme.css'
+import './internal-theme.css'
+import './ui-polish.css'
 
 export default function App() {
   return <><SessionIdleNotice /><Routes>
@@ -59,5 +65,6 @@ export default function App() {
     <Route path="/delivery/*" element={<InternalRoleRoute role="DELIVERY"><DeliveryPage /></InternalRoleRoute>} />
     <Route path="/internal/*" element={<InternalEntryRedirect />} />
     <Route path="/staff" element={<Navigate to="/internal" replace />} />
+    <Route path="*" element={<NotFoundPage />} />
   </Routes></>
 }

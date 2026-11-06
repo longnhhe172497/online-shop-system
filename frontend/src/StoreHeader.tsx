@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
-import { getMe, logout, type AuthUser } from './api/auth'
+import { Link, NavLink } from 'react-router-dom'
+import { getMe, type AuthUser } from './api/auth'
 import { getCart } from './api/cart'
 import { CART_EVENT } from './cartEvents'
 import { getInternalHome, isInternalRole } from './internalAccess'
+import SignOutButton from './SignOutButton'
 
 function Icon({ name }: { name: 'user' | 'bag' | 'menu' }) {
   return <svg className="fs-icon" viewBox="0 0 24 24" aria-hidden="true">
@@ -31,30 +32,30 @@ export default function StoreHeader() {
     }
   }, [])
 
-  async function signOut() {
-    await logout().catch(() => {})
-    setUser(null)
-    setCount(0)
-    setMenuOpen(false)
-  }
+  useEffect(() => {
+    if (!menuOpen) return
+    const close = (event: KeyboardEvent) => { if (event.key === 'Escape') setMenuOpen(false) }
+    window.addEventListener('keydown', close)
+    return () => window.removeEventListener('keydown', close)
+  }, [menuOpen])
 
   const staff = user !== null && isInternalRole(user.role)
   const links = <>
-    <Link to="/">Sản phẩm</Link>
-    {user?.role === 'CUSTOMER' && <Link to="/me/orders">Đơn hàng</Link>}
-    {staff && user && <Link to={getInternalHome(user.role)}>Khu vực nội bộ</Link>}
-    {user && <Link to="/me">Hồ sơ của tôi</Link>}
-    {user && <button type="button" onClick={signOut}>Đăng xuất</button>}
+    <NavLink to="/" end>Sản phẩm</NavLink>
+    {user?.role === 'CUSTOMER' && <NavLink to="/me/orders">Đơn hàng</NavLink>}
+    {staff && user && <NavLink to={getInternalHome(user.role)}>Khu vực nội bộ</NavLink>}
+    {user && <NavLink to="/me">Hồ sơ của tôi</NavLink>}
+    {user && <SignOutButton />}
   </>
 
   return <>
-    <div className="fs-topbar">Thanh toán bằng mã QR hoặc khi nhận hàng (COD)</div>
+    <div className="fs-topbar">ĐỔI TRẢ TRONG 7 NGÀY · THANH TOÁN QR HOẶC KHI NHẬN HÀNG</div>
     <header className="fs-header">
       <nav className="fs-nav" aria-label="Điều hướng cửa hàng">
-        <Link className="fs-brand" to="/">Forme</Link>
+        <Link className="fs-brand" to="/" aria-label="FORME - Trang chủ">FORME</Link>
         <div className="fs-navlinks">{links}</div>
         <div className="fs-navicons">
-          {user && <span className="fs-user" title={user.email}>{user.fullName}</span>}
+          {user && <span className="fs-user" title={user.email}>Xin chào, {user.fullName}</span>}
           <Link className="fs-iconbtn" to={user ? '/me' : '/auth'} aria-label={user ? 'Tài khoản của tôi' : 'Đăng nhập'}>
             <Icon name="user" /></Link>
           {!staff && <Link className="fs-iconbtn" to="/cart" aria-label={`Giỏ hàng${count > 0 ? ` (${count})` : ''}`}>

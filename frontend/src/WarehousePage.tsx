@@ -27,6 +27,7 @@ export default function WarehousePage() {
     <StaffLayout
       eyebrow="Vận hành"
       title="Hàng đợi kho"
+      subtitle="Theo dõi đơn cần đóng gói, kiểm định hàng hoàn và tổng hợp báo cáo cuối ngày."
       roleName="Nhân viên kho"
       tabs={NAV}
       active={tab}
