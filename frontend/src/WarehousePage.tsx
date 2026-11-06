@@ -7,7 +7,8 @@ import {
   type PackingOrder, type PageResponse,
 } from './api/warehouseDelivery'
 import { inspectReturn, listWarehouseReturns, type ReturnRequest } from './api/afterSales'
-import { Pager, formatDateTime, formatVnd } from './logisticsUi'
+import { Pager } from './logisticsUi'
+import { formatDateTime, formatVnd } from './logisticsFormat'
 import './logistics.css'
 
 type Tab = 'orders' | 'returns' | 'report'
@@ -63,7 +64,8 @@ function PackingPanel() {
   }, [page])
 
   useEffect(() => {
-    void load()
+    const timer = window.setTimeout(() => void load(), 0)
+    return () => window.clearTimeout(timer)
   }, [load])
 
   async function pack(order: PackingOrder) {
@@ -179,7 +181,8 @@ function ReturnInspectionPanel() {
   }, [])
 
   useEffect(() => {
-    void load()
+    const timer = window.setTimeout(() => void load(), 0)
+    return () => window.clearTimeout(timer)
   }, [load])
 
   async function submit(row: ReturnRequest) {

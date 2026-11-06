@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import StaffLayout, { type StaffTab } from './StaffLayout'
-import { formatDateTime, formatVnd } from './logisticsUi'
+import { formatDateTime, formatVnd } from './logisticsFormat'
 import { errorMessage } from './api/warehouseDelivery'
 import { inspectionResultLabel, refundMethodLabel, refundReasonLabel, refundStatusLabel, refundStatusTone,
   returnStatusLabel, returnStatusTone } from './afterSalesUi'
@@ -38,7 +38,10 @@ function ReturnsPanel() {
     setLoading(true); setError('')
     try { setRows((await listReturns()).items) } catch (e) { setError(errorMessage(e)) } finally { setLoading(false) }
   }, [])
-  useEffect(() => { void load() }, [load])
+  useEffect(() => {
+    const timer = window.setTimeout(() => void load(), 0)
+    return () => window.clearTimeout(timer)
+  }, [load])
   async function decide(row: ReturnRequest, approved: boolean) {
     setBusy(row.id); setError('')
     try { await decideReturn(row.id, approved); await load() } catch (e) { setError(errorMessage(e)) } finally { setBusy(null) }
@@ -71,7 +74,10 @@ function RefundsPanel() {
   const [error, setError] = useState('')
   const [busy, setBusy] = useState<number | null>(null)
   const load = useCallback(async () => { try { setRows((await listRefunds()).items); setError('') } catch (e) { setError(errorMessage(e)) } }, [])
-  useEffect(() => { void load() }, [load])
+  useEffect(() => {
+    const timer = window.setTimeout(() => void load(), 0)
+    return () => window.clearTimeout(timer)
+  }, [load])
   async function complete(id: number) {
     setBusy(id); setError('')
     try { await completeRefund(id); await load() } catch (e) { setError(errorMessage(e)) } finally { setBusy(null) }
@@ -99,7 +105,10 @@ function ReportsPanel() {
     setLoading(true); setError('')
     try { setData(await getTransactionReport(from, to)) } catch (e) { setError(errorMessage(e)) } finally { setLoading(false) }
   }, [from, to])
-  useEffect(() => { void load() }, [load])
+  useEffect(() => {
+    const timer = window.setTimeout(() => void load(), 0)
+    return () => window.clearTimeout(timer)
+  }, [load])
   return <section>
     <div className="lg-toolbar"><label>Từ ngày <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} /></label>
       <label>Đến ngày <input type="date" value={to} onChange={(e) => setTo(e.target.value)} /></label>

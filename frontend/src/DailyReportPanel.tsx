@@ -24,7 +24,10 @@ export default function DailyReportPanel({ team }: { team: DailyReportTeam }) {
       }
     } catch (e) { setError(errorMessage(e)) }
   }, [team])
-  useEffect(() => { void load(true) }, [load])
+  useEffect(() => {
+    const timer = window.setTimeout(() => void load(true), 0)
+    return () => window.clearTimeout(timer)
+  }, [load])
 
   async function submit(event: FormEvent) {
     event.preventDefault()
