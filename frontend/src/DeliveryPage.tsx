@@ -6,7 +6,8 @@ import {
   type DeliveryScope, type PageResponse, type ShipmentListItem, type ShipmentStatus,
   type UpdateShipmentStatusRequest,
 } from './api/warehouseDelivery'
-import { Pager, STATUS_LABELS, StatusChip, formatDateTime, formatVnd } from './logisticsUi'
+import { Pager, StatusChip } from './logisticsUi'
+import { STATUS_LABELS, formatDateTime, formatVnd } from './logisticsFormat'
 import './logistics.css'
 
 type Tab = 'MINE' | 'UNASSIGNED' | 'FAILED' | 'REPORT'
@@ -74,7 +75,8 @@ export default function DeliveryPage() {
   }, [tab, filter, page])
 
   useEffect(() => {
-    void load()
+    const timer = window.setTimeout(() => void load(), 0)
+    return () => window.clearTimeout(timer)
   }, [load])
 
   function changeTab(next: Tab) {

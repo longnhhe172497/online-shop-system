@@ -3,7 +3,7 @@ import AccountLayout from './AccountLayout'
 import { createTicket, listMyTickets, replyTicket, type SupportTicket } from './api/afterSales'
 import { errorMessage } from './api/warehouseDelivery'
 import { ticketStatusLabel, ticketStatusTone } from './afterSalesUi'
-import { formatDateTime } from './logisticsUi'
+import { formatDateTime } from './logisticsFormat'
 import './logistics.css'
 
 export default function CustomerSupportPage() {
@@ -21,7 +21,10 @@ export default function CustomerSupportPage() {
     catch (failure) { setError(errorMessage(failure)) }
   }, [])
 
-  useEffect(() => { void load() }, [load])
+  useEffect(() => {
+    const timer = window.setTimeout(() => void load(), 0)
+    return () => window.clearTimeout(timer)
+  }, [load])
 
   async function submit(event: FormEvent) {
     event.preventDefault(); setBusy(true); setError(''); setNotice('')

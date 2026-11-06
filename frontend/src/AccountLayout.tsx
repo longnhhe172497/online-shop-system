@@ -1,6 +1,5 @@
 import type { ReactNode } from 'react'
 import { Link, NavLink } from 'react-router-dom'
-import SignOutButton from './SignOutButton'
 import { FormeFooter, FormeHeader } from './FormeLayout'
 
 export default function AccountLayout({ title, intro, children }: { title: string; intro: string;
@@ -17,8 +16,10 @@ export default function AccountLayout({ title, intro, children }: { title: strin
         <NavLink to="/me/security">Bảo mật tài khoản <span>→</span></NavLink>
         <NavLink to="/me/email">Đổi email đăng nhập <span>→</span></NavLink>
         <NavLink to="/me/sessions">Thiết bị đăng nhập <span>→</span></NavLink>
-      </nav>{children}<div className="account-footer-actions"><Link className="account-return" to="/">← Về cửa hàng</Link>
-        <SignOutButton className="account-sign-out" /></div></div></main>
+      </nav>
+      {children}
+      <div className="account-footer-actions"><Link className="account-return" to="/">← Về cửa hàng</Link></div>
+    </div></main>
     <FormeFooter />
   </div>
 }

@@ -3,7 +3,7 @@ import StaffLayout, { type StaffTab } from './StaffLayout'
 import { errorMessage } from './api/warehouseDelivery'
 import { listTicketQueue, replyTicket, updateTicketStatus, type SupportTicket } from './api/afterSales'
 import { ticketStatusLabel, ticketStatusTone } from './afterSalesUi'
-import { formatDateTime } from './logisticsUi'
+import { formatDateTime } from './logisticsFormat'
 import './logistics.css'
 
 type Tab = 'queue'
@@ -27,7 +27,10 @@ function Queue() {
     try { setRows((await listTicketQueue()).items); setError('') }
     catch (failure) { setError(errorMessage(failure)) }
   }, [])
-  useEffect(() => { void load() }, [load])
+  useEffect(() => {
+    const timer = window.setTimeout(() => void load(), 0)
+    return () => window.clearTimeout(timer)
+  }, [load])
 
   async function reply(id: number) {
     const message = drafts[id]?.trim()

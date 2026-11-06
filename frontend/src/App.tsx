@@ -1,14 +1,9 @@
+import { lazy, Suspense } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import AuthPage from './AuthPage'
 import VerifyPage from './VerifyPage'
 import PasswordResetPage from './PasswordResetPage'
 import ProfilePage from './ProfilePage'
-import AdminPage from './AdminPage'
-import WarehousePage from './WarehousePage'
-import ManagerAfterSalesPage from './ManagerAfterSalesPage'
-import CustomerSupportPage from './CustomerSupportPage'
-import SupportTicketsPage from './SupportTicketsPage'
-import DeliveryPage from './DeliveryPage'
 import InternalEntryRedirect from './InternalEntryRedirect'
 import InternalRoleRoute from './InternalRoleRoute'
 import { AcceptInvitationPage, MfaLoginPage, RegistrationSentPage,
@@ -32,8 +27,22 @@ import './account-theme.css'
 import './internal-theme.css'
 import './ui-polish.css'
 
+const AdminPage = lazy(() => import('./AdminPage'))
+const WarehousePage = lazy(() => import('./WarehousePage'))
+const ManagerAfterSalesPage = lazy(() => import('./ManagerAfterSalesPage'))
+const CustomerSupportPage = lazy(() => import('./CustomerSupportPage'))
+const SupportTicketsPage = lazy(() => import('./SupportTicketsPage'))
+const DeliveryPage = lazy(() => import('./DeliveryPage'))
+
+function RouteLoading() {
+  return <main className="route-loading" role="status" aria-live="polite">
+    <span className="route-loading-mark" aria-hidden="true">F</span>
+    <p>Đang chuẩn bị không gian làm việc…</p>
+  </main>
+}
+
 export default function App() {
-  return <><SessionIdleNotice /><Routes>
+  return <><SessionIdleNotice /><Suspense fallback={<RouteLoading />}><Routes>
     <Route path="/" element={<StorefrontPage />} />
     <Route path="/products/:id" element={<ProductDetailPage />} />
     <Route path="/cart" element={<CartPage />} />
@@ -66,5 +75,5 @@ export default function App() {
     <Route path="/internal/*" element={<InternalEntryRedirect />} />
     <Route path="/staff" element={<Navigate to="/internal" replace />} />
     <Route path="*" element={<NotFoundPage />} />
-  </Routes></>
+  </Routes></Suspense></>
 }
