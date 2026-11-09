@@ -49,6 +49,33 @@ export async function downloadTransactionReport(from: string, to: string) {
   anchor.href = url; anchor.download = `transaction-report-${from}-${to}.csv`
   document.body.appendChild(anchor); anchor.click(); anchor.remove(); URL.revokeObjectURL(url)
 }
+export interface TopProduct { productId: number; sku: string; name: string; unitsSold: number; revenue: number }
+export interface LowStockItem { productId: number; sku: string; name: string; available: number; reorderThreshold: number }
+export interface PendingActions {
+  returnRequestsToDecide: number; pendingRefunds: number; unassignedOpenTickets: number
+  deliveryFailedOrders: number; paidQrReturnedWithoutRefund: number
+}
+export interface DashboardView {
+  summary: ReportSummary; topProducts: TopProduct[]
+  lowStock: LowStockItem[]; pendingActions: PendingActions
+}
+export interface StaffReportRow { staffName: string; role: string; reportDate: string; content: string; updatedAt: string }
+export interface FailedDeliveryOrder {
+  orderId: number; orderCode: string; customerName: string; amount: number; returnedAt: string
+}
+
+export async function getDashboard(from: string, to: string) {
+  return (await api.get<DashboardView>('/manager/reports/dashboard', { params: { from, to } })).data
+}
+export async function listStaffDailyReports(date: string) {
+  return (await api.get<StaffReportRow[]>('/manager/reports/daily-reports', { params: { date } })).data
+}
+export async function listFailedDeliveryOrders() {
+  return (await api.get<FailedDeliveryOrder[]>('/after-sales/failed-deliveries')).data
+}
+export async function createFailedDeliveryRefund(orderId: number) {
+  return (await api.post<Refund>(`/after-sales/failed-deliveries/${orderId}/refund`)).data
+}
 export async function inspectReturn(id: number, items: ItemInspection[]) {
   return (await api.post<ReturnRequest>(`/warehouse/returns/${id}/inspection`, { items })).data
 }

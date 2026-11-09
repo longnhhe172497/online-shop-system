@@ -1,0 +1,23 @@
+/* Manager overview — follows the "Overview & operations" mockup (KPI cards, daily sales bars, top-selling, low stock). */
+.md-kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 22px; }
+.md-kpi { background: var(--lg-paper); border: 1px solid var(--lg-line); border-radius: 5px; padding: 20px; font-family: var(--lg-sans); color: var(--lg-ink); }
+.md-kpi strong { display: block; font: 30px/1.15 var(--lg-serif); margin: 12px 0 5px; overflow-wrap: anywhere; }
+.md-kpi small { color: var(--lg-muted); font-size: 12px; }
+.md-eyebrow { font: 800 11px/1.3 var(--lg-sans); text-transform: uppercase; letter-spacing: .15em; color: var(--lg-muted); }
+.md-split { display: grid; grid-template-columns: 1.65fr 1fr; gap: 22px; margin-bottom: 22px; }
+.md-split > * { min-width: 0; margin-bottom: 0; }
+.md-panel-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
+.md-panel-head h2 { margin: 4px 0 0; font: 24px/1.2 var(--lg-serif); }
+.md-chart { height: 220px; display: flex; align-items: flex-end; gap: 6px; padding-top: 20px; border-bottom: 1px solid var(--lg-line); }
+.md-bar { flex: 1; min-width: 4px; background: var(--lg-orange); border-radius: 2px 2px 0 0; }
+.md-bar.empty { background: var(--lg-line); }
+.md-chart-axis { display: flex; justify-content: space-between; color: var(--lg-muted); font: 12px var(--lg-sans); margin-top: 6px; }
+.md-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--lg-line); font-family: var(--lg-sans); font-size: 14px; }
+.md-row:last-child { border-bottom: 0; }
+.md-row button { border: 0; background: none; padding: 0; color: var(--lg-blue); font: 700 14px var(--lg-sans); cursor: pointer; text-align: left; }
+.md-report { white-space: pre-wrap; margin: 10px 0 0; }
+.md-note { width: 100%; min-height: 70px; margin: 10px 0; padding: 10px 12px; border: 1px solid var(--lg-line); border-radius: 3px; font: 14px var(--lg-sans); color: var(--lg-ink); box-sizing: border-box; }
+@media (max-width: 900px) { .md-kpis { grid-template-columns: repeat(2, 1fr); } .md-split { grid-template-columns: 1fr; } }
+@media (max-width: 520px) { .md-kpis { grid-template-columns: 1fr; } }
+.md-title { margin: 4px 0 12px; font: 24px/1.2 var(--lg-serif); color: var(--lg-ink); }
+.md-select { min-height: 40px; padding: 8px 10px; border: 1px solid var(--lg-line); border-radius: 3px; background: #fff; font: 14px var(--lg-sans); color: var(--lg-ink); }

@@ -1,6 +1,9 @@
 package com.osmshop.reporting;
 
+import com.osmshop.reporting.ReportingDtos.DashboardView;
+import com.osmshop.reporting.ReportingDtos.StaffReportRow;
 import com.osmshop.support.AfterSalesDtos.ReportSummary;
+import java.util.List;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -21,6 +24,21 @@ public class ReportingController {
     @GetMapping("/summary")
     public ReportSummary summary(@RequestParam @DateTimeFormat(iso=DateTimeFormat.ISO.DATE) LocalDate from,
             @RequestParam @DateTimeFormat(iso=DateTimeFormat.ISO.DATE) LocalDate to){return reports.summary(from,to);}
+
+    /** Dashboard for UC-MNG-006; the default range is the last 30 days. */
+    @GetMapping("/dashboard")
+    public DashboardView dashboard(@RequestParam(required=false) @DateTimeFormat(iso=DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam(required=false) @DateTimeFormat(iso=DateTimeFormat.ISO.DATE) LocalDate to){
+        LocalDate end=to==null?LocalDate.now(ReportingService.REPORT_ZONE):to;
+        LocalDate start=from==null?end.minusDays(29):from;
+        return reports.dashboard(start,end);
+    }
+
+    /** Read-only staff daily reports for UC-MNG-007; the default date is today. */
+    @GetMapping("/daily-reports")
+    public List<StaffReportRow> dailyReports(@RequestParam(required=false) @DateTimeFormat(iso=DateTimeFormat.ISO.DATE) LocalDate date){
+        return reports.dailyReports(date);
+    }
 
     @GetMapping(value="/export.csv",produces="text/csv")
     public ResponseEntity<byte[]> export(@RequestParam @DateTimeFormat(iso=DateTimeFormat.ISO.DATE) LocalDate from,

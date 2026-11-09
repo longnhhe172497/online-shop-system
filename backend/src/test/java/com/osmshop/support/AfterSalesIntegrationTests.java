@@ -106,6 +106,70 @@ class AfterSalesIntegrationTests extends AfterSalesIntegrationTestSupport {
     }
 
     @Test
+    void managerMustEnterNoteToRejectReturnRequest() throws Exception {
+        Session customer = session("CUSTOMER");
+        Session manager = session("MANAGER");
+        OrderFixture order = deliveredOrder(customer, 1, 20000);
+        String created = call(post("/api/orders/" + order.id() + "/returns"), customer,
+                returnRequest("REFUND_ONLY", order.itemId(), 1))
+                .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
+        long returnId = json.readTree(created).get("id").asLong();
+
+        call(post("/api/manager/returns/" + returnId + "/decision"), manager, Map.of("approved", false))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("REJECT_NOTE_REQUIRED"));
+        assertThat(jdbc.queryForObject("SELECT status FROM return_requests WHERE id=?", String.class, returnId))
+                .isEqualTo("REQUESTED");
+
+        call(post("/api/manager/returns/" + returnId + "/decision"), manager,
+                Map.of("approved", false, "note", "Product was used"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("REJECTED"))
+                .andExpect(jsonPath("$.decisionNote").value("Product was used"));
+    }
+
+    @Test
+    void failedPrepaidDeliveryRefundIsCreatedOnceThenCompleted() throws Exception {
+        Session customer = session("CUSTOMER");
+        Session manager = session("MANAGER");
+        OrderFixture order = deliveredOrder(customer, 2, 50000);
+        jdbc.update("UPDATE orders SET status='RETURNED_TO_WAREHOUSE',delivered_at=NULL WHERE id=?", order.id());
+        jdbc.update("""
+            INSERT INTO payment_attempts(order_id,attempt_number,method,status,amount,simulation_code,expires_at,paid_at)
+            VALUES (?,1,'SIMULATED_QR','PAID',100000,?,now()+interval '15 minutes',now())
+            """, order.id(), "PAY-" + java.util.UUID.randomUUID());
+
+        String candidates = call(get("/api/after-sales/failed-deliveries"), manager, null)
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        assertThat(candidates).contains("\"orderId\":" + order.id());
+
+        String refund = call(post("/api/after-sales/failed-deliveries/" + order.id() + "/refund"), manager, null)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.reason").value("FAILED_PREPAID_DELIVERY"))
+                .andExpect(jsonPath("$.status").value("PENDING"))
+                .andExpect(jsonPath("$.amount").value(100000))
+                .andReturn().getResponse().getContentAsString();
+        long refundId = json.readTree(refund).get("id").asLong();
+
+        call(post("/api/after-sales/failed-deliveries/" + order.id() + "/refund"), manager, null)
+                .andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("REFUND_ALREADY_EXISTS"));
+        call(post("/api/manager/refunds/" + refundId + "/complete"), manager, null)
+                .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("COMPLETED"));
+    }
+
+    @Test
+    void failedDeliveryRefundIsRefusedForCodAndForDeliveredOrders() throws Exception {
+        Session customer = session("CUSTOMER");
+        Session manager = session("MANAGER");
+        OrderFixture delivered = deliveredOrder(customer, 1, 30000);
+        call(post("/api/after-sales/failed-deliveries/" + delivered.id() + "/refund"), manager, null)
+                .andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("ORDER_NOT_RETURNED"));
+
+        OrderFixture cod = deliveredOrder(customer, 1, 30000);
+        jdbc.update("UPDATE orders SET status='RETURNED_TO_WAREHOUSE',payment_method='COD',delivered_at=NULL WHERE id=?", cod.id());
+        call(post("/api/after-sales/failed-deliveries/" + cod.id() + "/refund"), manager, null)
+                .andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("ORDER_NOT_PREPAID"));
+    }
+
+    @Test
     void ticketOwnershipReplyAndStatusAreEnforced() throws Exception {
         Session customer = session("CUSTOMER");
         Session stranger = session("CUSTOMER");
@@ -138,6 +202,11 @@ class AfterSalesIntegrationTests extends AfterSalesIntegrationTestSupport {
         call(get("/api/warehouse/returns"), customer, null).andExpect(status().isForbidden());
         call(get("/api/support/tickets/queue"), customer, null).andExpect(status().isForbidden());
         call(get("/api/manager/reports/summary?from=2026-11-01&to=2026-11-03"), customer, null)
+                .andExpect(status().isForbidden());
+        call(get("/api/manager/reports/dashboard"), customer, null).andExpect(status().isForbidden());
+        call(get("/api/manager/reports/daily-reports"), customer, null).andExpect(status().isForbidden());
+        call(get("/api/after-sales/failed-deliveries"), customer, null).andExpect(status().isForbidden());
+        call(post("/api/after-sales/failed-deliveries/" + order.id() + "/refund"), customer, null)
                 .andExpect(status().isForbidden());
     }
 }
