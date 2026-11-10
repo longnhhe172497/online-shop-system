@@ -1,3 +1,4 @@
+import { isAxiosError } from 'axios'
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { cancelOrder, getOrder, getShipment, retryPayment, simulatePayment, type OrderDetail, type ShipmentTracking } from './api/orders'
@@ -112,6 +113,16 @@ function ShipmentPanel({ orderId, status }: { orderId: number; status: OrderDeta
   </section>
 }
 
+// Return-request rules (window, quantity, order state) are decided by the backend; show its reason.
+function returnErrorMessage(failure: unknown) {
+  if (isAxiosError(failure)) {
+    const status = failure.response?.status ?? 0
+    const detail = (failure.response?.data as { detail?: unknown } | undefined)?.detail
+    if ([400, 404, 409].includes(status) && typeof detail === 'string' && detail.trim()) return detail
+  }
+  return getUiError(failure)
+}
+
 export default function OrderDetailPage() {
   const id = Number(useParams().id)
   const [order, setOrder] = useState<OrderDetail | null>(null)
@@ -177,7 +188,7 @@ export default function OrderDetailPage() {
       const result = await createReturnRequest(order.id, { requestType: returnType, reason: returnReason.trim(), items })
       setReturnNotice(`Đã gửi yêu cầu hậu mãi #${result.id}. Cửa hàng sẽ xem xét yêu cầu của bạn.`)
       setReturnReason(''); setReturnQuantities({})
-    } catch (failure) { setReturnError(getUiError(failure)) }
+    } catch (failure) { setReturnError(returnErrorMessage(failure)) }
     finally { setReturnBusy(false) }
   }
 

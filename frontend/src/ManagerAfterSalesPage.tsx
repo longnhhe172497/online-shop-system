@@ -148,7 +148,7 @@ function ReturnsPanel() {
       <p>{r.reason}</p>
       {r.evidenceUrl && <p><a href={r.evidenceUrl} target="_blank" rel="noreferrer">Xem minh chứng</a></p>}
       <ul>{r.items.map((i) => <li key={i.id}>{i.productName} ({i.sku}) × {i.requestedQuantity} · {formatVnd(i.refundAmount)}
-        {i.inspectionResult && <small>Kiểm tra: {inspectionResultLabel(i.inspectionResult)}; nhận {i.receivedQuantity}; nhập kho {i.restockQuantity}</small>}</li>)}</ul>
+        {i.inspectionResult && <small className="md-inspection">Kiểm tra: {inspectionResultLabel(i.inspectionResult)}; nhận {i.receivedQuantity}; nhập kho {i.restockQuantity}</small>}</li>)}</ul>
       {r.decisionNote && <p><small>Ghi chú: {r.decisionNote}</small></p>}
       {(r.status === 'REQUESTED' || r.status === 'UNDER_REVIEW' || r.status === 'INSPECTED') && <>
         <textarea className="md-note" aria-label={`Ghi chú quyết định cho yêu cầu #${r.id}`} maxLength={1000}
@@ -247,7 +247,7 @@ function ReportsPanel() {
   const [loading, setLoading] = useState(false)
   const load = useCallback(async () => {
     setLoading(true); setError(''); setNotice('')
-    try { setData(await getTransactionReport(from, to)) } catch (e) { setError(errorMessage(e)) } finally { setLoading(false) }
+    try { setData(await getTransactionReport(from, to)) } catch (e) { setData(null); setError(errorMessage(e)) } finally { setLoading(false) }
   }, [from, to])
   useEffect(() => {
     const timer = window.setTimeout(() => void load(), 0)
