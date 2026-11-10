@@ -1,9 +1,10 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { AxiosError, type AxiosResponse } from 'axios'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import ManagerAfterSalesPage from './ManagerAfterSalesPage'
 import {
-  completeRefund, createFailedDeliveryRefund, decideReturn, getDashboard, listFailedDeliveryOrders,
+  completeRefund, createFailedDeliveryRefund, decideReturn, getDashboard, getTransactionReport, listFailedDeliveryOrders,
   listRefunds, listReturns, listStaffDailyReports, type DashboardView, type ReturnRequest,
 } from './api/afterSales'
 
@@ -92,5 +93,19 @@ describe('Manager after-sales and reporting', () => {
     fireEvent.change(screen.getByLabelText('Ngày báo cáo'), { target: { value: '2026-11-01' } })
     expect(await screen.findByText('Không có báo cáo hằng ngày cho ngày đã chọn.')).toBeInTheDocument()
     expect(listStaffDailyReports).toHaveBeenLastCalledWith('2026-11-01')
+  })
+
+  it('clears the previous figures when the report period is rejected', async () => {
+    vi.mocked(getTransactionReport).mockResolvedValueOnce(dashboard.summary)
+    const detail = 'Khoảng thời gian báo cáo không hợp lệ (tối đa 366 ngày).'
+    vi.mocked(getTransactionReport).mockRejectedValueOnce(new AxiosError('Bad Request', 'ERR_BAD_REQUEST', undefined, undefined,
+      { status: 400, data: { code: 'INVALID_REPORT_RANGE', detail } } as AxiosResponse))
+    renderPage()
+    fireEvent.click(await screen.findByRole('tab', { name: 'Báo cáo giao dịch' }))
+    expect(await screen.findByText('Tổng quan giao dịch')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Xem báo cáo' }))
+    expect(await screen.findByText(detail)).toBeInTheDocument()
+    expect(screen.queryByText('Tổng quan giao dịch')).not.toBeInTheDocument()
   })
 })
