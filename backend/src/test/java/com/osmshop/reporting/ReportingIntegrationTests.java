@@ -99,6 +99,80 @@ class ReportingIntegrationTests {
     }
 
     @Test
+    void dashboardShowsTotalsTopProductsLowStockAndPendingActions() throws Exception {
+        Session customer = session("CUSTOMER");
+        Session manager = session("MANAGER");
+        Long category = jdbc.queryForObject("INSERT INTO categories(name) VALUES (?) RETURNING id", Long.class,
+                "Dashboard " + UUID.randomUUID());
+        String sku = "DB-" + UUID.randomUUID();
+        Long product = jdbc.queryForObject("""
+            INSERT INTO products(category_id,sku,name,price,stock_on_hand,reorder_threshold,status)
+            VALUES (?,?,'Dashboard shirt',125000,0,5,'ACTIVE') RETURNING id
+            """, Long.class, category, sku);
+        long orderId = order(customer, 125000);
+        jdbc.update("""
+            INSERT INTO order_items(order_id,product_id,sku_snapshot,name_snapshot,unit_price,quantity,discount_amount,line_total)
+            VALUES (?,?,?,'Dashboard shirt',125000,1,0,125000)
+            """, orderId, product, sku);
+        jdbc.update("""
+            INSERT INTO payment_attempts(order_id,attempt_number,method,status,amount,simulation_code,expires_at,paid_at)
+            VALUES (?,1,'SIMULATED_QR','PAID',125000,?,now()+interval '15 minutes',now())
+            """, orderId, "PAY-" + UUID.randomUUID());
+        jdbc.update("""
+            INSERT INTO refunds(order_id,reason,method,status,amount,idempotency_key,approved_by,completed_by,completed_at)
+            VALUES (?,'CUSTOMER_RETURN','SIMULATED_QR','COMPLETED',25000,?,?,?,now())
+            """, orderId, "REF-" + UUID.randomUUID(), manager.id(), manager.id());
+        jdbc.update("INSERT INTO support_tickets(customer_id,subject) VALUES (?,'Dashboard ticket')", customer.id());
+
+        LocalDate today = LocalDate.now(REPORT_ZONE);
+        String response = call(get("/api/manager/reports/dashboard?from=" + today.minusDays(1) + "&to=" + today), manager)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.summary.grossRevenue").value(125000))
+                .andExpect(jsonPath("$.summary.refundedAmount").value(25000))
+                .andReturn().getResponse().getContentAsString();
+        JsonNode dashboard = json.readTree(response);
+        assertThat(dashboard.get("topProducts").toString()).contains(sku);
+        assertThat(dashboard.get("lowStock").toString()).contains(sku);
+        assertThat(dashboard.get("pendingActions").get("unassignedOpenTickets").asLong()).isGreaterThanOrEqualTo(1);
+    }
+
+    @Test
+    void dashboardUsesLast30DaysByDefaultAndRejectsTooLongRange() throws Exception {
+        Session manager = session("MANAGER");
+        LocalDate today = LocalDate.now(REPORT_ZONE);
+        call(get("/api/manager/reports/dashboard"), manager)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.summary.from").value(today.minusDays(29).toString()))
+                .andExpect(jsonPath("$.summary.to").value(today.toString()));
+        call(get("/api/manager/reports/dashboard?from=" + today.minusDays(400) + "&to=" + today), manager)
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("INVALID_REPORT_RANGE"));
+    }
+
+    @Test
+    void dailyReportsListWarehouseAndDeliveryReportsForTheChosenDate() throws Exception {
+        Session manager = session("MANAGER");
+        Session warehouse = session("WAREHOUSE");
+        Session support = session("SUPPORT");
+        LocalDate today = LocalDate.now(REPORT_ZONE);
+        jdbc.update("INSERT INTO staff_daily_reports(staff_id,report_date,content) VALUES (?,?,?)",
+                warehouse.id(), today, "Packed 12 orders");
+        jdbc.update("INSERT INTO staff_daily_reports(staff_id,report_date,content) VALUES (?,?,?)",
+                support.id(), today, "Support content");
+        jdbc.update("INSERT INTO staff_daily_reports(staff_id,report_date,content) VALUES (?,?,?)",
+                warehouse.id(), today.minusDays(1), "Yesterday report");
+
+        String body = call(get("/api/manager/reports/daily-reports?date=" + today), manager)
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        assertThat(body).contains("Packed 12 orders").contains("WAREHOUSE")
+                .doesNotContain("Support content").doesNotContain("Yesterday report");
+
+        String empty = call(get("/api/manager/reports/daily-reports?date=" + today.minusDays(3000)), manager)
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        assertThat(json.readTree(empty).size()).isZero();
+    }
+
+    @Test
     void reportDateRangeIsValidatedAtHttpBoundary() throws Exception {
         Session manager = session("MANAGER");
         LocalDate today = LocalDate.now(REPORT_ZONE);

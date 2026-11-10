@@ -26,6 +26,8 @@ public final class AfterSalesDtos {
     public record RefundView(long id, long orderId, Long returnRequestId, String orderCode,
             String reason, String method, String status, BigDecimal amount,
             OffsetDateTime createdAt, OffsetDateTime completedAt) {}
+    public record FailedDeliveryOrderView(long orderId, String orderCode, String customerName,
+            BigDecimal amount, OffsetDateTime returnedAt) {}
     public record CreateTicketRequest(@NotBlank @Size(max = 200) String subject,
             @Positive Long orderId, @NotBlank @Size(max = 5000) String message) {}
     public record TicketMessageRequest(@NotBlank @Size(max = 5000) String message) {}
