@@ -124,6 +124,9 @@ function returnErrorMessage(failure: unknown) {
   return getUiError(failure)
 }
 
+// Rows of the return card have no thumbnail column: text on the left, quantity or status on the right.
+const RETURN_ROW = { gridTemplateColumns: 'minmax(0, 1fr) auto' }
+
 export default function OrderDetailPage() {
   const id = Number(useParams().id)
   const [order, setOrder] = useState<OrderDetail | null>(null)
@@ -332,7 +335,7 @@ export default function OrderDetailPage() {
           <select value={returnType} onChange={(e) => setReturnType(e.target.value as 'REFUND_ONLY' | 'RETURN_AND_REFUND')}>
             <option value="RETURN_AND_REFUND">Trả hàng và hoàn tiền</option><option value="REFUND_ONLY">Chỉ hoàn tiền</option>
           </select></label>
-        <ul className="line-list">{order.items.map((item) => <li key={item.id}>
+        <ul className="line-list">{order.items.map((item) => <li key={item.id} style={RETURN_ROW}>
           <div className="line-info"><strong>{item.name}</strong><span className="muted">Đã mua: {item.quantity}</span></div>
           <label>Số lượng<input aria-label={`Số lượng trả ${item.name}`} type="number" min="0" max={item.quantity}
             value={returnQuantities[item.id] ?? ''} onChange={(e) => setReturnQuantities({ ...returnQuantities, [item.id]: e.target.value })} /></label>
@@ -343,7 +346,7 @@ export default function OrderDetailPage() {
       </form>
       {orderReturns.length > 0 && <div className="order-return-history" style={{ marginTop: 24 }}>
         <h3>Yêu cầu đã gửi</h3>
-        <ul className="line-list">{orderReturns.map((r) => <li key={r.id}>
+        <ul className="line-list">{orderReturns.map((r) => <li key={r.id} style={RETURN_ROW}>
           <div className="line-info">
             <strong>#{r.id} · {r.requestType === 'REFUND_ONLY' ? 'Chỉ hoàn tiền' : 'Trả hàng và hoàn tiền'}</strong>
             <span className="muted">{formatDateTime(r.createdAt)} · {r.items.map((i) => `${i.productName} × ${i.requestedQuantity}`).join(', ')}</span>

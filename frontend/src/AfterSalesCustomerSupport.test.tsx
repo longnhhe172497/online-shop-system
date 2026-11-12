@@ -43,7 +43,7 @@ describe('Customer follows return requests on the order page', () => {
 
   it('shows the Manager\'s reason for a rejection (MSG-033) and the approval message (MSG-032), only for this order', async () => {
     vi.mocked(listMyReturns).mockResolvedValue([
-      request({ id: 41, status: 'REJECTED', decisionNote: 'Sản phẩm không lỗi' }),
+      request({ id: 41, status: 'REJECTED', decisionNote: 'Sản phẩm không lỗi.' }),
       request({ id: 42, status: 'REFUND_PENDING' }),
       request({ id: 43, orderId: 99, orderCode: 'OD-99', status: 'REJECTED', decisionNote: 'Đơn khác' })])
     renderOrder()
