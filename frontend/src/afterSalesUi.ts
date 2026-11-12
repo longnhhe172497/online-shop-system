@@ -58,3 +58,21 @@ export function refundStatusTone(status: string) {
   if (status === 'PROCESSING') return 'lg-warn'
   return 'lg-info'
 }
+
+/** What the customer is told about a request (UC-MNG-004: MSG-032 on approval, MSG-033 with the reason on rejection). */
+export function customerReturnMessage(status: string, note: string | null) {
+  if (status === 'REJECTED') return `Yêu cầu hoàn tiền của bạn đã bị từ chối. Lý do: ${note ?? 'không có ghi chú'}.`
+  if (status === 'REFUND_PENDING') return 'Yêu cầu hoàn tiền của bạn đã được chấp thuận.'
+  if (status === 'REFUNDED' || status === 'PARTIALLY_REFUNDED') return 'Cửa hàng đã hoàn tiền cho yêu cầu này.'
+  if (status === 'RETURN_AUTHORIZED') return 'Cửa hàng đồng ý cho gửi trả hàng. Vui lòng gửi sản phẩm về kho.'
+  if (status === 'INSPECTED') return 'Kho đã kiểm tra hàng trả, cửa hàng đang quyết định hoàn tiền.'
+  return 'Cửa hàng đang xem xét yêu cầu của bạn.'
+}
+
+/** Storefront badge tone (status-badge classes) for a return request. */
+export function customerReturnTone(status: string) {
+  if (status === 'REJECTED' || status === 'CANCELLED') return 'danger'
+  if (status === 'REFUNDED' || status === 'PARTIALLY_REFUNDED' || status === 'REFUND_PENDING') return 'success'
+  if (status === 'REQUESTED' || status === 'UNDER_REVIEW' || status === 'INSPECTED') return 'warning'
+  return 'info'
+}

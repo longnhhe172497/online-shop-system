@@ -2,7 +2,8 @@ import { isAxiosError } from 'axios'
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { cancelOrder, getOrder, getShipment, retryPayment, simulatePayment, type OrderDetail, type ShipmentTracking } from './api/orders'
-import { createReturnRequest } from './api/afterSales'
+import { createReturnRequest, listMyReturns, type ReturnRequest } from './api/afterSales'
+import { customerReturnMessage, customerReturnTone, returnStatusLabel } from './afterSalesUi'
 import { attemptStatusNames, formatDateTime, formatVnd, orderStatusNames, paymentMethodNames, paymentStatusNames,
   shipmentStatusNames,
   SIMULATION_NOTICE, statusTone } from './orderFormat'
@@ -139,6 +140,7 @@ export default function OrderDetailPage() {
   const [returnBusy, setReturnBusy] = useState(false)
   const [returnNotice, setReturnNotice] = useState('')
   const [returnError, setReturnError] = useState('')
+  const [orderReturns, setOrderReturns] = useState<ReturnRequest[]>([])
   // Length of the current QR window, captured the first time a code is shown; drives the progress bar.
   const [qrWindow, setQrWindow] = useState<{ expiresAt: string | null; seconds: number }>({ expiresAt: null, seconds: 0 })
 
@@ -149,6 +151,16 @@ export default function OrderDetailPage() {
       .finally(() => { if (active) setLoading(false) })
     return () => { active = false }
   }, [id])
+
+  // The customer follows each return/refund request of this order here, including the Manager's reason on rejection.
+  const delivered = order?.status === 'DELIVERED'
+  useEffect(() => {
+    if (!delivered) return
+    let active = true
+    listMyReturns().then((rows) => { if (active) setOrderReturns(rows.filter((row) => row.orderId === id)) })
+      .catch(() => { /* the history is supplementary; the form stays usable */ })
+    return () => { active = false }
+  }, [id, delivered])
 
   const payment = order?.payment ?? null
   const qrPending = payment?.method === 'SIMULATED_QR' && payment.status === 'PENDING'
@@ -188,6 +200,7 @@ export default function OrderDetailPage() {
       const result = await createReturnRequest(order.id, { requestType: returnType, reason: returnReason.trim(), items })
       setReturnNotice(`Đã gửi yêu cầu hậu mãi #${result.id}. Cửa hàng sẽ xem xét yêu cầu của bạn.`)
       setReturnReason(''); setReturnQuantities({})
+      setOrderReturns((rows) => [result, ...rows.filter((row) => row.id !== result.id)])
     } catch (failure) { setReturnError(returnErrorMessage(failure)) }
     finally { setReturnBusy(false) }
   }
@@ -328,6 +341,17 @@ export default function OrderDetailPage() {
           onChange={(e) => setReturnReason(e.target.value)} /></label>
         <button type="submit" className="shop-button" disabled={returnBusy}>{returnBusy ? 'Đang gửi…' : 'Gửi yêu cầu'}</button>
       </form>
+      {orderReturns.length > 0 && <div className="order-return-history" style={{ marginTop: 24 }}>
+        <h3>Yêu cầu đã gửi</h3>
+        <ul className="line-list">{orderReturns.map((r) => <li key={r.id}>
+          <div className="line-info">
+            <strong>#{r.id} · {r.requestType === 'REFUND_ONLY' ? 'Chỉ hoàn tiền' : 'Trả hàng và hoàn tiền'}</strong>
+            <span className="muted">{formatDateTime(r.createdAt)} · {r.items.map((i) => `${i.productName} × ${i.requestedQuantity}`).join(', ')}</span>
+            <span>{customerReturnMessage(r.status, r.decisionNote)}</span>
+          </div>
+          <span className={`status-badge ${customerReturnTone(r.status)}`}>{returnStatusLabel(r.status)}</span>
+        </li>)}</ul>
+      </div>}
     </section>}
 
     {cancelOpen && <div className="address-modal-backdrop"><section className="address-modal confirm-modal"

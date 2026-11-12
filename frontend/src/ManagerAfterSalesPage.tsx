@@ -214,6 +214,8 @@ function StaffReportsPanel() {
   const [rows, setRows] = useState<StaffReportRow[]>([])
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
+  // UC-MNG-007 A1: narrow the day's reports to one staff member.
+  const [staff, setStaff] = useState('')
   const load = useCallback(async () => {
     setLoading(true); setError('')
     try { setRows(await listStaffDailyReports(date)) } catch (e) { setError(errorMessage(e)) } finally { setLoading(false) }
@@ -222,14 +224,20 @@ function StaffReportsPanel() {
     const timer = window.setTimeout(() => void load(), 0)
     return () => window.clearTimeout(timer)
   }, [load])
+  const staffNames = [...new Set(rows.map((r) => r.staffName))].sort((a, b) => a.localeCompare(b, 'vi'))
+  const shown = staff ? rows.filter((r) => r.staffName === staff) : rows
   return <section>
-    <div className="lg-toolbar"><label>Ngày báo cáo <input type="date" value={date} max={vnDate()} onChange={(e) => setDate(e.target.value)} /></label>
-      <span>{rows.length} báo cáo</span>
+    <div className="lg-toolbar"><label>Ngày báo cáo <input type="date" value={date} max={vnDate()} onChange={(e) => { setDate(e.target.value); setStaff('') }} /></label>
+      <label>Nhân viên <select aria-label="Lọc theo nhân viên" value={staff} onChange={(e) => setStaff(e.target.value)}>
+        <option value="">Tất cả</option>
+        {staffNames.map((name) => <option key={name} value={name}>{name}</option>)}
+      </select></label>
+      <span>{shown.length} báo cáo</span>
       <button type="button" className="lg-btn ghost" onClick={() => void load()}>Làm mới</button></div>
     {error && <div className="lg-msg err" role="alert">{error}</div>}
-    {loading ? <div className="lg-empty">Đang tải báo cáo…</div> : rows.length === 0
+    {loading ? <div className="lg-empty">Đang tải báo cáo…</div> : shown.length === 0
       ? <div className="lg-empty">Không có báo cáo hằng ngày cho ngày đã chọn.</div>
-      : rows.map((r) => <article className="lg-panel" key={`${r.staffName}-${r.updatedAt}`}>
+      : shown.map((r) => <article className="lg-panel" key={`${r.staffName}-${r.updatedAt}`}>
         <div className="lg-toolbar"><strong>{r.staffName}</strong>
           <span className="lg-chip lg-info">{STAFF_ROLE[r.role] ?? r.role}</span>
           <span>Cập nhật {formatDateTime(r.updatedAt)}</span></div>
