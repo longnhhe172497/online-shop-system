@@ -3,7 +3,7 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { cancelOrder, getOrder, getShipment, retryPayment, simulatePayment, type OrderDetail, type ShipmentTracking } from './api/orders'
 import { createReturnRequest, listMyReturns, type ReturnRequest } from './api/afterSales'
-import { customerReturnMessage, customerReturnTone, returnStatusLabel } from './afterSalesUi'
+import { customerItemNote, customerReturnMessage, customerReturnTone, itemRefund, returnStatusLabel } from './afterSalesUi'
 import { attemptStatusNames, formatDateTime, formatVnd, orderStatusNames, paymentMethodNames, paymentStatusNames,
   shipmentStatusNames,
   SIMULATION_NOTICE, statusTone } from './orderFormat'
@@ -349,8 +349,16 @@ export default function OrderDetailPage() {
         <ul className="line-list">{orderReturns.map((r) => <li key={r.id} style={RETURN_ROW}>
           <div className="line-info">
             <strong>#{r.id} · {r.requestType === 'REFUND_ONLY' ? 'Chỉ hoàn tiền' : 'Trả hàng và hoàn tiền'}</strong>
-            <span className="muted">{formatDateTime(r.createdAt)} · {r.items.map((i) => `${i.productName} × ${i.requestedQuantity}`).join(', ')}</span>
+            <span className="muted">{formatDateTime(r.createdAt)}</span>
+            {r.items.map((i) => {
+              const note = customerItemNote(r.status, i, formatVnd)
+              return <span key={i.id} className="muted">{i.productName} × {i.requestedQuantity}{note && ` — ${note}`}</span>
+            })}
             <span>{customerReturnMessage(r.status, r.decisionNote)}</span>
+            {r.status !== 'REJECTED' && <strong>
+              {r.status === 'REFUND_PENDING' || r.status === 'REFUNDED' || r.status === 'PARTIALLY_REFUNDED' ? 'Số tiền hoàn' : 'Dự kiến hoàn'}:{' '}
+              {formatVnd(r.items.reduce((sum, i) => sum + itemRefund(i), 0))}
+            </strong>}
           </div>
           <span className={`status-badge ${customerReturnTone(r.status)}`}>{returnStatusLabel(r.status)}</span>
         </li>)}</ul>

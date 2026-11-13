@@ -55,6 +55,18 @@ describe('Customer follows return requests on the order page', () => {
     expect(screen.queryByText(/Đơn khác/)).not.toBeInTheDocument()
   })
 
+  it('explains per item what was refunded after a partial inspection', async () => {
+    const coat = { id: 2, orderItemId: 12, productName: 'Quần jeans', sku: 'QJ-02', requestedQuantity: 1, refundAmount: 450000,
+      receivedQuantity: 0, restockQuantity: 0, inspectionResult: 'NOT_ELIGIBLE', conditionNote: 'Không có trong kiện' }
+    vi.mocked(listMyReturns).mockResolvedValue([request({ id: 107, requestType: 'RETURN_AND_REFUND', status: 'REFUNDED',
+      items: [{ ...request({}).items[0], receivedQuantity: 1, restockQuantity: 1, inspectionResult: 'ELIGIBLE', conditionNote: 'Nguyên tem' }, coat] })])
+    renderOrder()
+
+    expect(await screen.findByText(/Áo thun trắng × 1 — Hoàn 250\.000/)).toBeInTheDocument()
+    expect(screen.getByText(/Quần jeans × 1 — Kho không nhận được sản phẩm này, không hoàn tiền\./)).toBeInTheDocument()
+    expect(screen.getByText(/Số tiền hoàn: 250\.000/)).toBeInTheDocument()
+  })
+
   it('adds a newly submitted request to the list', async () => {
     vi.mocked(listMyReturns).mockResolvedValue([])
     vi.mocked(createReturnRequest).mockResolvedValue(request({ id: 44 }))

@@ -76,3 +76,23 @@ export function customerReturnTone(status: string) {
   if (status === 'REQUESTED' || status === 'UNDER_REVIEW' || status === 'INSPECTED') return 'warning'
   return 'info'
 }
+
+type CustomerReturnItem = { requestedQuantity: number; refundAmount: number; receivedQuantity: number | null; inspectionResult: string | null }
+
+/** Money for one item as the backend computes it: after inspection only the received quantity of eligible items. */
+export function itemRefund(item: CustomerReturnItem) {
+  if (item.inspectionResult === null) return Number(item.refundAmount)
+  if (item.inspectionResult !== 'ELIGIBLE' || !item.receivedQuantity) return 0
+  return Number(item.refundAmount) * item.receivedQuantity / item.requestedQuantity
+}
+
+/** Per-item line for the customer: what the warehouse received and what is refunded for it. */
+export function customerItemNote(status: string, item: CustomerReturnItem, money: (value: number) => string) {
+  if (status === 'REJECTED') return ''
+  if (item.inspectionResult === 'NOT_ELIGIBLE') return 'Kho không nhận được sản phẩm này, không hoàn tiền.'
+  if (item.inspectionResult === 'ELIGIBLE') {
+    const partial = (item.receivedQuantity ?? 0) < item.requestedQuantity ? ` (kho nhận ${item.receivedQuantity}/${item.requestedQuantity})` : ''
+    return `Hoàn ${money(itemRefund(item))}${partial}`
+  }
+  return `Dự kiến hoàn ${money(itemRefund(item))}`
+}
