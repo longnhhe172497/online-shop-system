@@ -3,7 +3,7 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { cancelOrder, getOrder, getShipment, retryPayment, simulatePayment, type OrderDetail, type ShipmentTracking } from './api/orders'
 import { createReturnRequest, listMyReturns, type ReturnRequest } from './api/afterSales'
-import { customerItemNote, customerReturnMessage, customerReturnTone, itemRefund, returnStatusLabel } from './afterSalesUi'
+import { customerItemNote, customerReturnMessage, customerReturnTone, itemRefund, returnStatusLabel, returnedQuantities } from './afterSalesUi'
 import { attemptStatusNames, formatDateTime, formatVnd, orderStatusNames, paymentMethodNames, paymentStatusNames,
   shipmentStatusNames,
   SIMULATION_NOTICE, statusTone } from './orderFormat'
@@ -335,11 +335,17 @@ export default function OrderDetailPage() {
           <select value={returnType} onChange={(e) => setReturnType(e.target.value as 'REFUND_ONLY' | 'RETURN_AND_REFUND')}>
             <option value="RETURN_AND_REFUND">Trả hàng và hoàn tiền</option><option value="REFUND_ONLY">Chỉ hoàn tiền</option>
           </select></label>
-        <ul className="line-list">{order.items.map((item) => <li key={item.id} style={RETURN_ROW}>
-          <div className="line-info"><strong>{item.name}</strong><span className="muted">Đã mua: {item.quantity}</span></div>
-          <label>Số lượng<input aria-label={`Số lượng trả ${item.name}`} type="number" min="0" max={item.quantity}
+        <ul className="line-list">{order.items.map((item) => {
+          const used = returnedQuantities(orderReturns, item.id)
+          const left = Math.max(0, item.quantity - used.refunded - used.pending)
+          return <li key={item.id} style={RETURN_ROW}>
+          <div className="line-info"><strong>{item.name}</strong><span className="muted">Đã mua: {item.quantity}</span>
+            {(used.refunded > 0 || used.pending > 0) && <span className="muted">
+              Đã hoàn: {used.refunded}{used.pending > 0 && ` · Đang yêu cầu: ${used.pending}`} · Còn có thể trả: {left}</span>}
+          </div>
+          <label>Số lượng<input aria-label={`Số lượng trả ${item.name}`} type="number" min="0" max={left}
             value={returnQuantities[item.id] ?? ''} onChange={(e) => setReturnQuantities({ ...returnQuantities, [item.id]: e.target.value })} /></label>
-        </li>)}</ul>
+        </li>})}</ul>
         <label className="cancel-reason">Lý do yêu cầu<textarea required maxLength={2000} value={returnReason}
           onChange={(e) => setReturnReason(e.target.value)} /></label>
         <button type="submit" className="shop-button" disabled={returnBusy}>{returnBusy ? 'Đang gửi…' : 'Gửi yêu cầu'}</button>

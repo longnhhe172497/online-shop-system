@@ -94,5 +94,29 @@ export function customerItemNote(status: string, item: CustomerReturnItem, money
     const partial = (item.receivedQuantity ?? 0) < item.requestedQuantity ? ` (kho nhận ${item.receivedQuantity}/${item.requestedQuantity})` : ''
     return `Hoàn ${money(itemRefund(item))}${partial}`
   }
-  return `Dự kiến hoàn ${money(itemRefund(item))}`
+  const settled = status === 'REFUND_PENDING' || status === 'REFUNDED' || status === 'PARTIALLY_REFUNDED'
+  return `${settled ? 'Hoàn' : 'Dự kiến hoàn'} ${money(itemRefund(item))}`
+}
+
+type QuantityRequest = { requestType: string; status: string;
+  items: { orderItemId: number; requestedQuantity: number; receivedQuantity: number | null }[] }
+
+/**
+ * Quantities of one order item already used by return/refund requests, counted the way the backend checks
+ * a new request: refunded (Refund Only: requested; Return and Refund: what the warehouse received) and still
+ * in progress. Rejected or closed requests free their quantity again.
+ */
+export function returnedQuantities(requests: QuantityRequest[], orderItemId: number) {
+  let refunded = 0
+  let pending = 0
+  for (const r of requests) {
+    if (r.status === 'REJECTED' || r.status === 'CLOSED') continue
+    const done = r.status === 'REFUNDED' || r.status === 'PARTIALLY_REFUNDED'
+    for (const i of r.items) {
+      if (i.orderItemId !== orderItemId) continue
+      if (!done) pending += i.requestedQuantity
+      else refunded += r.requestType === 'RETURN_AND_REFUND' ? (i.receivedQuantity ?? 0) : i.requestedQuantity
+    }
+  }
+  return { refunded, pending }
 }

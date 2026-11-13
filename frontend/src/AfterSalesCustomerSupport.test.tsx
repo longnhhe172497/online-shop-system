@@ -67,6 +67,19 @@ describe('Customer follows return requests on the order page', () => {
     expect(screen.getByText(/Số tiền hoàn: 250\.000/)).toBeInTheDocument()
   })
 
+  it('shows under each product how many were already refunded, are being requested and can still be returned', async () => {
+    const shirt = { ...order.items[0], quantity: 2 }
+    vi.mocked(getOrder).mockResolvedValue({ ...order, items: [shirt] })
+    vi.mocked(listMyReturns).mockResolvedValue([
+      request({ id: 46, status: 'REFUNDED' }),
+      request({ id: 47, status: 'REJECTED' }),
+      request({ id: 48, status: 'REQUESTED', createdAt: '2026-11-10T03:00:00Z' })])
+    renderOrder()
+
+    expect(await screen.findByText('Đã hoàn: 1 · Đang yêu cầu: 1 · Còn có thể trả: 0')).toBeInTheDocument()
+    expect(screen.getByLabelText('Số lượng trả Áo thun trắng')).toHaveAttribute('max', '0')
+  })
+
   it('adds a newly submitted request to the list', async () => {
     vi.mocked(listMyReturns).mockResolvedValue([])
     vi.mocked(createReturnRequest).mockResolvedValue(request({ id: 44 }))
