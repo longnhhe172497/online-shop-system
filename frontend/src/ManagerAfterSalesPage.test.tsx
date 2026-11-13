@@ -95,6 +95,20 @@ describe('Manager after-sales and reporting', () => {
     expect(listStaffDailyReports).toHaveBeenLastCalledWith('2026-11-01')
   })
 
+  it('filters the day\'s staff reports by staff member', async () => {
+    vi.mocked(listStaffDailyReports).mockResolvedValueOnce([
+      { staffName: 'Hùng', role: 'WAREHOUSE', reportDate: '2026-11-09', content: 'Đóng gói 12 đơn', updatedAt: '2026-11-09T10:00:00Z' },
+      { staffName: 'Nam', role: 'DELIVERY', reportDate: '2026-11-09', content: 'Giao 8 đơn', updatedAt: '2026-11-09T11:00:00Z' }])
+    renderPage()
+    fireEvent.click(await screen.findByRole('tab', { name: 'Báo cáo nhân viên' }))
+    expect(await screen.findByText('Giao 8 đơn')).toBeInTheDocument()
+
+    fireEvent.change(screen.getByLabelText('Lọc theo nhân viên'), { target: { value: 'Hùng' } })
+    expect(screen.getByText('Đóng gói 12 đơn')).toBeInTheDocument()
+    expect(screen.queryByText('Giao 8 đơn')).not.toBeInTheDocument()
+    expect(screen.getByText('1 báo cáo')).toBeInTheDocument()
+  })
+
   it('clears the previous figures when the report period is rejected', async () => {
     vi.mocked(getTransactionReport).mockResolvedValueOnce(dashboard.summary)
     const detail = 'Khoảng thời gian báo cáo không hợp lệ (tối đa 366 ngày).'
