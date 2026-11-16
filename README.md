@@ -58,6 +58,16 @@ npm run dev
 
 To send real verification email from your own mailbox, follow [`docs/SMTP_SETUP.md`](docs/SMTP_SETUP.md). MailHog remains the safe default for local development.
 
+## Shared demo data
+
+To replace local application data with the complete shared demo dataset, run this command from the repository root:
+
+```powershell
+.\scripts\seed-demo.ps1 -Force
+```
+
+The seed includes accounts for every role and connected scenarios for catalog, cart, vouchers, checkout, payment, inventory, delivery, returns, support, reviews, sessions, and audit logs. It is for local development only and deliberately replaces existing application data. See [`database/seed/README.md`](database/seed/README.md) for demo credentials, one-time links, coverage, and safety notes.
+
 ## First Admin account (local only)
 
 1. Register your own account in the frontend and verify its email first.
