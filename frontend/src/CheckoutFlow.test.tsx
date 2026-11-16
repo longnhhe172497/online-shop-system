@@ -1,4 +1,5 @@
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { StrictMode } from 'react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import CheckoutPage from './CheckoutPage'
@@ -7,11 +8,13 @@ import VoucherManagementPage from './VoucherManagementPage'
 import { cancelOrder, getOrder, placeOrder, previewCheckout, simulatePayment, type CheckoutPreview,
   type OrderDetail } from './api/orders'
 import { listAddresses } from './api/profile'
+import { getMe } from './api/auth'
 import { createVoucher, listVouchers } from './api/vouchers'
 
 vi.mock('./api/orders', () => ({ previewCheckout: vi.fn(), placeOrder: vi.fn(), listOrders: vi.fn(), getOrder: vi.fn(),
   cancelOrder: vi.fn(), retryPayment: vi.fn(), simulatePayment: vi.fn() }))
 vi.mock('./api/profile', () => ({ listAddresses: vi.fn() }))
+vi.mock('./api/auth', () => ({ getMe: vi.fn() }))
 vi.mock('./api/vouchers', () => ({ listVouchers: vi.fn(), createVoucher: vi.fn(), updateVoucher: vi.fn(),
   deleteVoucher: vi.fn() }))
 
@@ -44,6 +47,7 @@ function renderAt(path: string) {
 describe('Checkout and payment', () => {
   beforeEach(() => {
     vi.resetAllMocks()
+    vi.mocked(getMe).mockResolvedValue({ id: 1, email: 'test@example.com', fullName: 'Test', role: 'CUSTOMER' })
     vi.mocked(listAddresses).mockResolvedValue([{ id: 5, recipientName: 'Lan', phone: '0900000011',
       addressLine: '12 Hồng Hà', ward: 'Phúc Xá', district: 'Ba Đình', province: 'Hà Nội', isDefault: true }])
   })
@@ -93,6 +97,41 @@ describe('Checkout and payment', () => {
     expect(screen.queryByText('Bạn cần đăng nhập')).not.toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Thử lại' }))
     expect(await screen.findByText('Bàn phím K68')).toBeInTheDocument()
+  })
+
+  it.each(['before', 'after'])('ignores an obsolete forbidden response %s a successful StrictMode load', async (timing) => {
+    let rejectOld!: (reason: unknown) => void
+    let resolveCurrent!: (value: CheckoutPreview) => void
+    vi.mocked(previewCheckout)
+      .mockImplementationOnce(() => new Promise((_, reject) => { rejectOld = reject }))
+      .mockImplementationOnce(() => new Promise((resolve) => { resolveCurrent = resolve }))
+    render(<StrictMode><MemoryRouter><CheckoutPage /></MemoryRouter></StrictMode>)
+    await waitFor(() => expect(previewCheckout).toHaveBeenCalledTimes(2))
+    const reject = () => rejectOld(Object.assign(new Error('Forbidden'),
+      { isAxiosError: true, response: { status: 403 } }))
+    if (timing === 'before') await act(async () => { reject() })
+    await act(async () => { resolveCurrent(quote) })
+    if (timing === 'after') await act(async () => { reject() })
+    expect(await screen.findByRole('button', { name: 'Đặt hàng' })).toBeEnabled()
+    expect(screen.queryByText('Chỉ tài khoản khách hàng được đặt hàng')).not.toBeInTheDocument()
+    expect(getMe).not.toHaveBeenCalled()
+  })
+
+  it.each(['CUSTOMER', 'ADMIN'])('checks the actual role after a forbidden response for %s', async (role) => {
+    vi.mocked(previewCheckout).mockRejectedValue(Object.assign(new Error('Forbidden'),
+      { isAxiosError: true, response: { status: 403 } }))
+    vi.mocked(getMe).mockResolvedValue({ id: 1, email: 'test@example.com', fullName: 'Test', role })
+    renderAt('/checkout')
+    expect(await screen.findByText(role === 'CUSTOMER'
+      ? 'Không tải được giỏ hàng' : 'Chỉ tài khoản khách hàng được đặt hàng')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Đặt hàng' })).not.toBeInTheDocument()
+    if (role === 'CUSTOMER') {
+      expect(screen.queryByText('Chỉ tài khoản khách hàng được đặt hàng')).not.toBeInTheDocument()
+      vi.mocked(previewCheckout).mockResolvedValue(quote)
+      fireEvent.click(screen.getByRole('button', { name: 'Thử lại' }))
+      expect(await screen.findByRole('button', { name: 'Đặt hàng' })).toBeEnabled()
+      expect(screen.queryByText('Không tải được giỏ hàng')).not.toBeInTheDocument()
+    }
   })
 
   it('simulates a successful QR payment and can cancel a confirmed order', async () => {

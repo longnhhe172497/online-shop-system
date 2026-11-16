@@ -1,0 +1,262 @@
+{
+    "format": "3",
+    "built": "2026-11-02",
+    "law_date": "20\/09\/2026",
+    "license": "CC BY 4.0",
+    "files": {
+        "tinh": {
+            "rows": 34,
+            "csv": 3278,
+            "json": 5751,
+            "cols": [
+                "ma_tinh",
+                "ten",
+                "ten_day_du",
+                "loai",
+                "so_don_vi_cap_xa",
+                "url"
+            ]
+        },
+        "xa": {
+            "rows": 3321,
+            "csv": 565512,
+            "json": 964159,
+            "cols": [
+                "ma_xa",
+                "ten",
+                "loai",
+                "ma_tinh",
+                "ten_tinh",
+                "ma_buu_chinh",
+                "dien_tich_km2",
+                "quy_mo_dan_so",
+                "nghi_quyet",
+                "url"
+            ]
+        },
+        "xa-cu-moi": {
+            "rows": 10618,
+            "csv": 1352560,
+            "json": 2764603,
+            "cols": [
+                "ma_xa_cu",
+                "ten_xa_cu",
+                "quan_huyen_cu",
+                "tinh_cu",
+                "ma_xa_moi",
+                "ten_xa_moi",
+                "ma_tinh",
+                "ten_tinh",
+                "pham_vi",
+                "ten_danh_muc_cu"
+            ]
+        }
+    },
+    "provinces": {
+        "an-giang": {
+            "name": "An Giang",
+            "code": "91",
+            "rows": 102,
+            "csv": 16936
+        },
+        "bac-ninh": {
+            "name": "Bắc Ninh",
+            "code": "24",
+            "rows": 99,
+            "csv": 17570
+        },
+        "ca-mau": {
+            "name": "Cà Mau",
+            "code": "96",
+            "rows": 64,
+            "csv": 10520
+        },
+        "can-tho": {
+            "name": "Cần Thơ",
+            "code": "92",
+            "rows": 103,
+            "csv": 18121
+        },
+        "cao-bang": {
+            "name": "Cao Bằng",
+            "code": "04",
+            "rows": 56,
+            "csv": 9349
+        },
+        "da-nang": {
+            "name": "Đà Nẵng",
+            "code": "48",
+            "rows": 94,
+            "csv": 16511
+        },
+        "dak-lak": {
+            "name": "Đắk Lắk",
+            "code": "66",
+            "rows": 102,
+            "csv": 17003
+        },
+        "dien-bien": {
+            "name": "Điện Biên",
+            "code": "11",
+            "rows": 45,
+            "csv": 7739
+        },
+        "dong-nai": {
+            "name": "Đồng Nai",
+            "code": "75",
+            "rows": 95,
+            "csv": 16818
+        },
+        "dong-thap": {
+            "name": "Đồng Tháp",
+            "code": "82",
+            "rows": 102,
+            "csv": 17593
+        },
+        "gia-lai": {
+            "name": "Gia Lai",
+            "code": "52",
+            "rows": 135,
+            "csv": 21889
+        },
+        "ha-noi": {
+            "name": "Hà Nội",
+            "code": "01",
+            "rows": 126,
+            "csv": 21958
+        },
+        "ha-tinh": {
+            "name": "Hà Tĩnh",
+            "code": "42",
+            "rows": 69,
+            "csv": 11451
+        },
+        "hai-phong": {
+            "name": "Hải Phòng",
+            "code": "31",
+            "rows": 114,
+            "csv": 20732
+        },
+        "hue": {
+            "name": "Huế",
+            "code": "46",
+            "rows": 40,
+            "csv": 6847
+        },
+        "hung-yen": {
+            "name": "Hưng Yên",
+            "code": "33",
+            "rows": 104,
+            "csv": 17566
+        },
+        "khanh-hoa": {
+            "name": "Khánh Hòa",
+            "code": "56",
+            "rows": 65,
+            "csv": 11232
+        },
+        "lai-chau": {
+            "name": "Lai Châu",
+            "code": "12",
+            "rows": 38,
+            "csv": 6291
+        },
+        "lam-dong": {
+            "name": "Lâm Đồng",
+            "code": "68",
+            "rows": 124,
+            "csv": 21375
+        },
+        "lang-son": {
+            "name": "Lạng Sơn",
+            "code": "20",
+            "rows": 65,
+            "csv": 10900
+        },
+        "lao-cai": {
+            "name": "Lào Cai",
+            "code": "15",
+            "rows": 99,
+            "csv": 16206
+        },
+        "nghe-an": {
+            "name": "Nghệ An",
+            "code": "40",
+            "rows": 130,
+            "csv": 21418
+        },
+        "ninh-binh": {
+            "name": "Ninh Bình",
+            "code": "37",
+            "rows": 129,
+            "csv": 21875
+        },
+        "phu-tho": {
+            "name": "Phú Thọ",
+            "code": "25",
+            "rows": 148,
+            "csv": 24405
+        },
+        "quang-ngai": {
+            "name": "Quảng Ngãi",
+            "code": "51",
+            "rows": 96,
+            "csv": 16438
+        },
+        "quang-ninh": {
+            "name": "Quảng Ninh",
+            "code": "22",
+            "rows": 54,
+            "csv": 9992
+        },
+        "quang-tri": {
+            "name": "Quảng Trị",
+            "code": "44",
+            "rows": 78,
+            "csv": 13399
+        },
+        "son-la": {
+            "name": "Sơn La",
+            "code": "14",
+            "rows": 75,
+            "csv": 12281
+        },
+        "tay-ninh": {
+            "name": "Tây Ninh",
+            "code": "80",
+            "rows": 96,
+            "csv": 16072
+        },
+        "thai-nguyen": {
+            "name": "Thái Nguyên",
+            "code": "19",
+            "rows": 92,
+            "csv": 16044
+        },
+        "thanh-hoa": {
+            "name": "Thanh Hóa",
+            "code": "38",
+            "rows": 166,
+            "csv": 27881
+        },
+        "ho-chi-minh": {
+            "name": "TP. Hồ Chí Minh",
+            "code": "79",
+            "rows": 168,
+            "csv": 31917
+        },
+        "tuyen-quang": {
+            "name": "Tuyên Quang",
+            "code": "08",
+            "rows": 124,
+            "csv": 21192
+        },
+        "vinh-long": {
+            "name": "Vĩnh Long",
+            "code": "86",
+            "rows": 124,
+            "csv": 20994
+        }
+    },
+    "readme": 7188
+}

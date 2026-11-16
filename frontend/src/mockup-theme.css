@@ -154,7 +154,7 @@
   letter-spacing: .09em;
   text-transform: uppercase;
 }
-.auth-card input, .account-form input, .address-form-grid input,
+.auth-card input, .account-form input, .address-form-grid :is(input, select),
 .admin-filters input, .admin-filters select, .admin-table select,
 .setting-row input, .admin-editor select, .google-link-password input {
   background: #fff;
@@ -163,13 +163,13 @@
   color: var(--forme-ink);
   min-height: 45px;
 }
-.auth-card input:focus, .account-form input:focus, .address-form-grid input:focus,
+.auth-card input:focus, .account-form input:focus, .address-form-grid :is(input, select):focus,
 .admin-filters input:focus, .admin-filters select:focus, .admin-table select:focus {
   border-color: var(--forme-blue);
   outline: 2px solid #dce2ff;
 }
 .auth-card input:disabled, .account-form input:disabled { background: #f4f1ec; color: var(--forme-muted); }
-.account-form input[aria-invalid="true"], .address-form-grid input[aria-invalid="true"],
+.account-form input[aria-invalid="true"], .address-form-grid :is(input, select)[aria-invalid="true"],
 .auth-card input[aria-invalid="true"] {
   border-color: #b42318;
 }

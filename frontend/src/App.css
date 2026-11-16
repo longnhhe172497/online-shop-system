@@ -400,7 +400,7 @@
 }
 
 .account-form input,
-.address-form-grid input {
+.address-form-grid :is(input, select) {
     background: #fff;
     border: 1px solid #dcd8d2;
     border-radius: 8px;
@@ -416,7 +416,7 @@
 }
 
 .account-form input:focus,
-.address-form-grid input:focus {
+.address-form-grid :is(input, select):focus {
     border-color: #2438c5;
     outline: 2px solid #dce2ff;
 }
