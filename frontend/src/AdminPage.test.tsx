@@ -114,10 +114,12 @@ it('applies audit filters only when the filter form is submitted', async () => {
   await screen.findByText('Chưa có nhật ký.')
   fireEvent.change(screen.getByRole('textbox', { name: 'Lọc theo email người thực hiện' }),
     { target: { value: 'admin@example.com' } })
+  fireEvent.change(screen.getByRole('combobox', { name: 'Lọc hành động' }),
+    { target: { value: 'USER_CREATED' } })
   expect(listAudit).toHaveBeenCalledTimes(1)
   fireEvent.click(screen.getByRole('button', { name: 'Lọc' }))
   await waitFor(() => expect(listAudit).toHaveBeenCalledWith(0,
-    expect.objectContaining({ actor: 'admin@example.com' })))
+    expect.objectContaining({ actor: 'admin@example.com', action: 'USER_CREATED' })))
 })
 
 it('requires confirmation before revoking an invitation', async () => {

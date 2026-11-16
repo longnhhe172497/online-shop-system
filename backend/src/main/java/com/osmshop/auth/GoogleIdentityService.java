@@ -67,6 +67,10 @@ public class GoogleIdentityService {
                         INSERT INTO audit_logs(actor_id,action,entity_type,entity_id)
                         VALUES (?,'AUTH_GOOGLE_REGISTER','USER',?)
                         """, userId, Long.toString(userId));
+                jdbc.update("""
+                        INSERT INTO audit_logs(actor_id,action,entity_type,entity_id,details)
+                        VALUES (?,'USER_CREATED','USER',?,jsonb_build_object('source','GOOGLE_REGISTRATION'))
+                        """, userId, Long.toString(userId));
             }
         }
         return auth.loginGoogleUser(userId, ipAddress, userAgent);

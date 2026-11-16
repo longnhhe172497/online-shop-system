@@ -70,6 +70,8 @@ class AuthServiceUnitTests {
         assertEquals(true, result.emailSent());
         verify(jdbc).update(org.mockito.ArgumentMatchers.contains("INSERT INTO auth_tokens"),
                 eq(7L), anyString(), any());
+        verify(jdbc).update(org.mockito.ArgumentMatchers.contains("USER_CREATED"),
+                eq(7L), eq("7"), eq("127.0.0.1"));
         org.mockito.ArgumentCaptor<SimpleMailMessage> message =
                 org.mockito.ArgumentCaptor.forClass(SimpleMailMessage.class);
         verify(mail).send(message.capture());

@@ -42,13 +42,33 @@ const actionNames: Record<string, string> = {
   AUTH_LOGIN_FAILED: 'Đăng nhập thất bại', MFA_EMAIL_ENABLED: 'Bật MFA qua email',
   MFA_TOTP_ENABLED: 'Bật ứng dụng xác thực', MFA_DISABLED: 'Tắt MFA',
   MFA_RECOVERY_REGENERATED: 'Tạo lại mã khôi phục',
+  AUTH_GOOGLE_REGISTER: 'Đăng ký bằng Google', AUTH_GOOGLE_LINK: 'Liên kết Google',
+  AUTH_GOOGLE_UNLINK: 'Hủy liên kết Google',
   PRODUCT_CREATED: 'Tạo sản phẩm', PRODUCT_UPDATED: 'Sửa sản phẩm', PRODUCT_STATUS_CHANGED: 'Đổi trạng thái sản phẩm',
   CATEGORY_CREATED: 'Tạo danh mục', CATEGORY_UPDATED: 'Sửa danh mục', CATEGORY_STATUS_CHANGED: 'Đổi trạng thái danh mục',
-  CATEGORY_DELETED: 'Xóa danh mục'
+  CATEGORY_DELETED: 'Xóa danh mục',
+  VOUCHER_CREATED: 'Tạo mã giảm giá', VOUCHER_UPDATED: 'Sửa mã giảm giá', VOUCHER_DELETED: 'Xóa mã giảm giá',
+  ORDER_PLACED: 'Đặt đơn hàng', ORDER_CONFIRMED: 'Xác nhận đơn hàng', ORDER_ASSIGNED: 'Phân công giao hàng',
+  ORDER_CANCELLED: 'Hủy đơn hàng',
+  PAYMENT_SUCCEEDED: 'Thanh toán thành công', PAYMENT_FAILED: 'Thanh toán thất bại',
+  PAYMENT_RETRIED: 'Thử lại thanh toán', PAYMENT_EXPIRED: 'Thanh toán hết hạn',
+  REVIEW_HIDDEN: 'Ẩn đánh giá', REVIEW_RESTORED: 'Khôi phục đánh giá',
+  REVIEW_REPLIED: 'Phản hồi đánh giá', REVIEW_REPLY_REMOVED: 'Xóa phản hồi đánh giá',
+  RETURN_REQUEST_CREATED: 'Tạo yêu cầu trả hàng', RETURN_REJECTED: 'Từ chối trả hàng',
+  RETURN_AUTHORIZED: 'Cho phép gửi trả hàng', RETURN_APPROVED: 'Duyệt trả hàng',
+  RETURN_INSPECTED: 'Kiểm tra hàng trả', REFUND_COMPLETED: 'Hoàn tất hoàn tiền',
+  SUPPORT_TICKET_CREATED: 'Tạo yêu cầu hỗ trợ', SUPPORT_TICKET_REPLIED: 'Phản hồi yêu cầu hỗ trợ',
+  SUPPORT_TICKET_STATUS_CHANGED: 'Đổi trạng thái yêu cầu hỗ trợ',
+  DEMO_DATA_SEEDED: 'Khởi tạo dữ liệu mẫu',
+  ROLE_PERMISSIONS_BASELINE_CREATED: 'Khởi tạo quyền vai trò',
+  SYSTEM_SETTING_CHANGED: 'Thay đổi thiết lập hệ thống'
 }
 const entityNames: Record<string, string> = {
   USER: 'Tài khoản', SYSTEM_SETTING: 'Thiết lập', ROLE: 'Vai trò',
-  PRODUCT: 'Sản phẩm', CATEGORY: 'Danh mục'
+  PRODUCT: 'Sản phẩm', CATEGORY: 'Danh mục', STAFF_INVITATION: 'Lời mời',
+  VOUCHER: 'Mã giảm giá', ORDER: 'Đơn hàng', REVIEW: 'Đánh giá',
+  RETURN_REQUEST: 'Yêu cầu trả hàng', REFUND: 'Hoàn tiền', SUPPORT_TICKET: 'Yêu cầu hỗ trợ',
+  SYSTEM: 'Hệ thống'
 }
 const invitationStatuses: Record<Invitation['status'], string> = {
   PENDING: 'Đang gửi', STALLED: 'Chưa rõ kết quả gửi', SENT: 'Đã gửi', FAILED: 'Gửi thất bại',

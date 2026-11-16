@@ -85,6 +85,11 @@ public class AuthService {
                         INSERT INTO auth_tokens(user_id,token_hash,purpose,expires_at)
                         VALUES (?, ?, 'EMAIL_VERIFICATION', ?)
                         """, created, hash(token), Timestamp.from(Instant.now().plus(24, ChronoUnit.HOURS)));
+                jdbc.update("""
+                        INSERT INTO audit_logs(actor_id,action,entity_type,entity_id,details)
+                        VALUES (?,'USER_CREATED','USER',?,
+                                jsonb_build_object('source','PASSWORD_REGISTRATION','ip',?::text))
+                        """, created, Long.toString(created), safeLength(ipAddress, 64));
                 return created;
             });
         } catch (DataIntegrityViolationException exception) {
