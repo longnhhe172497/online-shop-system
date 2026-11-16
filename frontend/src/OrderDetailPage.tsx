@@ -1,7 +1,9 @@
+import { isAxiosError } from 'axios'
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { cancelOrder, getOrder, getShipment, retryPayment, simulatePayment, type OrderDetail, type ShipmentTracking } from './api/orders'
-import { createReturnRequest } from './api/afterSales'
+import { createReturnRequest, listMyReturns, type ReturnRequest } from './api/afterSales'
+import { customerItemNote, customerReturnMessage, customerReturnTone, itemRefund, returnStatusLabel, returnedQuantities } from './afterSalesUi'
 import { attemptStatusNames, formatDateTime, formatVnd, orderStatusNames, paymentMethodNames, paymentStatusNames,
   shipmentStatusNames,
   SIMULATION_NOTICE, statusTone } from './orderFormat'
@@ -112,6 +114,19 @@ function ShipmentPanel({ orderId, status }: { orderId: number; status: OrderDeta
   </section>
 }
 
+// Return-request rules (window, quantity, order state) are decided by the backend; show its reason.
+function returnErrorMessage(failure: unknown) {
+  if (isAxiosError(failure)) {
+    const status = failure.response?.status ?? 0
+    const detail = (failure.response?.data as { detail?: unknown } | undefined)?.detail
+    if ([400, 404, 409].includes(status) && typeof detail === 'string' && detail.trim()) return detail
+  }
+  return getUiError(failure)
+}
+
+// Rows of the return card have no thumbnail column: text on the left, quantity or status on the right.
+const RETURN_ROW = { gridTemplateColumns: 'minmax(0, 1fr) auto' }
+
 export default function OrderDetailPage() {
   const id = Number(useParams().id)
   const [order, setOrder] = useState<OrderDetail | null>(null)
@@ -128,6 +143,7 @@ export default function OrderDetailPage() {
   const [returnBusy, setReturnBusy] = useState(false)
   const [returnNotice, setReturnNotice] = useState('')
   const [returnError, setReturnError] = useState('')
+  const [orderReturns, setOrderReturns] = useState<ReturnRequest[]>([])
   // Length of the current QR window, captured the first time a code is shown; drives the progress bar.
   const [qrWindow, setQrWindow] = useState<{ expiresAt: string | null; seconds: number }>({ expiresAt: null, seconds: 0 })
 
@@ -138,6 +154,16 @@ export default function OrderDetailPage() {
       .finally(() => { if (active) setLoading(false) })
     return () => { active = false }
   }, [id])
+
+  // The customer follows each return/refund request of this order here, including the Manager's reason on rejection.
+  const delivered = order?.status === 'DELIVERED'
+  useEffect(() => {
+    if (!delivered) return
+    let active = true
+    listMyReturns().then((rows) => { if (active) setOrderReturns(rows.filter((row) => row.orderId === id)) })
+      .catch(() => { /* the history is supplementary; the form stays usable */ })
+    return () => { active = false }
+  }, [id, delivered])
 
   const payment = order?.payment ?? null
   const qrPending = payment?.method === 'SIMULATED_QR' && payment.status === 'PENDING'
@@ -177,7 +203,8 @@ export default function OrderDetailPage() {
       const result = await createReturnRequest(order.id, { requestType: returnType, reason: returnReason.trim(), items })
       setReturnNotice(`Đã gửi yêu cầu hậu mãi #${result.id}. Cửa hàng sẽ xem xét yêu cầu của bạn.`)
       setReturnReason(''); setReturnQuantities({})
-    } catch (failure) { setReturnError(getUiError(failure)) }
+      setOrderReturns((rows) => [result, ...rows.filter((row) => row.id !== result.id)])
+    } catch (failure) { setReturnError(returnErrorMessage(failure)) }
     finally { setReturnBusy(false) }
   }
 
@@ -308,20 +335,46 @@ export default function OrderDetailPage() {
           <select value={returnType} onChange={(e) => setReturnType(e.target.value as 'REFUND_ONLY' | 'RETURN_AND_REFUND')}>
             <option value="RETURN_AND_REFUND">Trả hàng và hoàn tiền</option><option value="REFUND_ONLY">Chỉ hoàn tiền</option>
           </select></label>
-        <ul className="line-list">{order.items.map((item) => <li key={item.id}>
-          <div className="line-info"><strong>{item.name}</strong><span className="muted">Đã mua: {item.quantity}</span></div>
-          <label>Số lượng<input aria-label={`Số lượng trả ${item.name}`} type="number" min="0" max={item.quantity}
+        <ul className="line-list">{order.items.map((item) => {
+          const used = returnedQuantities(orderReturns, item.id)
+          const left = Math.max(0, item.quantity - used.refunded - used.pending)
+          return <li key={item.id} style={RETURN_ROW}>
+          <div className="line-info"><strong>{item.name}</strong><span className="muted">Đã mua: {item.quantity}</span>
+            {(used.refunded > 0 || used.pending > 0) && <span className="muted">
+              Đã hoàn: {used.refunded}{used.pending > 0 && ` · Đang yêu cầu: ${used.pending}`} · Còn có thể trả: {left}</span>}
+          </div>
+          <label>Số lượng<input aria-label={`Số lượng trả ${item.name}`} type="number" min="0" max={left}
             value={returnQuantities[item.id] ?? ''} onChange={(e) => setReturnQuantities({ ...returnQuantities, [item.id]: e.target.value })} /></label>
-        </li>)}</ul>
+        </li>})}</ul>
         <label className="cancel-reason">Lý do yêu cầu<textarea required maxLength={2000} value={returnReason}
           onChange={(e) => setReturnReason(e.target.value)} /></label>
         <button type="submit" className="shop-button" disabled={returnBusy}>{returnBusy ? 'Đang gửi…' : 'Gửi yêu cầu'}</button>
       </form>
+      {orderReturns.length > 0 && <div className="order-return-history" style={{ marginTop: 24 }}>
+        <h3>Yêu cầu đã gửi</h3>
+        <ul className="line-list">{orderReturns.map((r) => <li key={r.id} style={RETURN_ROW}>
+          <div className="line-info">
+            <strong>#{r.id} · {r.requestType === 'REFUND_ONLY' ? 'Chỉ hoàn tiền' : 'Trả hàng và hoàn tiền'}</strong>
+            <span className="muted">{formatDateTime(r.createdAt)}</span>
+            {r.items.map((i) => {
+              const note = customerItemNote(r.status, i, formatVnd)
+              return <span key={i.id} className="muted">{i.productName} × {i.requestedQuantity}{note && ` — ${note}`}</span>
+            })}
+            <span>{customerReturnMessage(r.status, r.decisionNote)}</span>
+            {r.status !== 'REJECTED' && <strong>
+              {r.status === 'REFUND_PENDING' || r.status === 'REFUNDED' || r.status === 'PARTIALLY_REFUNDED' ? 'Số tiền hoàn' : 'Dự kiến hoàn'}:{' '}
+              {formatVnd(r.items.reduce((sum, i) => sum + itemRefund(i), 0))}
+            </strong>}
+          </div>
+          <span className={`status-badge ${customerReturnTone(r.status)}`}>{returnStatusLabel(r.status)}</span>
+        </li>)}</ul>
+      </div>}
     </section>}
 
-    {cancelOpen && <div className="address-modal-backdrop"><section className="address-modal confirm-modal"
-      role="dialog" aria-modal="true" aria-labelledby="cancel-order-title">
-      <p className="card-eyebrow">XÁC NHẬN</p><h2 id="cancel-order-title">Hủy đơn {order.orderCode}?</h2>
+    {cancelOpen && <div className="address-modal-backdrop"><section className="address-modal confirm-modal cancel-order-modal"
+      role="dialog" aria-modal="true" aria-labelledby="cancel-order-title" aria-describedby="cancel-order-code">
+      <p className="card-eyebrow">XÁC NHẬN</p><h2 id="cancel-order-title">Hủy đơn hàng?</h2>
+      <p id="cancel-order-code" className="cancel-order-code">Mã đơn: <strong>{order.orderCode}</strong></p>
       <p>Hàng và mã giảm giá sẽ được trả lại.{payment?.status === 'PAID'
         && ' Đơn đã thanh toán nên cửa hàng sẽ tạo yêu cầu hoàn tiền mô phỏng.'}</p>
       <label className="cancel-reason">Lý do (không bắt buộc)

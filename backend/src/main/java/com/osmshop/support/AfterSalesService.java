@@ -50,7 +50,7 @@ public class AfterSalesService {
                     .orElseThrow(() -> bad("INVALID_ORDER_ITEM", "Sản phẩm không thuộc đơn hàng này."));
             Integer alreadyRequested = jdbc.queryForObject("""
                     SELECT COALESCE(sum(CASE
-                        WHEN rr.status='PARTIALLY_REFUNDED' AND rr.request_type='RETURN_AND_REFUND'
+                        WHEN rr.status IN ('REFUNDED','PARTIALLY_REFUNDED') AND rr.request_type='RETURN_AND_REFUND'
                             THEN COALESCE(i.received_quantity,0)
                         ELSE ri.quantity END),0)::integer
                     FROM return_request_items ri JOIN return_requests rr ON rr.id=ri.return_request_id
@@ -90,10 +90,12 @@ public class AfterSalesService {
 
     @Transactional
     public ReturnView decideReturn(long actorId, long requestId, ReturnDecisionRequest request) {
+        String note = blankToNull(request.note());
+        if (!Boolean.TRUE.equals(request.approved()) && note == null)
+            throw bad("REJECT_NOTE_REQUIRED", "Vui lòng nhập ghi chú lý do từ chối.");
         ReturnHead head = lockReturn(requestId);
         if (!Set.of("REQUESTED", "UNDER_REVIEW", "INSPECTED").contains(head.status()))
             throw conflict("RETURN_ALREADY_DECIDED", "Yêu cầu này không còn ở trạng thái chờ quyết định.");
-        String note = blankToNull(request.note());
         if (!Boolean.TRUE.equals(request.approved())) {
             jdbc.update("UPDATE return_requests SET status='REJECTED',decision_note=?,decided_by=?,decided_at=now(),updated_at=now() WHERE id=?",
                     note, actorId, requestId);
@@ -185,13 +187,50 @@ public class AfterSalesService {
                 actorId, refundId);
         if (changed == 0) throw conflict("REFUND_NOT_PENDING", "Khoản hoàn tiền không tồn tại hoặc không còn chờ xử lý.");
         jdbc.update("""
-                UPDATE return_requests rr SET status=CASE
-                    WHEN (SELECT r.amount FROM refunds r WHERE r.id=?) <
-                         (SELECT COALESCE(sum(ri.refund_amount),0) FROM return_request_items ri WHERE ri.return_request_id=rr.id)
-                    THEN 'PARTIALLY_REFUNDED' ELSE 'REFUNDED' END, updated_at=now()
-                WHERE rr.id=(SELECT return_request_id FROM refunds WHERE id=?) AND rr.status='REFUND_PENDING'
-                """, refundId, refundId);
+                UPDATE return_requests SET status='REFUNDED',updated_at=now()
+                WHERE id=(SELECT return_request_id FROM refunds WHERE id=?) AND status='REFUND_PENDING'
+                """, refundId);
         audit(actorId, "REFUND_COMPLETED", "REFUND", refundId, "{\"mode\":\"manual_confirmation\"}");
+        return jdbc.queryForObject("""
+                SELECT r.id,r.order_id,r.return_request_id,o.order_code,r.reason,r.method,r.status,r.amount,r.created_at,r.completed_at
+                FROM refunds r JOIN orders o ON o.id=r.order_id WHERE r.id=?
+                """, AfterSalesService::mapRefund, refundId);
+    }
+
+    @Transactional(readOnly = true)
+    public List<FailedDeliveryOrderView> failedDeliveryRefundCandidates() {
+        return jdbc.query("""
+                SELECT o.id,o.order_code,u.full_name,o.total_amount,o.updated_at
+                FROM orders o JOIN users u ON u.id=o.customer_id
+                WHERE o.status='RETURNED_TO_WAREHOUSE' AND o.payment_method='SIMULATED_QR'
+                  AND EXISTS (SELECT 1 FROM payment_attempts p WHERE p.order_id=o.id AND p.method='SIMULATED_QR' AND p.status='PAID')
+                  AND NOT EXISTS (SELECT 1 FROM refunds r WHERE r.order_id=o.id AND r.status<>'FAILED')
+                ORDER BY o.updated_at DESC,o.id DESC LIMIT 100
+                """, (rs, row) -> new FailedDeliveryOrderView(rs.getLong(1), rs.getString(2), rs.getString(3),
+                rs.getBigDecimal(4), rs.getObject(5, OffsetDateTime.class)));
+    }
+
+    @Transactional
+    public RefundView createFailedDeliveryRefund(long actorId, long orderId) {
+        FailedOrderRow order = jdbc.query("SELECT status,payment_method,total_amount FROM orders WHERE id=? FOR UPDATE",
+                (rs, row) -> new FailedOrderRow(rs.getString(1), rs.getString(2), rs.getBigDecimal(3)), orderId)
+                .stream().findFirst().orElseThrow(() -> notFound("Không tìm thấy đơn hàng."));
+        if (!"RETURNED_TO_WAREHOUSE".equals(order.status()))
+            throw conflict("ORDER_NOT_RETURNED", "Chỉ tạo hoàn tiền cho đơn đã hoàn về kho sau khi giao thất bại.");
+        if (!"SIMULATED_QR".equals(order.paymentMethod()))
+            throw conflict("ORDER_NOT_PREPAID", "Đơn COD chưa thu tiền nên không cần hoàn tiền.");
+        Integer paid = jdbc.queryForObject("SELECT count(*) FROM payment_attempts WHERE order_id=? AND method='SIMULATED_QR' AND status='PAID'",
+                Integer.class, orderId);
+        if (paid == null || paid == 0) throw conflict("ORDER_NOT_PAID", "Đơn hàng chưa được thanh toán.");
+        Integer existing = jdbc.queryForObject("SELECT count(*) FROM refunds WHERE order_id=? AND status<>'FAILED'", Integer.class, orderId);
+        if (existing != null && existing > 0) throw conflict("REFUND_ALREADY_EXISTS", "Đơn hàng này đã có khoản hoàn tiền.");
+        if (order.totalAmount() == null || order.totalAmount().signum() <= 0)
+            throw conflict("NO_REFUNDABLE_AMOUNT", "Đơn hàng không có số tiền cần hoàn.");
+        Long refundId = jdbc.queryForObject("""
+                INSERT INTO refunds(order_id,reason,method,status,amount,idempotency_key,approved_by)
+                VALUES (?,'FAILED_PREPAID_DELIVERY','SIMULATED_QR','PENDING',?,?,?) RETURNING id
+                """, Long.class, orderId, order.totalAmount(), "FAILED-DELIVERY-" + orderId, actorId);
+        audit(actorId, "REFUND_CREATED", "REFUND", refundId, "{\"reason\":\"FAILED_PREPAID_DELIVERY\"}");
         return jdbc.queryForObject("""
                 SELECT r.id,r.order_id,r.return_request_id,o.order_code,r.reason,r.method,r.status,r.amount,r.created_at,r.completed_at
                 FROM refunds r JOIN orders o ON o.id=r.order_id WHERE r.id=?
@@ -298,6 +337,7 @@ public class AfterSalesService {
     private static AuthApiException conflict(String c,String m){return new AuthApiException(HttpStatus.CONFLICT,c,m);}
     private record OrderRow(String status,String paymentMethod,OffsetDateTime deliveredAt){}
     private record ItemBase(int quantity,BigDecimal lineTotal,BigDecimal subtotal,BigDecimal orderDiscount){}
+    private record FailedOrderRow(String status,String paymentMethod,BigDecimal totalAmount){}
     private record ReturnHead(long orderId,String type,String status,String paymentMethod){}
     private record TicketHead(long id,long customerId,String customerName,Long orderId,String orderCode,String subject,String status,Long assignedStaffId,OffsetDateTime createdAt,OffsetDateTime updatedAt){}
 }

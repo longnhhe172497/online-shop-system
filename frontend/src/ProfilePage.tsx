@@ -4,6 +4,7 @@ import { createAddress, deleteAddress, getAccountLimits, getProfile, listAddress
   type Address, type AddressInput, type Profile } from './api/profile'
 import { getUiError } from './uiError'
 import AccountLayout from './AccountLayout'
+import divisions from './reference/vietnam-divisions.json'
 import { personNameError, phoneDigits, phoneError, requiredTextError } from './inputValidation'
 
 const emptyAddress: AddressInput = {
@@ -38,9 +39,11 @@ export default function ProfilePage() {
   const [error, setError] = useState('')
   const [addressError, setAddressError] = useState('')
   const [addressFieldErrors, setAddressFieldErrors] = useState({
-    name: '', phone: '', addressLine: '', province: '',
+    name: '', phone: '', addressLine: '', province: '', ward: '',
   })
   const [notice, setNotice] = useState('')
+  const selectedProvince = divisions.find((province) => province.name === addressForm.province)
+  const selectedWard = selectedProvince?.wards.find((ward) => ward.name === addressForm.ward)
   const editingDefaultAddress = editingId !== null &&
     addresses.some((address) => address.id === editingId && address.isDefault)
 
@@ -106,7 +109,8 @@ export default function ProfilePage() {
       name: personNameError(addressForm.recipientName, 'Họ tên người nhận'),
       phone: phoneError(addressForm.phone, true),
       addressLine: requiredTextError(addressForm.addressLine, 'Địa chỉ cụ thể'),
-      province: requiredTextError(addressForm.province, 'Tỉnh / Thành phố'),
+      province: requiredTextError(addressForm.province, 'Tỉnh / Thành phố') || (!selectedProvince ? 'Vui lòng chọn tỉnh / thành phố trong danh sách.' : ''),
+      ward: !selectedWard ? 'Vui lòng chọn xã / phường / đặc khu thuộc tỉnh đã chọn.' : '',
     }
     setAddressFieldErrors(validation)
     if (Object.values(validation).some(Boolean)) return
@@ -115,7 +119,7 @@ export default function ProfilePage() {
       recipientName: addressForm.recipientName.trim(),
       addressLine: addressForm.addressLine.trim(),
       ward: addressForm.ward.trim(),
-      district: addressForm.district.trim(),
+      district: '',
       province: addressForm.province.trim(),
     }
     setBusy(true)
@@ -154,7 +158,7 @@ export default function ProfilePage() {
     setEditingId(null)
     setAddressForm(emptyAddress)
     setAddressError('')
-    setAddressFieldErrors({ name: '', phone: '', addressLine: '', province: '' })
+    setAddressFieldErrors({ name: '', phone: '', addressLine: '', province: '', ward: '' })
     setEditorOpen(true)
   }
 
@@ -164,7 +168,7 @@ export default function ProfilePage() {
       addressLine: address.addressLine, ward: address.ward ?? '', district: address.district ?? '',
       province: address.province, isDefault: address.isDefault })
     setAddressError('')
-    setAddressFieldErrors({ name: '', phone: '', addressLine: '', province: '' })
+    setAddressFieldErrors({ name: '', phone: '', addressLine: '', province: '', ward: '' })
     setEditorOpen(true)
   }
 
@@ -279,18 +283,29 @@ export default function ProfilePage() {
             aria-invalid={Boolean(addressFieldErrors.addressLine)} />
             {addressFieldErrors.addressLine && <span className="field-error" role="alert">
               {addressFieldErrors.addressLine}</span>}</label>
-          <label>PHƯỜNG / XÃ<input value={addressForm.ward}
-            onChange={(event) => updateAddressField('ward', event.target.value)} maxLength={120} /></label>
-          <label>QUẬN / HUYỆN<input value={addressForm.district}
-            onChange={(event) => updateAddressField('district', event.target.value)} maxLength={120} /></label>
-          <label className="form-span-2">TỈNH / THÀNH PHỐ<input value={addressForm.province}
-            onChange={(event) => { updateAddressField('province', event.target.value)
-              setAddressFieldErrors((current) => ({ ...current,
-                province: requiredTextError(event.target.value, 'Tỉnh / Thành phố') })) }}
-            required maxLength={120} placeholder="Ví dụ: Hà Nội"
-            aria-invalid={Boolean(addressFieldErrors.province)} />
-            {addressFieldErrors.province && <span className="field-error" role="alert">
-              {addressFieldErrors.province}</span>}</label>
+          <label>TỈNH / THÀNH PHỐ<select value={selectedProvince?.name ?? ''} required
+            aria-invalid={Boolean(addressFieldErrors.province)}
+            onChange={(event) => {
+              setAddressForm((current) => ({ ...current, province: event.target.value, ward: '', district: '' }))
+              setAddressFieldErrors((current) => ({ ...current, province: '', ward: '' }))
+            }}>
+            <option value="">Chọn tỉnh / thành phố</option>
+            {divisions.map((province) => <option key={province.code} value={province.name}>{province.name}</option>)}
+          </select>{addressFieldErrors.province && <span className="field-error" role="alert">
+            {addressFieldErrors.province}</span>}</label>
+          <label>XÃ / PHƯỜNG / ĐẶC KHU<select value={selectedWard?.name ?? ''} required
+            disabled={!selectedProvince} aria-invalid={Boolean(addressFieldErrors.ward)}
+            onChange={(event) => {
+              updateAddressField('ward', event.target.value)
+              setAddressFieldErrors((current) => ({ ...current, ward: '' }))
+            }}>
+            <option value="">{selectedProvince ? 'Chọn xã / phường / đặc khu' : 'Chọn tỉnh / thành phố trước'}</option>
+            {selectedProvince?.wards.map((ward) => <option key={ward.code} value={ward.name}>{ward.name}</option>)}
+          </select>{addressFieldErrors.ward && <span className="field-error" role="alert">
+            {addressFieldErrors.ward}</span>}</label>
+          {editingId !== null && (!selectedProvince || !selectedWard || addressForm.district) &&
+            <p className="form-span-2 profile-field-note">Địa chỉ đã lưu: {formatAddress(addresses.find((address) => address.id === editingId)!)}.
+              Vui lòng chọn lại tỉnh/thành phố và xã/phường/đặc khu theo danh mục hiện hành.</p>}
         </div>
         <label className="default-option"><input type="checkbox" checked={addressForm.isDefault}
           disabled={editingDefaultAddress}

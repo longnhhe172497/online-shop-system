@@ -10,6 +10,11 @@
 .shop-main { flex: 1; }
 
 /* ---------- Shared pieces ---------- */
+.shop-page .cancel-order-modal { width: 100%; max-width: 480px; min-width: 0; }
+.shop-page .cancel-order-modal h2 { font-size: clamp(24px, 5vw, 28px); line-height: 1.3; margin: 8px 0 12px; }
+.shop-page .cancel-order-modal .cancel-order-code { font-family: var(--forme-sans); font-size: 14px; margin: 0 0 12px; }
+.cancel-order-code strong { display: inline-block; max-width: 100%; overflow-wrap: anywhere; }
+
 .shop-card { background: var(--forme-paper); border: 1px solid var(--forme-line); border-radius: var(--forme-radius); box-shadow: var(--forme-shadow-sm); padding: 22px 24px; }
 .shop-card h2 { font-family: var(--forme-serif); font-size: 21px; font-weight: 500; margin: 0; }
 .card-title { align-items: center; display: flex; gap: 12px; margin-bottom: 18px; }

@@ -7,6 +7,7 @@ import { formatDateTime } from './logisticsFormat'
 import './logistics.css'
 
 type Tab = 'queue'
+const TICKET_STATUSES = ['OPEN', 'IN_PROGRESS', 'RESOLVED', 'CLOSED']
 const NAV: StaffTab<Tab>[] = [{ id: 'queue', label: 'Yêu cầu hỗ trợ' }]
 
 export default function SupportTicketsPage() {
@@ -22,11 +23,13 @@ function Queue() {
   const [drafts, setDrafts] = useState<Record<number, string>>({})
   const [error, setError] = useState('')
   const [busy, setBusy] = useState<number | null>(null)
+  // UC-SUP-002 step 1: the queue is filtered by ticket status on the server; empty means every status.
+  const [status, setStatus] = useState('')
 
   const load = useCallback(async () => {
-    try { setRows((await listTicketQueue()).items); setError('') }
+    try { setRows((await listTicketQueue(status || undefined)).items); setError('') }
     catch (failure) { setError(errorMessage(failure)) }
-  }, [])
+  }, [status])
   useEffect(() => {
     const timer = window.setTimeout(() => void load(), 0)
     return () => window.clearTimeout(timer)
@@ -53,7 +56,12 @@ function Queue() {
 
   return <section>
     {error && <div className="lg-msg err" role="alert">{error}</div>}
-    <div className="lg-toolbar support-queue-toolbar"><span><strong>{rows.length}</strong> yêu cầu đang hiển thị</span>
+    <div className="lg-toolbar support-queue-toolbar">
+      <label>Trạng thái <select aria-label="Lọc theo trạng thái" value={status} onChange={(event) => setStatus(event.target.value)}>
+        <option value="">Tất cả</option>
+        {TICKET_STATUSES.map((value) => <option key={value} value={value}>{ticketStatusLabel(value)}</option>)}
+      </select></label>
+      <span><strong>{rows.length}</strong> yêu cầu đang hiển thị</span>
       <button type="button" className="lg-btn ghost" onClick={() => void load()}>Làm mới</button></div>
     <div className="support-ticket-list">
       {rows.map((ticket) => <article className="lg-panel support-ticket" key={ticket.id}>
