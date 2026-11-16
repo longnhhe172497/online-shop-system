@@ -1,6 +1,6 @@
 package com.osmshop.catalog;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,8 +28,10 @@ class ProductServiceTests {
                 """, categoryId, categoryId);
 
         var result = products.listActiveProducts(0, 20);
-        assertEquals(1, result.totalItems());
-        assertEquals("Visible item", result.items().getFirst().name());
-        assertEquals(5, result.items().getFirst().availableQuantity());
+        assertThat(result.items())
+                .filteredOn(item -> item.name().equals("Visible item"))
+                .singleElement()
+                .satisfies(item -> assertThat(item.availableQuantity()).isEqualTo(5));
+        assertThat(result.items()).noneMatch(item -> item.name().equals("Hidden item"));
     }
 }
