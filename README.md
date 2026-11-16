@@ -79,6 +79,16 @@ SELECT NULL, 'INITIAL_ADMIN_BOOTSTRAP', 'USER', id::text, '{}'::jsonb FROM promo
 
 The command does not create a shared or hard-coded Admin password. It only promotes your already verified account in your local database. The Admin screen can email invitations to staff; recipients set their own passwords. Each teammate's local database needs its own initial Admin if they want to test Admin functions.
 
+## Test catalog (local only)
+
+To get the same products and photos as the rest of the team (5 categories × 6 products, used by the system tests), load the dev catalog once from the repository root:
+
+```bash
+docker exec -i online-shop-postgres psql -U online_shop -d online_shop < database/seed/dev_catalog.sql
+```
+
+Reload `http://localhost:5173`; no restart is needed. The photos are already in `frontend/public/images/products/` (free Unsplash photos, see its `CREDITS.md`). Running the file again updates the catalog without duplicating it and keeps stock you changed while testing. Create a Warehouse or Admin account first if you want the starting stock to appear in the Warehouse stock history.
+
 ## Internal workspace
 
 After login, Admin, Manager, Support, Warehouse, and Delivery accounts enter `/internal`. Customer accounts enter the storefront. The internal sidebar shows only the sections currently authorized for that role: Admin sees account management, settings, and audit; other staff roles currently see a static overview until their business modules are implemented. The old `/admin` URL redirects to `/internal` for existing bookmarks. API access remains enforced by the backend, not only by the sidebar.
