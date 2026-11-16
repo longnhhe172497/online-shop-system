@@ -80,6 +80,11 @@ export async function inspectReturn(id: number, items: ItemInspection[]) {
   return (await api.post<ReturnRequest>(`/warehouse/returns/${id}/inspection`, { items })).data
 }
 
+/** The signed-in customer's own return/refund requests, newest first. */
+export async function listMyReturns() {
+  return (await api.get<ReturnRequest[]>('/orders/returns')).data
+}
+
 export async function createReturnRequest(orderId: number, body: {
   requestType: 'REFUND_ONLY' | 'RETURN_AND_REFUND'; reason: string; evidenceUrl?: string | null
   items: { orderItemId: number; quantity: number }[]
