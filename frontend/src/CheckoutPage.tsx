@@ -1,8 +1,9 @@
 import { isAxiosError } from 'axios'
-import { useCallback, useEffect, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { placeOrder, previewCheckout, type CheckoutPreview, type PaymentMethod } from './api/orders'
 import { listAddresses, type Address } from './api/profile'
+import { getMe } from './api/auth'
 import { formatVnd, SIMULATION_NOTICE } from './orderFormat'
 import { CheckoutSteps, Icon, ProductThumb, ShopLayout } from './shopUi'
 import { getUiError } from './uiError'
@@ -30,20 +31,39 @@ export default function CheckoutPage() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [loadProblem, setLoadProblem] = useState<'login' | 'role' | 'failed' | null>(null)
+  const loadVersion = useRef(0)
 
   const load = useCallback(async () => {
+    const version = ++loadVersion.current
     setLoading(true); setLoadProblem(null); setError('')
+    setPreview(null); setAddresses([]); setAddressId(null)
     try {
       const [quote, saved] = await Promise.all([previewCheckout(), listAddresses()])
+      if (version !== loadVersion.current) return
+      setLoadProblem(null)
       setPreview(quote)
       setAddresses(saved)
       setAddressId(saved.find((address) => address.isDefault)?.id ?? saved[0]?.id ?? null)
     } catch (failure) {
       const status = isAxiosError(failure) ? failure.response?.status : undefined
-      setLoadProblem(status === 401 ? 'login' : status === 403 ? 'role' : 'failed')
-    } finally { setLoading(false) }
+      let problem: 'login' | 'role' | 'failed' = status === 401 ? 'login' : 'failed'
+      if (status === 403 && version === loadVersion.current) {
+        try {
+          const user = await getMe()
+          if (user.role !== 'CUSTOMER') problem = 'role'
+        } catch { /* A forbidden request alone does not identify a staff account. */ }
+      }
+      if (version !== loadVersion.current) return
+      setLoadProblem(problem)
+    } finally { if (version === loadVersion.current) setLoading(false) }
   }, [])
-  useEffect(() => { void Promise.resolve().then(load) }, [load])
+  const invalidateLoad = useCallback(() => { ++loadVersion.current }, [])
+  useEffect(() => {
+    // Loading synchronizes this page with the checkout API on mount.
+    // oxlint-disable-next-line react/set-state-in-effect
+    void load()
+    return invalidateLoad
+  }, [load, invalidateLoad])
 
   async function applyVoucher(code: string) {
     setVoucherError(''); setBusy(true)
@@ -87,11 +107,11 @@ export default function CheckoutPage() {
       <h2>Không tải được giỏ hàng</h2>
       <p>Kết nối đang bị gián đoạn. Vui lòng thử lại sau ít phút.</p>
       <button type="button" className="shop-button" onClick={() => void load()}>Thử lại</button></section>}
-    {empty && <section className="shop-card empty-state"><Icon name="cart" size={40} />
+    {!loading && !loadProblem && empty && <section className="shop-card empty-state"><Icon name="cart" size={40} />
       <h2>Giỏ hàng đang trống</h2><p>Hãy thêm sản phẩm vào giỏ trước khi thanh toán.</p>
       <Link className="shop-button" to="/">Tiếp tục mua sắm</Link></section>}
 
-    {preview && !empty && <form className="checkout-layout" onSubmit={submit}>
+    {!loading && !loadProblem && preview && !empty && <form className="checkout-layout" onSubmit={submit}>
       <div className="checkout-main">
         <section className="shop-card">
           <div className="card-title"><span className="card-icon"><Icon name="pin" /></span><h2>Địa chỉ nhận hàng</h2>

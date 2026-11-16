@@ -2,6 +2,7 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-li
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import ProfilePage from './ProfilePage'
+import divisions from './reference/vietnam-divisions.json'
 import { createAddress, deleteAddress, getAccountLimits, getProfile, listAddresses,
   updateAddress, updateProfile, type Address, type Profile } from './api/profile'
 
@@ -13,7 +14,7 @@ vi.mock('./SignOutButton', () => ({ default: () => null }))
 const customer: Profile = { id: 1, email: 'customer@example.com', fullName: 'Khách Hàng',
   phone: null, role: 'CUSTOMER' }
 const address: Address = { id: 7, recipientName: 'Người nhận', phone: '0901234567',
-  addressLine: '123 Đường A', ward: 'Phường 1', district: 'Quận 1', province: 'Hà Nội',
+  addressLine: '123 Đường A', ward: 'Phường Ba Đình', district: '', province: 'Hà Nội',
   isDefault: true }
 
 beforeEach(() => { vi.resetAllMocks(); vi.mocked(getProfile).mockResolvedValue(customer)
@@ -22,6 +23,49 @@ beforeEach(() => { vi.resetAllMocks(); vi.mocked(getProfile).mockResolvedValue(c
 afterEach(cleanup)
 
 function openPage(path: string) { render(<MemoryRouter initialEntries={[path]}><ProfilePage /></MemoryRouter>) }
+
+it('bundles complete two-level data with unique codes and Hanoi wards', () => {
+  expect(divisions).toHaveLength(34)
+  const wards = divisions.flatMap((province) => province.wards)
+  expect(wards).toHaveLength(3321)
+  expect(new Set(wards.map((ward) => ward.code)).size).toBe(3321)
+  expect(new Set(divisions.map((province) => province.code)).size).toBe(34)
+  expect(divisions.every((province) => province.wards.length > 0)).toBe(true)
+  expect(divisions.find((province) => province.name === 'Hà Nội')?.wards).toHaveLength(126)
+})
+
+it('filters wards by province and clears the previous ward when switching provinces', async () => {
+  openPage('/me/addresses')
+  await screen.findByRole('table')
+  fireEvent.click(screen.getByRole('button', { name: /Thêm địa chỉ/ }))
+  const dialog = within(screen.getByRole('dialog'))
+  const province = dialog.getByLabelText('TỈNH / THÀNH PHỐ')
+  const ward = dialog.getByLabelText('XÃ / PHƯỜNG / ĐẶC KHU')
+  expect(ward).toBeDisabled()
+  expect(dialog.queryByLabelText('QUẬN / HUYỆN')).not.toBeInTheDocument()
+  fireEvent.change(province, { target: { value: 'Hà Nội' } })
+  expect(within(ward).getByRole('option', { name: 'Phường Ba Đình' })).toBeInTheDocument()
+  expect(within(ward).queryByRole('option', { name: 'Phường Sài Gòn' })).not.toBeInTheDocument()
+  fireEvent.change(ward, { target: { value: 'Phường Ba Đình' } })
+  fireEvent.change(province, { target: { value: 'TP. Hồ Chí Minh' } })
+  expect(ward).toHaveValue('')
+  expect(within(ward).getByRole('option', { name: 'Phường Sài Gòn' })).toBeInTheDocument()
+  expect(within(ward).queryByRole('option', { name: 'Phường Ba Đình' })).not.toBeInTheDocument()
+})
+
+it('requires an explicit current ward when editing a legacy address', async () => {
+  vi.mocked(listAddresses).mockResolvedValue([{ ...address, ward: 'Phường cũ', district: 'Quận cũ' }])
+  openPage('/me/addresses')
+  fireEvent.click(await screen.findByRole('button', { name: 'Chỉnh sửa' }))
+  const dialog = within(screen.getByRole('dialog'))
+  expect(dialog.getByText(/Địa chỉ đã lưu:/)).toHaveTextContent('Quận cũ')
+  fireEvent.submit(dialog.getByRole('button', { name: 'Lưu thay đổi' }).closest('form')!)
+  expect(updateAddress).not.toHaveBeenCalled()
+  fireEvent.change(dialog.getByLabelText(/^XÃ \/ PHƯỜNG/), { target: { value: 'Phường Ba Đình' } })
+  fireEvent.click(dialog.getByRole('button', { name: 'Lưu thay đổi' }))
+  await waitFor(() => expect(updateAddress).toHaveBeenCalledWith(7,
+    expect.objectContaining({ ward: 'Phường Ba Đình', district: '', province: 'Hà Nội' })))
+})
 
 it('updates profile fields while keeping the login email read-only', async () => {
   vi.mocked(updateProfile).mockResolvedValue({ ...customer, fullName: 'Tên mới', phone: '0909000000' })
@@ -63,11 +107,13 @@ it('adds and edits an address in the desktop address dialog', async () => {
   fireEvent.change(within(addDialog).getByLabelText('ĐỊA CHỈ CỤ THỂ'),
     { target: { value: '456 Đường B' } })
   fireEvent.change(within(addDialog).getByLabelText('TỈNH / THÀNH PHỐ'),
-    { target: { value: 'Hồ Chí Minh' } })
+    { target: { value: 'TP. Hồ Chí Minh' } })
+  fireEvent.change(within(addDialog).getByLabelText('XÃ / PHƯỜNG / ĐẶC KHU'),
+    { target: { value: 'Phường Sài Gòn' } })
   fireEvent.click(within(addDialog).getByRole('button', { name: 'Thêm địa chỉ' }))
   await waitFor(() => expect(createAddress).toHaveBeenCalledWith(expect.objectContaining({
     recipientName: 'Người nhận mới', phone: '0909999999', addressLine: '456 Đường B',
-    province: 'Hồ Chí Minh' })))
+    province: 'TP. Hồ Chí Minh', ward: 'Phường Sài Gòn', district: '' })))
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
 
   fireEvent.click(screen.getByRole('button', { name: 'Chỉnh sửa' }))

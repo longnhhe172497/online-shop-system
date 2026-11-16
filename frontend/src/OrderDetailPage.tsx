@@ -319,9 +319,10 @@ export default function OrderDetailPage() {
       </form>
     </section>}
 
-    {cancelOpen && <div className="address-modal-backdrop"><section className="address-modal confirm-modal"
-      role="dialog" aria-modal="true" aria-labelledby="cancel-order-title">
-      <p className="card-eyebrow">XÁC NHẬN</p><h2 id="cancel-order-title">Hủy đơn {order.orderCode}?</h2>
+    {cancelOpen && <div className="address-modal-backdrop"><section className="address-modal confirm-modal cancel-order-modal"
+      role="dialog" aria-modal="true" aria-labelledby="cancel-order-title" aria-describedby="cancel-order-code">
+      <p className="card-eyebrow">XÁC NHẬN</p><h2 id="cancel-order-title">Hủy đơn hàng?</h2>
+      <p id="cancel-order-code" className="cancel-order-code">Mã đơn: <strong>{order.orderCode}</strong></p>
       <p>Hàng và mã giảm giá sẽ được trả lại.{payment?.status === 'PAID'
         && ' Đơn đã thanh toán nên cửa hàng sẽ tạo yêu cầu hoàn tiền mô phỏng.'}</p>
       <label className="cancel-reason">Lý do (không bắt buộc)

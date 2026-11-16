@@ -241,12 +241,13 @@ describe('App', () => {
     fireEvent.change(within(dialog).getByLabelText('HỌ TÊN NGƯỜI NHẬN'), { target: { value: 'Test User' } })
     fireEvent.change(within(dialog).getByLabelText('SỐ ĐIỆN THOẠI'), { target: { value: '0901234567' } })
     fireEvent.change(within(dialog).getByLabelText('ĐỊA CHỈ CỤ THỂ'), { target: { value: '123 Main Street' } })
-    fireEvent.change(within(dialog).getByLabelText('TỈNH / THÀNH PHỐ'), { target: { value: 'Hanoi' } })
+    fireEvent.change(within(dialog).getByLabelText('TỈNH / THÀNH PHỐ'), { target: { value: 'Hà Nội' } })
+    fireEvent.change(within(dialog).getByLabelText('XÃ / PHƯỜNG / ĐẶC KHU'), { target: { value: 'Phường Ba Đình' } })
     fireEvent.click(within(dialog).getByRole('button', { name: 'Thêm địa chỉ' }))
     expect(await screen.findByText('Đã lưu địa chỉ giao hàng.')).toBeInTheDocument()
     expect(createAddress).toHaveBeenCalledWith({
       recipientName: 'Test User', phone: '0901234567',
-      addressLine: '123 Main Street', ward: '', district: '', province: 'Hanoi', isDefault: false
+      addressLine: '123 Main Street', ward: 'Phường Ba Đình', district: '', province: 'Hà Nội', isDefault: false
     })
     expect(screen.getByRole('table')).toHaveTextContent('Test User')
     expect(screen.getByText('Mặc định')).toBeInTheDocument()

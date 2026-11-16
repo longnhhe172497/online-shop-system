@@ -135,10 +135,10 @@
 }
 .account-layout .account-secondary:hover:not(:disabled) { border-color: var(--forme-ink); }
 .account-layout .account-form input,
-.account-layout .address-form-grid input,
+.account-layout .address-form-grid :is(input, select),
 .account-layout .cancel-reason textarea { border-radius: var(--forme-radius-sm); }
 .account-layout .account-form input:focus,
-.account-layout .address-form-grid input:focus { box-shadow: 0 0 0 3px rgba(52, 75, 197, .1); }
+.account-layout .address-form-grid :is(input, select):focus { box-shadow: 0 0 0 3px rgba(52, 75, 197, .1); }
 .account-layout .auth-error, .account-layout .auth-notice {
   border-radius: var(--forme-radius-sm);
   font-size: 13px;
