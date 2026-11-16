@@ -93,6 +93,7 @@ class GoogleIdentityServiceUnitTests {
         verify(jdbc).update(org.mockito.ArgumentMatchers.contains("INSERT INTO google_identities"),
                 eq(7L), eq("subject"));
         verify(jdbc).update(org.mockito.ArgumentMatchers.contains("AUTH_GOOGLE_REGISTER"), eq(7L), eq("7"));
+        verify(jdbc).update(org.mockito.ArgumentMatchers.contains("USER_CREATED"), eq(7L), eq("7"));
         verify(auth).loginGoogleUser(7L, "127.0.0.1", "agent");
     }
 

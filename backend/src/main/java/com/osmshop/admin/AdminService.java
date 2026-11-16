@@ -145,7 +145,7 @@ public class AdminService {
         arguments.add(size);
         arguments.add(page * size);
         List<AuditView> items = jdbc.query("""
-                SELECT a.id,a.actor_id,u.email,a.action,a.entity_type,a.entity_id,a.created_at
+                SELECT a.id,a.actor_id,coalesce(u.email,target.email),a.action,a.entity_type,a.entity_id,a.created_at
                 """ + base + " ORDER BY a.id DESC LIMIT ? OFFSET ?", AdminService::mapAudit,
                 arguments.toArray());
         return new PageResponse<>(items, page, size, count == null ? 0 : count);

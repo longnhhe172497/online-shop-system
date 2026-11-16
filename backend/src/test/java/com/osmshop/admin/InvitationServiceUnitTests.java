@@ -102,6 +102,8 @@ class   InvitationServiceUnitTests {
         verify(jdbc).update(org.mockito.ArgumentMatchers.contains("accepted_at=now()"), eq(11L));
         verify(jdbc).update(org.mockito.ArgumentMatchers.contains("INVITATION_ACCEPTED"),
                 eq(1L), eq("7"));
+        verify(jdbc).update(org.mockito.ArgumentMatchers.contains("USER_CREATED"),
+                eq(7L), eq("7"), eq(1L));
     }
 
     @Test

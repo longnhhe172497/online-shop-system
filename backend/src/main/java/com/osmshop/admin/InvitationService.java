@@ -177,6 +177,11 @@ public class InvitationService {
                     INSERT INTO audit_logs(actor_id,action,entity_type,entity_id,details)
                     VALUES (?,'INVITATION_ACCEPTED','USER',?, '{}'::jsonb)
                     """, invitation.invitedBy(), Long.toString(userId));
+            jdbc.update("""
+                    INSERT INTO audit_logs(actor_id,action,entity_type,entity_id,details)
+                    VALUES (?,'USER_CREATED','USER',?,
+                            jsonb_build_object('source','STAFF_INVITATION','invitedBy',?::bigint))
+                    """, userId, Long.toString(userId), invitation.invitedBy());
         } catch (DataIntegrityViolationException exception) {
             throw new AuthApiException(HttpStatus.CONFLICT, "EMAIL_ALREADY_REGISTERED", "Email đã có tài khoản.");
         }

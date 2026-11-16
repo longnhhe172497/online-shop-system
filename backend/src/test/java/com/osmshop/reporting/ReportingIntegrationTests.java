@@ -63,6 +63,11 @@ class ReportingIntegrationTests {
     void summaryAggregatesRealOrdersPaidPaymentsAndCompletedRefunds() throws Exception {
         Session customer = session("CUSTOMER");
         Session manager = session("MANAGER");
+        LocalDate today = LocalDate.now(REPORT_ZONE);
+        String from = today.minusDays(1).toString();
+        String to = today.plusDays(1).toString();
+        JsonNode before = json.readTree(call(get("/api/manager/reports/summary?from=" + from + "&to=" + to), manager)
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString());
         long orderId = order(customer, 125000);
         jdbc.update("""
             INSERT INTO payment_attempts(order_id,attempt_number,method,status,amount,simulation_code,expires_at,paid_at)
@@ -73,19 +78,16 @@ class ReportingIntegrationTests {
             VALUES (?,'CUSTOMER_RETURN','SIMULATED_QR','COMPLETED',25000,?,?,?,now())
             """, orderId, "REF-" + UUID.randomUUID(), manager.id(), manager.id());
 
-        LocalDate today = LocalDate.now(REPORT_ZONE);
-        String from = today.minusDays(1).toString();
-        String to = today.plusDays(1).toString();
         String response = call(get("/api/manager/reports/summary?from=" + from + "&to=" + to), manager)
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.orderCount").value(1))
-                .andExpect(jsonPath("$.paidOrderCount").value(1))
-                .andExpect(jsonPath("$.grossRevenue").value(125000))
-                .andExpect(jsonPath("$.refundedAmount").value(25000))
-                .andExpect(jsonPath("$.refundCount").value(1))
                 .andReturn().getResponse().getContentAsString();
 
         JsonNode report = json.readTree(response);
+        assertThat(report.get("orderCount").asLong() - before.get("orderCount").asLong()).isEqualTo(1);
+        assertThat(report.get("paidOrderCount").asLong() - before.get("paidOrderCount").asLong()).isEqualTo(1);
+        assertThat(report.get("grossRevenue").asLong() - before.get("grossRevenue").asLong()).isEqualTo(125000);
+        assertThat(report.get("refundedAmount").asLong() - before.get("refundedAmount").asLong()).isEqualTo(25000);
+        assertThat(report.get("refundCount").asLong() - before.get("refundCount").asLong()).isEqualTo(1);
         assertThat(report.get("daily").isArray()).isTrue();
         assertThat(report.get("daily").size()).isEqualTo(3);
         JsonNode todayMetric = null;
@@ -93,15 +95,24 @@ class ReportingIntegrationTests {
             if (today.toString().equals(metric.get("date").asText())) todayMetric = metric;
         }
         assertThat(todayMetric).isNotNull();
-        assertThat(todayMetric.get("orderCount").asLong()).isEqualTo(1);
-        assertThat(todayMetric.get("paidOrderCount").asLong()).isEqualTo(1);
-        assertThat(todayMetric.get("refundCount").asLong()).isEqualTo(1);
+        JsonNode beforeTodayMetric = null;
+        for (JsonNode metric : before.get("daily")) {
+            if (today.toString().equals(metric.get("date").asText())) beforeTodayMetric = metric;
+        }
+        assertThat(beforeTodayMetric).isNotNull();
+        assertThat(todayMetric.get("orderCount").asLong() - beforeTodayMetric.get("orderCount").asLong()).isEqualTo(1);
+        assertThat(todayMetric.get("paidOrderCount").asLong() - beforeTodayMetric.get("paidOrderCount").asLong()).isEqualTo(1);
+        assertThat(todayMetric.get("refundCount").asLong() - beforeTodayMetric.get("refundCount").asLong()).isEqualTo(1);
     }
 
     @Test
     void dashboardShowsTotalsTopProductsLowStockAndPendingActions() throws Exception {
         Session customer = session("CUSTOMER");
         Session manager = session("MANAGER");
+        LocalDate today = LocalDate.now(REPORT_ZONE);
+        JsonNode before = json.readTree(call(
+                get("/api/manager/reports/dashboard?from=" + today.minusDays(1) + "&to=" + today), manager)
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString());
         Long category = jdbc.queryForObject("INSERT INTO categories(name) VALUES (?) RETURNING id", Long.class,
                 "Dashboard " + UUID.randomUUID());
         String sku = "DB-" + UUID.randomUUID();
@@ -124,13 +135,14 @@ class ReportingIntegrationTests {
             """, orderId, "REF-" + UUID.randomUUID(), manager.id(), manager.id());
         jdbc.update("INSERT INTO support_tickets(customer_id,subject) VALUES (?,'Dashboard ticket')", customer.id());
 
-        LocalDate today = LocalDate.now(REPORT_ZONE);
         String response = call(get("/api/manager/reports/dashboard?from=" + today.minusDays(1) + "&to=" + today), manager)
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.summary.grossRevenue").value(125000))
-                .andExpect(jsonPath("$.summary.refundedAmount").value(25000))
                 .andReturn().getResponse().getContentAsString();
         JsonNode dashboard = json.readTree(response);
+        assertThat(dashboard.at("/summary/grossRevenue").asLong()
+                - before.at("/summary/grossRevenue").asLong()).isEqualTo(125000);
+        assertThat(dashboard.at("/summary/refundedAmount").asLong()
+                - before.at("/summary/refundedAmount").asLong()).isEqualTo(25000);
         assertThat(dashboard.get("topProducts").toString()).contains(sku);
         assertThat(dashboard.get("lowStock").toString()).contains(sku);
         assertThat(dashboard.get("pendingActions").get("unassignedOpenTickets").asLong()).isGreaterThanOrEqualTo(1);
