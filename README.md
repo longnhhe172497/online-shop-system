@@ -58,6 +58,16 @@ npm run dev
 
 To send real verification email from your own mailbox, follow [`docs/SMTP_SETUP.md`](docs/SMTP_SETUP.md). MailHog remains the safe default for local development.
 
+## Shared demo data
+
+To replace local application data with the complete shared demo dataset, run this command from the repository root:
+
+```powershell
+.\scripts\seed-demo.ps1 -Force
+```
+
+The seed includes accounts for every role and connected scenarios for catalog, cart, vouchers, checkout, payment, inventory, delivery, returns, support, reviews, sessions, and audit logs. It is for local development only and deliberately replaces existing application data. See [`database/seed/README.md`](database/seed/README.md) for demo credentials, one-time links, coverage, and safety notes.
+
 ## First Admin account (local only)
 
 1. Register your own account in the frontend and verify its email first.
@@ -78,6 +88,16 @@ SELECT NULL, 'INITIAL_ADMIN_BOOTSTRAP', 'USER', id::text, '{}'::jsonb FROM promo
 4. Sign out and sign in again, then open `http://localhost:5173/internal`.
 
 The command does not create a shared or hard-coded Admin password. It only promotes your already verified account in your local database. The Admin screen can email invitations to staff; recipients set their own passwords. Each teammate's local database needs its own initial Admin if they want to test Admin functions.
+
+## Test catalog (local only)
+
+To get the same products and photos as the rest of the team (5 categories × 6 products, used by the system tests), load the dev catalog once from the repository root:
+
+```bash
+docker exec -i online-shop-postgres psql -U online_shop -d online_shop < database/seed/dev_catalog.sql
+```
+
+Reload `http://localhost:5173`; no restart is needed. The photos are already in `frontend/public/images/products/` (free Unsplash photos, see its `CREDITS.md`). Running the file again updates the catalog without duplicating it and keeps stock you changed while testing. Create a Warehouse or Admin account first if you want the starting stock to appear in the Warehouse stock history.
 
 ## Internal workspace
 

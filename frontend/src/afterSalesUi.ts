@@ -58,3 +58,65 @@ export function refundStatusTone(status: string) {
   if (status === 'PROCESSING') return 'lg-warn'
   return 'lg-info'
 }
+
+/** What the customer is told about a request (UC-MNG-004: MSG-032 on approval, MSG-033 with the reason on rejection). */
+export function customerReturnMessage(status: string, note: string | null) {
+  if (status === 'REJECTED') return `Yêu cầu hoàn tiền của bạn đã bị từ chối. Lý do: ${(note ?? 'không có ghi chú').trim().replace(/[.!?]+$/, '')}.`
+  if (status === 'REFUND_PENDING') return 'Yêu cầu hoàn tiền của bạn đã được chấp thuận.'
+  if (status === 'REFUNDED' || status === 'PARTIALLY_REFUNDED') return 'Cửa hàng đã hoàn tiền cho yêu cầu này.'
+  if (status === 'RETURN_AUTHORIZED') return 'Cửa hàng đồng ý cho gửi trả hàng. Vui lòng gửi sản phẩm về kho.'
+  if (status === 'INSPECTED') return 'Kho đã kiểm tra hàng trả, cửa hàng đang quyết định hoàn tiền.'
+  return 'Cửa hàng đang xem xét yêu cầu của bạn.'
+}
+
+/** Storefront badge tone (status-badge classes) for a return request. */
+export function customerReturnTone(status: string) {
+  if (status === 'REJECTED' || status === 'CANCELLED') return 'danger'
+  if (status === 'REFUNDED' || status === 'PARTIALLY_REFUNDED' || status === 'REFUND_PENDING') return 'success'
+  if (status === 'REQUESTED' || status === 'UNDER_REVIEW' || status === 'INSPECTED') return 'warning'
+  return 'info'
+}
+
+type CustomerReturnItem = { requestedQuantity: number; refundAmount: number; receivedQuantity: number | null; inspectionResult: string | null }
+
+/** Money for one item as the backend computes it: after inspection only the received quantity of eligible items. */
+export function itemRefund(item: CustomerReturnItem) {
+  if (item.inspectionResult === null) return Number(item.refundAmount)
+  if (item.inspectionResult !== 'ELIGIBLE' || !item.receivedQuantity) return 0
+  return Number(item.refundAmount) * item.receivedQuantity / item.requestedQuantity
+}
+
+/** Per-item line for the customer: what the warehouse received and what is refunded for it. */
+export function customerItemNote(status: string, item: CustomerReturnItem, money: (value: number) => string) {
+  if (status === 'REJECTED') return ''
+  if (item.inspectionResult === 'NOT_ELIGIBLE') return 'Kho không nhận được sản phẩm này, không hoàn tiền.'
+  if (item.inspectionResult === 'ELIGIBLE') {
+    const partial = (item.receivedQuantity ?? 0) < item.requestedQuantity ? ` (kho nhận ${item.receivedQuantity}/${item.requestedQuantity})` : ''
+    return `Hoàn ${money(itemRefund(item))}${partial}`
+  }
+  const settled = status === 'REFUND_PENDING' || status === 'REFUNDED' || status === 'PARTIALLY_REFUNDED'
+  return `${settled ? 'Hoàn' : 'Dự kiến hoàn'} ${money(itemRefund(item))}`
+}
+
+type QuantityRequest = { requestType: string; status: string;
+  items: { orderItemId: number; requestedQuantity: number; receivedQuantity: number | null }[] }
+
+/**
+ * Quantities of one order item already used by return/refund requests, counted the way the backend checks
+ * a new request: refunded (Refund Only: requested; Return and Refund: what the warehouse received) and still
+ * in progress. Rejected or closed requests free their quantity again.
+ */
+export function returnedQuantities(requests: QuantityRequest[], orderItemId: number) {
+  let refunded = 0
+  let pending = 0
+  for (const r of requests) {
+    if (r.status === 'REJECTED' || r.status === 'CLOSED') continue
+    const done = r.status === 'REFUNDED' || r.status === 'PARTIALLY_REFUNDED'
+    for (const i of r.items) {
+      if (i.orderItemId !== orderItemId) continue
+      if (!done) pending += i.requestedQuantity
+      else refunded += r.requestType === 'RETURN_AND_REFUND' ? (i.receivedQuantity ?? 0) : i.requestedQuantity
+    }
+  }
+  return { refunded, pending }
+}
